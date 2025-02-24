@@ -170,8 +170,8 @@ construct_ribotrans <- function(gtf_file = NULL,
                       "library" = library,
                       "features" = features,
                       "mapping_type" = mapping_type,
-                      assignment_mode = assignment_mode,
-                      genome_trans_features = features.g)
+                      "assignment_mode" = assignment_mode,
+                      "genome_trans_features" = features.g)
 
   return(res)
 }
