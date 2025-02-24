@@ -2,7 +2,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew",
                   "mstart", "mstop", "n", "na.omit", "new","count", "counts", "frame", "qwidth",
                   "pos", "rname", "smooth", "smooth.x", "smooth.y", "transcript_id",
                   "translen", "type", "utr3","utr5", "which_label", "width",
-                  "mappped_reads", "normval", "rpm"))
+                  "mappped_reads", "normval", "rpm","start","end","gene_id", "seqnames"))
 
 
 #' ribotrans Class

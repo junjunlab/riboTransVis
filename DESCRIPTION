@@ -30,6 +30,7 @@ Imports:
     magrittr,
     methods,
     purrr,
+    reticulate,
     Rsamtools,
     rtracklayer,
     scales,
