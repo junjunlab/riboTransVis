@@ -27,12 +27,15 @@ Imports:
     ggplot2,
     ggpp,
     ggside,
+    IRanges,
     magrittr,
     methods,
+    parallel,
     purrr,
     reticulate,
     Rsamtools,
     rtracklayer,
+    S4Vectors,
     scales,
     zoo
 Suggests: 

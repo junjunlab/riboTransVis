@@ -237,7 +237,7 @@ getCoverage <- function(bam_file = NULL,
   pileup_result <- Rsamtools::pileup(file = Rsamtools::BamFile(bam_file),
                                      pileupParam = Rsamtools::PileupParam(distinguish_nucleotides = FALSE,
                                                                           distinguish_strands = FALSE,
-                                                                          max_depth = 10^5),
+                                                                          max_depth = 10^6),
                                      scanBamParam = Rsamtools::ScanBamParam(which = region)) %>%
     dplyr::select(-which_label)
 
@@ -317,6 +317,7 @@ getOccupancy <- function(bam_file = NULL,
 
   # get position
   bam_data <- Rsamtools::scanBam(file = bam_file,
+                                 nThreads = parallel::detectCores(),
                                  param = Rsamtools::ScanBamParam(what = c("rname", "pos"),
                                                                  which = region,
                                                                  flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE))

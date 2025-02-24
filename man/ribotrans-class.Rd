@@ -18,7 +18,13 @@ An S4 class to represent ribosome profiling data and associated information.
 
 \item{\code{library}}{A \code{data.frame} representing the sequencing library information.}
 
+\item{\code{assignment_mode}}{A \code{character} string indicating the methodology used for read assignment.}
+
+\item{\code{mapping_type}}{A \code{character} string specifying the mapping type (\code{"transcriptome"} or \code{"genome"}).}
+
 \item{\code{features}}{A \code{data.frame} describing transcript features (e.g., exons, genes).}
+
+\item{\code{genome_trans_features}}{A \code{data.frame} containing genomic transcript features for genome-based mappings.}
 
 \item{\code{summary_info}}{A \code{data.frame} describing all reads detailed information.}
 

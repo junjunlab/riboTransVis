@@ -2,19 +2,41 @@
 % Please edit documentation in R/generic-methods.R
 \name{generate_summary}
 \alias{generate_summary}
+\alias{generate_summary,ribotrans-method}
 \title{Generate Summary Information for Ribosome Profiling Data}
 \usage{
 generate_summary(object, ...)
+
+\S4method{generate_summary}{ribotrans}(object, exp_type = c("ribo", "rna"), nThreads = 1)
 }
 \arguments{
-\item{object}{An object containing experimental data}
+\item{object}{A \code{ribotrans} object containing library and feature information.}
 
 \item{...}{Additional arguments passed to methods}
+
+\item{exp_type}{Character string indicating experiment type. One of \code{"ribo"} (ribosome profiling)
+or \code{"rna"} (RNA-seq).}
+
+\item{nThreads}{Integer specifying the number of threads to use for BAM file processing.}
 }
 \value{
 An updated object containing summary information
+
+The input \code{ribotrans} object with an updated \code{summary_info} slot containing read count summaries.
 }
 \description{
 Generic function to generate summary information from ribosome profiling
 or RNA-seq data.
+
+This method extracts read mapping information from BAM files and links it
+to transcript features in a \code{ribotrans} object.
+}
+\details{
+This method processes BAM files corresponding to the specified experiment type (\code{ribo} or \code{rna}) and extracts:
+\itemize{
+\item Read positions (\code{pos})
+\item Read lengths (\code{qwidth})
+\item Read counts per transcript position
+}
+The extracted mapping data is then merged with transcript annotation data from the \code{features} slot.
 }

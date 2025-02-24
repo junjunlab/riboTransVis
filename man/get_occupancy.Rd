@@ -2,29 +2,79 @@
 % Please edit documentation in R/generic-methods.R
 \name{get_occupancy}
 \alias{get_occupancy}
-\title{Generic Function for Extracting Ribosome Occupancy}
+\alias{get_occupancy,ribotrans-method}
+\title{Get Ribosome Occupancy from \code{ribotrans} Object}
 \usage{
 get_occupancy(object, ...)
+
+\S4method{get_occupancy}{ribotrans}(
+  object,
+  gene_name = NULL,
+  smooth = c("FALSE", "TRUE"),
+  slide_window = 30
+)
 }
 \arguments{
-\item{object}{An object containing ribosome profiling (\code{ribo-seq}) or transcriptomic data.}
+\item{object}{A \code{ribotrans} object containing ribosome profiling BAM files and library metadata.}
 
 \item{...}{Additional arguments passed to specific methods.}
+
+\item{gene_name}{Character. Name of the gene from which to extract coverage.
+If \code{NULL} (default), retrieves coverage for all genes.}
+
+\item{smooth}{Character. Should the data be smoothed? Options: \code{"FALSE"} or \code{"TRUE"}. Default is \code{"FALSE"}.}
+
+\item{slide_window}{Integer. The number of nucleotides for smoothing (used only if \code{smooth = "TRUE"}). Default is \code{30}.}
 }
 \value{
-The output format depends on the method. Generally, it returns a \code{ribotrans} object with updated occupancy data.
+A modified \code{ribotrans} object with ribosome occupancy information.
+
+A modified \code{ribotrans} object that now contains:
+\itemize{
+\item \strong{\code{object@ribo_occupancy}}: A \code{data.frame} with ribosome occupancy values.
+\item \strong{\code{object@ribo.smoothed}}: \code{"TRUE"} or \code{"FALSE"}, indicating whether occupancy data was smoothed.
+}
 }
 \description{
-A S4 generic function for extracting ribosome footprinting occupancy from different object types.
-It dispatches S4 methods based on the class of \code{object}.
+This generic function retrieves ribosome occupancy from a \code{ribotrans} object.
+
+This method extracts ribosome occupancy information from a \code{ribotrans} object,
+optionally applying a smoothing transformation.
 }
 \details{
-This generic function enables \strong{ribosome occupancy extraction} from different S4 objects.
-Specific implementations are handled via \code{setMethod()}.
+Ribosome occupancy describes the density of ribosomes along a transcript.
+This function processes \code{ribotrans} BAM files to compute read coverage, supporting both \strong{genome-aligned}
+and \strong{transcriptome-aligned} data.
+
+\strong{Analysis Steps:}
+\enumerate{
+\item Extracts mapped ribosome profiling BAM files from \code{object@bam_file} (filtered by \code{"ribo"} type).
+\item Retrieves mapped read counts from \code{object@library} to normalize the occupancy.
+\item Calls:
 \itemize{
-\item \strong{\verb{get_occupancy,ribotrans-method}}: Extracts ribosome footprinting per-position occupancy from a \code{ribotrans} object.
+\item \code{getOccupancyGenome()} for \strong{genome-based BAM files}.
+\item \code{getOccupancy()} for \strong{transcript-based BAM files}.
 }
+\item Merges all samples into a single \code{data.frame}.
+\item \strong{If \code{smooth = "TRUE"}}, applies a \strong{sliding window smoothing} (\code{smoothEachPosition()}).
+}
+
+The processed data is stored in \code{object@ribo_occupancy}, and the smoothing status is recorded in \code{object@ribo.smoothed}.
+}
+\examples{
+\dontrun{
+# Assume ribo_obj is a ribotrans object with ribosome BAM files
+result <- get_occupancy(ribo_obj, gene_name = "TP53", smooth = "TRUE", slide_window = 50)
+print(result@ribo_occupancy)
+}
+
 }
 \seealso{
-\code{\link{getOccupancy}} for computing occupancy directly from BAM files.
+\code{\link{get_occupancy,ribotrans-method}} for the specific method.
+
+\itemize{
+\item \code{\link{getOccupancyGenome}}: Extract occupancy from genome-mapped data.
+\item \code{\link{getOccupancy}}: Extract occupancy from transcript-aligned data.
+\item \code{\link{ribotrans}}: The S4 object storing this data.
+}
 }

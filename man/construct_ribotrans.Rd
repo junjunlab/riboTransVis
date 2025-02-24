@@ -2,10 +2,12 @@
 % Please edit documentation in R/class.R
 \name{construct_ribotrans}
 \alias{construct_ribotrans}
-\title{Construct a ribotrans Object}
+\title{Construct a Ribotrans Object for Transcriptome or Genome Mapping}
 \usage{
 construct_ribotrans(
   gtf_file = NULL,
+  mapping_type = c("transcriptome", "genome"),
+  assignment_mode = c("end5", "end3"),
   RNA_bam_file = NULL,
   RNA_sample_name = NULL,
   Ribo_bam_file = NULL,
@@ -15,6 +17,11 @@ construct_ribotrans(
 }
 \arguments{
 \item{gtf_file}{A \code{character} string indicating the path to the GTF annotation file.}
+
+\item{mapping_type}{Character. Either \code{"transcriptome"} or \code{"genome"}, indicating whether
+RNA-seq/Ribo-seq alignments are transcriptome-based or genome-based. Default is \code{"transcriptome"}.}
+
+\item{assignment_mode}{Character. Specifies the read assignment strategy: \code{"end5"} (5' end) or \code{"end3"} (3' end).}
 
 \item{RNA_bam_file}{A \code{character} vector containing paths to RNA-seq BAM files.}
 
@@ -32,8 +39,8 @@ An object of class \code{ribotrans} containing BAM file metadata,
 library information, and parsed transcriptomic features.
 }
 \description{
-Creates a \code{ribotrans} object from RNA and ribosome profiling BAM files along
-with transcriptome annotation (\code{GTF} file).
+\code{construct_ribotrans()} generates a structured object with transcript or genomic annotations
+and mapped RNA-seq / Ribo-seq library information. It supports selecting the longest transcript for each gene.
 }
 \details{
 This function processes the transcriptome annotation and extracts alignment
@@ -42,4 +49,19 @@ an S4 object of class \code{ribotrans}.
 
 It computes total mapped reads for each BAM file and stores the information
 in the \code{library} slot of the \code{ribotrans} object.
+}
+\examples{
+\dontrun{
+ribotrans_obj <- construct_ribotrans(
+  gtf_file = "example.gtf",
+  mapping_type = "transcriptome",
+  RNA_bam_file = c("rna1.bam", "rna2.bam"),
+  RNA_sample_name = c("sample1", "sample2"),
+  Ribo_bam_file = c("ribo1.bam"),
+  Ribo_sample_name = c("sample3"),
+  choose_longest_trans = TRUE
+)
+}
+
+
 }

@@ -2,29 +2,78 @@
 % Please edit documentation in R/generic-methods.R
 \name{get_coverage}
 \alias{get_coverage}
-\title{Generic Function for Extracting Read Coverage}
+\alias{get_coverage,ribotrans-method}
+\title{Get RNA-seq Coverage from a \code{ribotrans} Object}
 \usage{
 get_coverage(object, ...)
+
+\S4method{get_coverage}{ribotrans}(
+  object,
+  gene_name = NULL,
+  smooth = c("FALSE", "TRUE"),
+  slide_window = 30
+)
 }
 \arguments{
-\item{object}{An object containing RNA-seq or ribosome profiling data.}
+\item{object}{A \code{ribotrans} object containing RNA-seq BAM files and library metadata.}
 
-\item{...}{Additional arguments passed to specific methods.}
+\item{...}{Additional arguments passed to methods.}
+
+\item{gene_name}{Character. Name of the gene from which to extract coverage.
+If \code{NULL} (default), retrieves coverage for all genes.}
+
+\item{smooth}{Character. Should the data be smoothed? Options: \code{"FALSE"} or \code{"TRUE"}. Default is \code{"FALSE"}.}
+
+\item{slide_window}{Integer. The window size for smoothing (only used if \code{smooth = "TRUE"}). Default: \code{30}.}
 }
 \value{
-The return value depends on the method. Generally, a \code{ribotrans} object is returned with computed coverage.
+A modified \code{ribotrans} object with RNA-seq coverage information.
+
+A modified \code{ribotrans} object that now contains:
+\itemize{
+\item \strong{\code{object@RNA_coverage}}: A \code{data.frame} with RNA-seq coverage values.
+\item \strong{\code{object@RNA.smoothed}}: \code{"TRUE"} or \code{"FALSE"}, indicating whether coverage data was smoothed.
+}
 }
 \description{
-A S4 generic function to extract RNA-seq read coverage for a given gene.
-This function dispatches S4 methods based on the class of \code{object}.
+This generic function extracts RNA-seq coverage from a \code{ribotrans} object.
+
+This method extracts RNA-seq coverage information from a \code{ribotrans} object,
+optionally applying a smoothing transformation.
 }
 \details{
-This generic function supports \strong{different implementations based on object type}.
-Specific methods are defined via \code{setMethod()}.
+RNA-seq coverage describes read distribution along transcripts, providing insights into gene expression levels.
+This function processes \code{ribotrans} BAM files and computes RNA read coverage for each transcript.
+
+\strong{Analysis Steps:}
+\enumerate{
+\item Extracts RNA-seq BAM files from \code{object@bam_file}, filtering by \code{"rna"} type.
+\item Retrieves mapped read counts from \code{object@library} to normalize coverage.
+\item Calls:
 \itemize{
-\item \strong{\verb{get_coverage,ribotrans-method}}: Extracts per-position RNA-seq read coverage from a \code{ribotrans} object.
+\item \code{getCoverageGenome()} for \strong{genome-mapped BAM files}.
+\item \code{getCoverage()} for \strong{transcript-mapped BAM files}.
 }
+\item Merges all samples into a single \code{data.frame}.
+\item \strong{If \code{smooth = "TRUE"}}, applies a \strong{sliding window smoothing} (\code{smoothEachPosition()}).
+}
+
+The processed data is stored in \code{object@RNA_coverage}, and the smoothing status is recorded in \code{object@RNA.smoothed}.
+}
+\examples{
+\dontrun{
+# Assume ribo_obj is a ribotrans object with RNA BAM files
+result <- get_coverage(ribo_obj, gene_name = "TP53", smooth = "TRUE", slide_window = 50)
+print(result@RNA_coverage)
+}
+
 }
 \seealso{
-\code{\link{getCoverage}} for coverage computation from BAM files.
+\code{\link{get_coverage,ribotrans-method}} for the specific implementation.
+
+\itemize{
+\item \code{\link{getCoverageGenome}}: Extract RNA coverage from genome-mapped data.
+\item \code{\link{getCoverage}}: Extract RNA coverage from transcript-aligned data.
+\item \code{\link{ribotrans}}: The S4 object storing this data.
+}
 }

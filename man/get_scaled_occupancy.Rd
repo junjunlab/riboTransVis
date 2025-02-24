@@ -2,30 +2,63 @@
 % Please edit documentation in R/generic-methods.R
 \name{get_scaled_occupancy}
 \alias{get_scaled_occupancy}
-\title{Generic Function for Computing Scaled Ribosome Occupancy}
+\alias{get_scaled_occupancy,ribotrans-method}
+\title{Compute Scaled Ribosome Occupancy}
 \usage{
 get_scaled_occupancy(object, ...)
+
+\S4method{get_scaled_occupancy}{ribotrans}(object, smooth = c("TRUE", "FALSE"), slide_window = 30)
 }
 \arguments{
-\item{object}{An object containing ribosome profiling (\code{ribo-seq}) and RNA-seq coverage data.}
+\item{object}{A \code{ribotrans} object containing both \code{ribo_occupancy} and \code{RNA_coverage} data.}
 
 \item{...}{Additional arguments passed to specific methods.}
+
+\item{smooth}{Character. Should the data be smoothed? Options: \code{"TRUE"} or \code{"FALSE"}. Default is \code{"TRUE"}.}
+
+\item{slide_window}{Integer. The window size for smoothing (used only if \code{smooth = "TRUE"}). Default: \code{30}.}
 }
 \value{
-The return structure depends on the method. Generally, it returns a \code{ribotrans} object with updated scaled occupancy data.
+A modified \code{ribotrans} object with scaled occupancy stored in \code{object@scaled_occupancy}.
+
+A modified \code{ribotrans} object containing \code{object@scaled_occupancy}, a \code{data.frame} with the scaled enrichment values.
 }
 \description{
-A S4 generic function to compute \strong{scaled ribosome occupancy}
-(ribo-seq signal normalized to RNA-seq coverage).
-This function dispatches S4 methods based on the class of \code{object}.
+This generic function calculates scaled ribosome occupancy by normalizing ribosome occupancy
+with RNA-seq coverage.
+
+This method calculates the scaled ribosome occupancy by dividing ribosome density
+(\code{ribo_occupancy}) by RNA-seq coverage (\code{RNA_coverage}), optionally applying a smoothing function.
 }
 \details{
-This generic function allows different implementations of \strong{scaled ribosome occupancy calculations}.
-Specific implementations should be defined using \code{setMethod()}.
-\itemize{
-\item \strong{\verb{get_scaled_occupancy,ribotrans-method}}: Computes \strong{Ribo/RNA enrichment per position} from a \code{ribotrans} object.
+\strong{Functionality:}
+This method normalizes ribosome occupancy by RNA-seq coverage per position, producing a \strong{scaled occupancy profile}.
+
+\strong{Workflow:}
+\enumerate{
+\item Ensure both \code{RNA_coverage} (\code{object@RNA_coverage}) and \code{ribo_occupancy} (\code{object@ribo_occupancy}) exist.
+\item Compute: \verb{scaled occupancy = (ribo occupancy) / (RNA coverage)}.
+\item Replace \code{NA} or \code{Inf} values with \code{0} for stability.
+\item \strong{Optional:} Apply a rolling mean (\code{zoo::rollmean()}) for smoothing.
 }
+
+\strong{Error Handling:}
+\itemize{
+\item If \code{RNA_coverage} or \code{ribo_occupancy} is missing, the function stops with an error.
+}
+}
+\examples{
+\dontrun{
+# Assume `ribo_obj` is a ribotrans object with RNA and ribosome data
+result <- get_scaled_occupancy(ribo_obj, smooth = "TRUE", slide_window = 50)
+print(result@scaled_occupancy)
+}
+
 }
 \seealso{
-\code{\link{get_occupancy}}, \code{\link{get_coverage}}
+\code{\link{get_scaled_occupancy,ribotrans-method}} for the method implementation.
+
+\code{\link{get_occupancy}}: Extract raw ribosome occupancy.
+\code{\link{get_coverage}}: Extract RNA coverage.
+\code{\link{ribotrans}}: The S4 class storing input data.
 }
