@@ -132,6 +132,8 @@ construct_ribotrans <- function(gtf_file = NULL,
       features.g <- features.g[which(features.g$transcript_id %in% longest.tid$transcript_id),]
 
     }
+  }else{
+    features.g <- data.frame()
   }
   # ============================================================================
   # extract library info
