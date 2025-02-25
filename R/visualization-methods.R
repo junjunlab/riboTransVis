@@ -212,7 +212,7 @@ setMethod("trans_plot",
               # sample orders
               if(!is.null(sample_order)){
                 if(sep_mer_sample == TRUE){
-                  tmp.df$sample <- factor(tmp.df$sample ,levels = c(sample_order,"merged sample"))
+                  tmp.df$sp <- factor(tmp.df$sp ,levels = c(sample_order,"merged sample"))
                 }else{
                   tmp.df$sample <- factor(tmp.df$sample ,levels = sample_order)
                 }
