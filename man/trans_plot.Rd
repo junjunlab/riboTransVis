@@ -12,6 +12,7 @@ trans_plot(object, ...)
   selected_id = NULL,
   type = c("ribo", "rna", "ribo_rna", "scaled_ribo"),
   layer = c("line", "col"),
+  sample_order = NULL,
   facet_layer = ggplot2::facet_grid(sample ~ rname, switch = "y"),
   sep_mer_sample = FALSE,
   new_signal_range = TRUE,
@@ -49,6 +50,8 @@ Possible values are:
 \item \code{"line"}: Line plot.
 \item \code{"col"}: Bar (column) plot.
 }}
+
+\item{sample_order}{The sample orders to be plotted.  Default: \code{NULL}.}
 
 \item{facet_layer}{ggplot2 faceting specification, default facet_grid(sample~rname,switch = "y").}
 

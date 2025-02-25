@@ -35,6 +35,7 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #'     \item \code{"line"}: Line plot.
 #'     \item \code{"col"}: Bar (column) plot.
 #'   }
+#' @param sample_order The sample orders to be plotted.  Default: `NULL`.
 #' @param facet_layer ggplot2 faceting specification, default facet_grid(sample~rname,switch = "y").
 #' @param sep_mer_sample  Logical. Whether show samples separately and merged for different panels. Default: `FALSE`.
 #' @param new_signal_range Logical. If `TRUE`, adds a signal range annotation to the plot. Default: `TRUE`.
@@ -72,6 +73,7 @@ setMethod("trans_plot",
                    selected_id = NULL,
                    type = c("ribo","rna","ribo_rna","scaled_ribo"),
                    layer = c("line", "col"),
+                   sample_order = NULL,
                    facet_layer = ggplot2::facet_grid(sample~rname,switch = "y"),
                    sep_mer_sample = FALSE,
                    new_signal_range = TRUE,
@@ -205,6 +207,16 @@ setMethod("trans_plot",
                 tmp.df <- rbind(tmp.df2, tmp.df)
 
                 facet_layer <- ggplot2::facet_grid(sp~rname,switch = "y")
+              }
+
+              # sample orders
+              if(!is.null(sample_order)){
+                if(sep_mer_sample == TRUE){
+                  tmp.df$sample <- factor(tmp.df$sample ,levels = c(sample_order,"merged sample"))
+                }else{
+                  tmp.df$sample <- factor(tmp.df$sample ,levels = sample_order)
+                }
+
               }
 
               # plot
