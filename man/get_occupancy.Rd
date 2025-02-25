@@ -7,12 +7,7 @@
 \usage{
 get_occupancy(object, ...)
 
-\S4method{get_occupancy}{ribotrans}(
-  object,
-  gene_name = NULL,
-  smooth = c("FALSE", "TRUE"),
-  slide_window = 30
-)
+\S4method{get_occupancy}{ribotrans}(object, gene_name = NULL, smooth = FALSE, slide_window = 30)
 }
 \arguments{
 \item{object}{A \code{ribotrans} object containing ribosome profiling BAM files and library metadata.}
@@ -22,7 +17,7 @@ get_occupancy(object, ...)
 \item{gene_name}{Character. Name of the gene from which to extract coverage.
 If \code{NULL} (default), retrieves coverage for all genes.}
 
-\item{smooth}{Character. Should the data be smoothed? Options: \code{"FALSE"} or \code{"TRUE"}. Default is \code{"FALSE"}.}
+\item{smooth}{Character. Should the data be smoothed? Options: \code{FALSE} or \code{TRUE}. Default is \code{FALSE}.}
 
 \item{slide_window}{Integer. The number of nucleotides for smoothing (used only if \code{smooth = "TRUE"}). Default is \code{30}.}
 }

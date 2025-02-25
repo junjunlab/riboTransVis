@@ -2,22 +2,23 @@
 # visualization
 # ==============================================================================
 
-#' Visualize transcript signals
+#' @title Visualize transcript signals
 #'
-#' Generic function definition for visualizing transcript-level signals, including ribosome occupancy and RNA-seq coverage.
+#' @description Generic function definition for visualizing transcript-level signals, including ribosome occupancy and RNA-seq coverage.
 #'
 #' @param object The main object containing required data for visualization. Typically an S4 class object, such as `ribotrans`.
 #' @param ... Additional parameters to be used in specific method implementations.
 #'
 #' @seealso \code{\link{trans_plot,ribotrans-method}} for the method implementation specific to the `ribotrans` class.
 #' @export
+#' @rdname trans_plot
 setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 
 
 
-#' Plot transcript-based ribosome profiling and RNA-seq results
+#' @title Plot transcript-based ribosome profiling and RNA-seq results
 #'
-#' Method implementation for `trans_plot`, specifically for objects of class `ribotrans`.
+#' @description Method implementation for `trans_plot`, specifically for objects of class `ribotrans`.
 #'
 #' @param object An S4 object of class `ribotrans`, containing ribosome profiling data, RNA-seq data, and gene annotation features.
 #' @param selected_id A character vector of specific transcript IDs to plot. Defaults to \code{NULL}, where all transcripts associated with the gene are plotted.
@@ -62,6 +63,7 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #' @importFrom cowplot plot_grid
 #' @importFrom ggpp annotate
 #' @export
+#' @rdname trans_plot
 setMethod("trans_plot",
           signature(object = "ribotrans"),
           function(object,
@@ -84,6 +86,11 @@ setMethod("trans_plot",
             layer <- match.arg(layer, choices = c("line", "col"))
 
             if(type == "ribo"){
+              # check data
+              if(nrow(object@ribo_occupancy) == 0){
+                stop("Please run `get_occupancy` first!")
+              }
+
               pldf <- object@ribo_occupancy
               ylab <- "Ribsome footprint occupancy"
 
@@ -95,6 +102,11 @@ setMethod("trans_plot",
 
               col <- NULL
             }else if(type == "rna"){
+              # check data
+              if(nrow(object@RNA_coverage) == 0){
+                stop("Please run `get_coverage` first!")
+              }
+
               pldf <- object@RNA_coverage
               ylab <- "RNA reads coverage"
 
@@ -107,6 +119,11 @@ setMethod("trans_plot",
               col <- NULL
             }else if(type == "ribo_rna"){
               ylab <- "Ribsome footprint occupancy \n (RNA reads coverage)"
+
+              # check data
+              if(nrow(object@scaled_occupancy) == 0){
+                stop("Please run `get_scaled_occupancy` first!")
+              }
 
               ribo <- object@ribo_occupancy
               ribo$exp <- "ribo"

@@ -327,7 +327,7 @@ getOccupancy <- function(bam_file = NULL,
   tmpdf <- purrr::map_df(seq_along(bam_data),function(x){
     tmp <- data.frame(bam_data[[x]]) %>%
       dplyr::group_by(rname,pos) %>%
-      dplyr::summarise(count = n(),.groups = "drop")
+      dplyr::summarise(count = dplyr::n(),.groups = "drop")
 
     return(tmp)
   })

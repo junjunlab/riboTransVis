@@ -147,7 +147,7 @@ getOccupancyGenome <- function(bam_file = NULL,
 
   bminfo <- bminfo %>%
     dplyr::group_by(rname,pos) %>%
-    dplyr::summarise(count = n(),.groups = "drop") %>%
+    dplyr::summarise(count = dplyr::n(),.groups = "drop") %>%
     dplyr::rename(seqnames = rname, start = pos) %>%
     dplyr::mutate(end = start,.after = "start")
 

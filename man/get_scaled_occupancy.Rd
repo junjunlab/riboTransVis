@@ -7,14 +7,14 @@
 \usage{
 get_scaled_occupancy(object, ...)
 
-\S4method{get_scaled_occupancy}{ribotrans}(object, smooth = c("TRUE", "FALSE"), slide_window = 30)
+\S4method{get_scaled_occupancy}{ribotrans}(object, smooth = TRUE, slide_window = 30)
 }
 \arguments{
 \item{object}{A \code{ribotrans} object containing both \code{ribo_occupancy} and \code{RNA_coverage} data.}
 
 \item{...}{Additional arguments passed to specific methods.}
 
-\item{smooth}{Character. Should the data be smoothed? Options: \code{"TRUE"} or \code{"FALSE"}. Default is \code{"TRUE"}.}
+\item{smooth}{Character. Should the data be smoothed? Options: \code{TRUE} or \code{FALSE}. Default is \code{TRUE}.}
 
 \item{slide_window}{Integer. The window size for smoothing (used only if \code{smooth = "TRUE"}). Default: \code{30}.}
 }

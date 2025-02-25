@@ -67,7 +67,7 @@ setMethod("generate_summary",
 
               tinfo <- data.frame(bam_data[[1]]) %>%
                 fastplyr::f_group_by(rname,pos,qwidth) %>%
-                fastplyr::f_summarise(count = n())
+                fastplyr::f_summarise(count = dplyr::n())
 
               tinfo$sample <- gp[x]
 
@@ -112,7 +112,7 @@ setGeneric("get_coverage",function(object,...) standardGeneric("get_coverage"))
 #' @param object A `ribotrans` object containing RNA-seq BAM files and library metadata.
 #' @param gene_name Character. Name of the gene from which to extract coverage.
 #'    If `NULL` (default), retrieves coverage for all genes.
-#' @param smooth Character. Should the data be smoothed? Options: `"FALSE"` or `"TRUE"`. Default is `"FALSE"`.
+#' @param smooth Character. Should the data be smoothed? Options: `FALSE` or `TRUE`. Default is `FALSE`.
 #' @param slide_window Integer. The window size for smoothing (only used if `smooth = "TRUE"`). Default: `30`.
 #'
 #' @details
@@ -153,9 +153,9 @@ setGeneric("get_coverage",function(object,...) standardGeneric("get_coverage"))
 setMethod("get_coverage",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
-                   smooth = c("FALSE", "TRUE"),
+                   smooth = FALSE,
                    slide_window = 30){
-            smooth <- match.arg(smooth, c("FALSE", "TRUE"))
+            # smooth <- match.arg(smooth, c(FALSE, TRUE))
 
             bf <- subset(object@bam_file, type == "rna")
             rnabams <- bf$bam
@@ -187,16 +187,16 @@ setMethod("get_coverage",
             }) -> rna.df
 
             # smooth for each position
-            if(smooth == TRUE){
-              sm.df <- smoothEachPosition(features = object@features,
-                                          posdf = rna.df,
-                                          slide_window = slide_window)
+            sm.df <- smoothEachPosition(features = object@features,
+                                        posdf = rna.df,
+                                        slide_window = slide_window)
 
+            if(smooth == TRUE){
               object@RNA_coverage <- sm.df
               object@RNA.smoothed <- "TRUE"
             }else{
-              rna.df$smooth <- rna.df$rpm
-              object@RNA_coverage <- rna.df
+              sm.df$smooth <- sm.df$rpm
+              object@RNA_coverage <- sm.df
               object@RNA.smoothed <- "FALSE"
             }
 
@@ -230,7 +230,7 @@ setGeneric("get_occupancy",function(object,...) standardGeneric("get_occupancy")
 #' @param object A `ribotrans` object containing ribosome profiling BAM files and library metadata.
 #' @param gene_name Character. Name of the gene from which to extract coverage.
 #'    If `NULL` (default), retrieves coverage for all genes.
-#' @param smooth Character. Should the data be smoothed? Options: `"FALSE"` or `"TRUE"`. Default is `"FALSE"`.
+#' @param smooth Character. Should the data be smoothed? Options: `FALSE` or `TRUE`. Default is `FALSE`.
 #' @param slide_window Integer. The number of nucleotides for smoothing (used only if `smooth = "TRUE"`). Default is `30`.
 #'
 #' @details
@@ -272,9 +272,9 @@ setGeneric("get_occupancy",function(object,...) standardGeneric("get_occupancy")
 setMethod("get_occupancy",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
-                   smooth = c("FALSE", "TRUE"),
+                   smooth = FALSE,
                    slide_window = 30){
-            smooth <- match.arg(smooth, c("FALSE", "TRUE"))
+            # smooth <- match.arg(smooth, c(FALSE, TRUE))
 
             bf <- subset(object@bam_file, type == "ribo")
             ribobams <- bf$bam
@@ -306,16 +306,16 @@ setMethod("get_occupancy",
             }) -> ribo.df
 
             # smooth for each position
-            if(smooth == TRUE){
-              sm.df <- smoothEachPosition(features = object@features,
-                                          posdf = ribo.df,
-                                          slide_window = slide_window)
+            sm.df <- smoothEachPosition(features = object@features,
+                                        posdf = ribo.df,
+                                        slide_window = slide_window)
 
+            if(smooth == TRUE){
               object@ribo_occupancy <- sm.df
               object@ribo.smoothed <- "TRUE"
             }else{
-              ribo.df$smooth <- ribo.df$rpm
-              object@ribo_occupancy <- ribo.df
+              sm.df$smooth <- sm.df$rpm
+              object@ribo_occupancy <- sm.df
               object@ribo.smoothed <- "FALSE"
             }
 
@@ -348,7 +348,7 @@ setGeneric("get_scaled_occupancy",function(object,...) standardGeneric("get_scal
 #'     (`ribo_occupancy`) by RNA-seq coverage (`RNA_coverage`), optionally applying a smoothing function.
 #'
 #' @param object A `ribotrans` object containing both `ribo_occupancy` and `RNA_coverage` data.
-#' @param smooth Character. Should the data be smoothed? Options: `"TRUE"` or `"FALSE"`. Default is `"TRUE"`.
+#' @param smooth Character. Should the data be smoothed? Options: `TRUE` or `FALSE`. Default is `TRUE`.
 #' @param slide_window Integer. The window size for smoothing (used only if `smooth = "TRUE"`). Default: `30`.
 #'
 #' @details
@@ -385,9 +385,9 @@ setGeneric("get_scaled_occupancy",function(object,...) standardGeneric("get_scal
 setMethod("get_scaled_occupancy",
           signature(object = "ribotrans"),
           function(object,
-                   smooth = c("TRUE", "FALSE"),
+                   smooth = TRUE,
                    slide_window = 30){
-            smooth <- match.arg(smooth, c("TRUE", "FALSE"))
+            # smooth <- match.arg(smooth, c(TRUE, FALSE))
 
             # ribo rpm/rna rpm for each position
 
@@ -402,10 +402,10 @@ setMethod("get_scaled_occupancy",
 
             # run
             mb <- object@ribo_occupancy %>%
-              dplyr::select(sample,rname,pos,smooth) %>%
-              dplyr::left_join(y = object@RNA_coverage[,c("sample","rname","pos","smooth")],
+              dplyr::select(sample,rname,pos,rpm) %>%
+              dplyr::left_join(y = object@RNA_coverage[,c("sample","rname","pos","rpm")],
                                by = c("sample","rname","pos")) %>%
-              dplyr::mutate(enrich = (smooth.x/smooth.y)) %>%
+              dplyr::mutate(enrich = (rpm.x/rpm.y)) %>%
               dplyr::mutate(enrich = ifelse(is.na(enrich) | is.infinite(enrich),0,enrich))
 
             # loop for each sample and transcript to smooth
