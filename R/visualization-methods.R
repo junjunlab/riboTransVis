@@ -36,6 +36,7 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #'     \item \code{"col"}: Bar (column) plot.
 #'   }
 #' @param facet_layer ggplot2 faceting specification, default facet_grid(sample~rname,switch = "y").
+#' @param sep_mer_sample  Logical. Whether show samples separately and merged for different panels. Default: `FALSE`.
 #' @param new_signal_range Logical. If `TRUE`, adds a signal range annotation to the plot. Default: `TRUE`.
 #' @param range_x Numerics specifying the x position of the signal range annotation
 #'   in normalized parent coordinates `[0, 1]`. Default: `0.9`.
@@ -72,6 +73,7 @@ setMethod("trans_plot",
                    type = c("ribo","rna","ribo_rna","scaled_ribo"),
                    layer = c("line", "col"),
                    facet_layer = ggplot2::facet_grid(sample~rname,switch = "y"),
+                   sep_mer_sample = FALSE,
                    new_signal_range = TRUE,
                    range_x = 0.9,
                    range_y = 0.9,
@@ -194,6 +196,18 @@ setMethod("trans_plot",
                 range_label <- NULL
               }
 
+              # whether show merged sample and seperate sample together
+              if(sep_mer_sample == TRUE){
+                tmp.df2 <- tmp.df
+                tmp.df2$sp <- "merged sample"
+
+                tmp.df$sp <- tmp.df$sample
+                tmp.df <- rbind(tmp.df2, tmp.df)
+
+                facet_layer <- ggplot2::facet_grid(sp~rname,switch = "y")
+              }
+
+              # plot
               p <-
                 ggplot(tmp.df) +
                 player +

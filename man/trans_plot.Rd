@@ -13,6 +13,7 @@ trans_plot(object, ...)
   type = c("ribo", "rna", "ribo_rna", "scaled_ribo"),
   layer = c("line", "col"),
   facet_layer = ggplot2::facet_grid(sample ~ rname, switch = "y"),
+  sep_mer_sample = FALSE,
   new_signal_range = TRUE,
   range_x = 0.9,
   range_y = 0.9,
@@ -50,6 +51,8 @@ Possible values are:
 }}
 
 \item{facet_layer}{ggplot2 faceting specification, default facet_grid(sample~rname,switch = "y").}
+
+\item{sep_mer_sample}{Logical. Whether show samples separately and merged for different panels. Default: \code{FALSE}.}
 
 \item{new_signal_range}{Logical. If \code{TRUE}, adds a signal range annotation to the plot. Default: \code{TRUE}.}
 
