@@ -12,6 +12,7 @@ trans_plot(object, ...)
   selected_id = NULL,
   type = c("ribo", "rna", "ribo_rna", "scaled_ribo"),
   layer = c("line", "col"),
+  facet_layer = ggplot2::facet_grid(sample ~ rname, switch = "y"),
   new_signal_range = TRUE,
   range_x = 0.9,
   range_y = 0.9,
@@ -47,6 +48,8 @@ Possible values are:
 \item \code{"line"}: Line plot.
 \item \code{"col"}: Bar (column) plot.
 }}
+
+\item{facet_layer}{ggplot2 faceting specification, default facet_grid(sample~rname,switch = "y").}
 
 \item{new_signal_range}{Logical. If \code{TRUE}, adds a signal range annotation to the plot. Default: \code{TRUE}.}
 

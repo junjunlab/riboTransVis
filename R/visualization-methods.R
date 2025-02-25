@@ -35,6 +35,7 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #'     \item \code{"line"}: Line plot.
 #'     \item \code{"col"}: Bar (column) plot.
 #'   }
+#' @param facet_layer ggplot2 faceting specification, default facet_grid(sample~rname,switch = "y").
 #' @param new_signal_range Logical. If `TRUE`, adds a signal range annotation to the plot. Default: `TRUE`.
 #' @param range_x Numerics specifying the x position of the signal range annotation
 #'   in normalized parent coordinates `[0, 1]`. Default: `0.9`.
@@ -70,6 +71,7 @@ setMethod("trans_plot",
                    selected_id = NULL,
                    type = c("ribo","rna","ribo_rna","scaled_ribo"),
                    layer = c("line", "col"),
+                   facet_layer = ggplot2::facet_grid(sample~rname,switch = "y"),
                    new_signal_range = TRUE,
                    range_x = 0.9,
                    range_y = 0.9,
@@ -196,9 +198,9 @@ setMethod("trans_plot",
                 ggplot(tmp.df) +
                 player +
                 range_label +
-                theme_bw(base_size = 12) +
+                theme_bw() +
                 # facet_wrap(~sample,scales = "fixed",ncol = 1,switch = "y") +
-                facet_grid(sample~rname,switch = "y") +
+                facet_layer +
                 theme(panel.grid = element_blank(),
                       axis.text = element_text(colour = "black"),
                       strip.text = element_text(colour = "black",size = rel(1)),
