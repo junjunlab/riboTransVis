@@ -1,4 +1,4 @@
-globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew",
+globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","allexp", "ave", "cds", "relexp",
                   "mstart", "mstop", "n", "na.omit", "new","count", "counts", "frame", "qwidth",
                   "pos", "rname", "smooth", "rpm.x", "rpm.y", "transcript_id", "strand",
                   "translen", "type", "utr3","utr5", "which_label", "width","f_len", "object",

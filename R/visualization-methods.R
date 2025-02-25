@@ -607,7 +607,7 @@ setMethod("metagene_plot",
                 fastplyr::f_group_by(sample,rel,frame) %>%
                 fastplyr::f_summarise(normval = sum(rpm)/ttt)
 
-              pltlayer <- geom_line(aes(x = rel, y = smooth, color = factor(frame)))
+              pltlayer <- geom_line(aes(x = rel, y = relexp, color = factor(frame)))
               col <- scale_color_manual(values = c("0" = "#663366", "1" = "#996699", "2" = "#CC99CC"),
                                         name ="frame")
             }else{
@@ -615,7 +615,7 @@ setMethod("metagene_plot",
                 fastplyr::f_group_by(sample,rel) %>%
                 fastplyr::f_summarise(normval = sum(rpm)/ttt)
 
-              pltlayer <- geom_line(aes(x = rel, y = smooth))
+              pltlayer <- geom_line(aes(x = rel, y = relexp))
               col <- NULL
             }
 
@@ -656,6 +656,16 @@ setMethod("metagene_plot",
 
             }
 
+
+            ave.tmp <- sm.df %>%
+              dplyr::group_by(sample) %>%
+              dplyr::summarise(allexp = sum(normval)) %>%
+              dplyr::mutate(ave = allexp/length(distrg)) %>%
+              dplyr::select(sample, ave)
+
+            sm.df <- sm.df %>%
+              dplyr::left_join(y = ave.tmp,by = "sample") %>%
+              dplyr::mutate(relexp = normval/ave)
 
             # plot
             p <-
