@@ -10,33 +10,68 @@ generate_summary(object, ...)
 \S4method{generate_summary}{ribotrans}(object, exp_type = c("ribo", "rna"), nThreads = 1)
 }
 \arguments{
-\item{object}{A \code{ribotrans} object containing library and feature information.}
+\item{object}{A ribotrans object containing BAM file information and transcript features}
 
 \item{...}{Additional arguments passed to methods}
 
-\item{exp_type}{Character string indicating experiment type. One of \code{"ribo"} (ribosome profiling)
-or \code{"rna"} (RNA-seq).}
+\item{exp_type}{Character, specify the experiment type to analyze:
+\itemize{
+\item "ribo": ribosome profiling data
+\item "rna": RNA-seq data
+}}
 
-\item{nThreads}{Integer specifying the number of threads to use for BAM file processing.}
+\item{nThreads}{Integer, number of threads to use for BAM file processing}
 }
 \value{
 An updated object containing summary information
 
-The input \code{ribotrans} object with an updated \code{summary_info} slot containing read count summaries.
+Returns the input ribotrans object with updated summary_info slot containing
+the processed mapping statistics
 }
 \description{
 Generic function to generate summary information from ribosome profiling
 or RNA-seq data.
 
-This method extracts read mapping information from BAM files and links it
-to transcript features in a \code{ribotrans} object.
+This method processes BAM files to generate position-wise read counts and mapping statistics
+for either ribosome profiling or RNA-seq data. It handles both transcriptome and genome-aligned
+data, performing appropriate coordinate conversions when necessary.
 }
 \details{
-This method processes BAM files corresponding to the specified experiment type (\code{ribo} or \code{rna}) and extracts:
+The function performs the following steps:
+\enumerate{
+\item Filters library information based on experiment type
+\item Processes each BAM file to extract read positions and counts
+\item For genome-aligned data:
 \itemize{
-\item Read positions (\code{pos})
-\item Read lengths (\code{qwidth})
-\item Read counts per transcript position
+\item Converts genomic coordinates to transcript coordinates
+\item Handles 5' or 3' end assignment based on strand information
 }
-The extracted mapping data is then merged with transcript annotation data from the \code{features} slot.
+\item For transcriptome-aligned data:
+\itemize{
+\item Directly uses transcript coordinates
+}
+\item Merges position information with transcript annotations
+}
+
+The resulting summary includes:
+\itemize{
+\item rname: transcript identifier
+\item pos: position along transcript
+\item qwidth: read length
+\item count: number of reads at each position
+\item sample: sample identifier
+\item mstart/mstop: CDS start/stop positions
+\item translen: transcript length
+}
+}
+\note{
+\itemize{
+\item For large BAM files, increasing nThreads can significantly improve processing speed
+\item Memory usage increases with BAM file size and number of threads
+\item Genome-aligned data requires more processing time due to coordinate conversion
+}
+}
+\seealso{
+\code{\link{construct_ribotrans}} for creating ribotrans objects
+\code{\link{get_occupancy}} for calculating ribosome occupancy
 }
