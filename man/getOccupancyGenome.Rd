@@ -8,7 +8,8 @@ getOccupancyGenome(
   bam_file = NULL,
   gene_name = NULL,
   features = NULL,
-  total_reads = NULL
+  total_reads = NULL,
+  assignment_mode = NULL
 )
 }
 \arguments{
@@ -19,6 +20,8 @@ getOccupancyGenome(
 \item{features}{A \code{data.frame} or \code{GRanges} object containing transcript annotation.}
 
 \item{total_reads}{Numeric. The total number of mapped reads (for RPM normalization).}
+
+\item{assignment_mode}{Character. Specifies the read assignment strategy: \code{"end5"} (5' end) or \code{"end3"} (3' end).}
 }
 \value{
 A \code{data.frame} with read occupancy information:

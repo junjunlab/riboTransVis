@@ -275,6 +275,7 @@ setMethod("get_occupancy",
                    smooth = FALSE,
                    slide_window = 30){
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
+            assignment_mode <- object@assignment_mode
 
             bf <- subset(object@bam_file, type == "ribo")
             ribobams <- bf$bam
@@ -291,7 +292,8 @@ setMethod("get_occupancy",
                 tmp <- getOccupancyGenome(bam_file = ribobams[x],
                                           gene_name = gene_name,
                                           features = object@genome_trans_features,
-                                          total_reads = totalreads[x])
+                                          total_reads = totalreads[x],
+                                          assignment_mode = assignment_mode)
               }else{
                 tmp <- getOccupancy(bam_file = ribobams[x],
                                     gene_name = gene_name,

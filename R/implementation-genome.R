@@ -80,6 +80,7 @@ prepareTransInfo_forGenome <- function(gtf_file = NULL){
 #' @param gene_name Character. The gene name for which read occupancy is extracted.
 #' @param features A `data.frame` or `GRanges` object containing transcript annotation.
 #' @param total_reads Numeric. The total number of mapped reads (for RPM normalization).
+#' @param assignment_mode Character. Specifies the read assignment strategy: `"end5"` (5' end) or `"end3"` (3' end).
 #'
 #' @return A `data.frame` with read occupancy information:
 #' \itemize{
@@ -117,7 +118,8 @@ prepareTransInfo_forGenome <- function(gtf_file = NULL){
 getOccupancyGenome <- function(bam_file = NULL,
                                gene_name = NULL,
                                features = NULL,
-                               total_reads = NULL){
+                               total_reads = NULL,
+                               assignment_mode = NULL){
   # filter genes
   query_region <- features %>%
     dplyr::rename(gene = gene_name) %>%
@@ -135,7 +137,7 @@ getOccupancyGenome <- function(bam_file = NULL,
   # list to data frame
   bminfo <- lapply(bam_data,FUN = data.frame) %>% do.call("rbind",.)
 
-  if(object@assignment_mode == "end5"){
+  if(assignment_mode == "end5"){
     # check strand to assign 5'end position
     bminfo <- bminfo %>%
       dplyr::mutate(pos = ifelse(strand == "-", pos + qwidth - 1, pos))

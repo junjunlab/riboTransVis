@@ -31,8 +31,10 @@ RNA-seq/Ribo-seq alignments are transcriptome-based or genome-based. Default is 
 
 \item{Ribo_sample_name}{A \code{character} vector representing ribosome profiling sample names.}
 
-\item{choose_longest_trans}{A logical value indicating whether to select only
-the longest transcript for each gene. Default is \code{FALSE}.}
+\item{choose_longest_trans}{Logical value indicating whether to select the longest transcript
+for each gene. If TRUE, only the longest transcript (based on CDS and transcript length)
+will be kept for each gene. This is useful to reduce redundancy when multiple transcript
+isoforms exist for a gene. If FALSE (default), all transcripts will be retained.}
 }
 \value{
 An object of class \code{ribotrans} containing BAM file metadata,

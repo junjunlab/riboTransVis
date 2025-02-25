@@ -56,8 +56,10 @@ ribotrans <- setClass("ribotrans",
 #' @param RNA_sample_name A `character` vector representing RNA-seq sample names.
 #' @param Ribo_bam_file A `character` vector containing paths to ribosome profiling BAM files.
 #' @param Ribo_sample_name A `character` vector representing ribosome profiling sample names.
-#' @param choose_longest_trans A logical value indicating whether to select only
-#'   the longest transcript for each gene. Default is `FALSE`.
+#' @param choose_longest_trans Logical value indicating whether to select the longest transcript
+#' for each gene. If TRUE, only the longest transcript (based on CDS and transcript length)
+#' will be kept for each gene. This is useful to reduce redundancy when multiple transcript
+#' isoforms exist for a gene. If FALSE (default), all transcripts will be retained.
 #'
 #' @details
 #' This function processes the transcriptome annotation and extracts alignment
@@ -109,29 +111,18 @@ construct_ribotrans <- function(gtf_file = NULL,
 
   # whether select longest transcript
   if(choose_longest_trans == TRUE){
-    dt_features <- as.data.table(features)
-
-    features <- dt_features[
-      dt_features[, .I[which.max(translen)], by = gene]$V1
-    ]
+    features <- features %>%
+      fastplyr::f_group_by(gene) %>%
+      fastplyr::f_arrange(cds, translen,.by_group = T,.descending = T) %>%
+      fastplyr::f_slice_head(n = 1,keep_order = T)
   }
 
   # check mapping_type
   if(mapping_type == "genome"){
     features.g <- prepareTransInfo_forGenome(gtf_file = gtf_file)
 
-    # whether select longest transcript
-    if(choose_longest_trans == TRUE){
-      longest.tid <- features.g %>%
-        dplyr::select(gene_name,transcript_id,f_len) %>%
-        unique() %>%
-        dplyr::group_by(gene_name,) %>%
-        dplyr::slice_max(order_by = f_len,n = 1)
-
-
-      features.g <- features.g[which(features.g$transcript_id %in% longest.tid$transcript_id),]
-
-    }
+    features.g <- features.g %>%
+      fastplyr::f_filter(transcript_id %in% features$transcript_id)
   }else{
     features.g <- data.frame()
   }
