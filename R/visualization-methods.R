@@ -98,7 +98,7 @@ setMethod("trans_plot",
               }
 
               pldf <- object@ribo_occupancy
-              ylab <- "Ribsome footprint occupancy"
+              ylab <- "Ribsome footprint occupancy (RPM)"
 
               if(layer == "line"){
                 player <- geom_path(aes(x = pos,y = smooth,color = sample))
@@ -114,7 +114,7 @@ setMethod("trans_plot",
               }
 
               pldf <- object@RNA_coverage
-              ylab <- "RNA reads coverage"
+              ylab <- "RNA reads coverage (RPM)"
 
               if(layer == "line"){
                 player <- geom_path(aes(x = pos,y = smooth,color = sample))

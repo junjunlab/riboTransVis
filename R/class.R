@@ -121,8 +121,9 @@ construct_ribotrans <- function(gtf_file = NULL,
   if(mapping_type == "genome"){
     features.g <- prepareTransInfo_forGenome(gtf_file = gtf_file)
 
-    features.g <- features.g %>%
-      fastplyr::f_filter(transcript_id %in% features$transcript_id)
+    data.table::setDT(features.g)
+    data.table::setDT(features)
+    features.g2 <- features.g[transcript_id %in% features$transcript_id]
   }else{
     features.g <- data.frame()
   }
