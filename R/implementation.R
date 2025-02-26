@@ -66,6 +66,8 @@ prepareTransInfo <- function(gtf_file = NULL){
 
   idtran <- gtf %>%
     dplyr::filter(type == "transcript") %>%
+    # deal with no gene name symbol with  transcript_id
+    dplyr::mutate(gene_name = ifelse(is.na(gene_name),transcript_id,gene_name)) %>%
     dplyr::mutate(idnew = paste(transcript_id,gene_name,sep = "|")) %>%
     dplyr::select(transcript_id,idnew) %>% unique() %>% na.omit()
 

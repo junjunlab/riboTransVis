@@ -39,6 +39,9 @@ Imports:
     scales,
     zoo
 Suggests: 
+    glue,
     knitr,
-    rmarkdown
+    rlang,
+    rmarkdown,
+    tibble
 VignetteBuilder: knitr

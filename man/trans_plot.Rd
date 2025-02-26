@@ -16,6 +16,7 @@ trans_plot(object, ...)
   facet_layer = ggplot2::facet_grid(sample ~ rname, switch = "y"),
   sep_mer_sample = FALSE,
   new_signal_range = TRUE,
+  position_mode = c("nt", "codon"),
   range_x = 0.9,
   range_y = 0.9,
   range_size = 4,
@@ -59,6 +60,12 @@ Possible values are:
 
 \item{new_signal_range}{Logical. If \code{TRUE}, adds a signal range annotation to the plot. Default: \code{TRUE}.}
 
+\item{position_mode}{Character, position display mode. One of:
+\itemize{
+\item "nt": nucleotide positions
+\item "codon": codon positions.
+}}
+
 \item{range_x}{Numerics specifying the x position of the signal range annotation
 in normalized parent coordinates \verb{[0, 1]}. Default: \code{0.9}.}
 
@@ -95,6 +102,21 @@ Method implementation for \code{trans_plot}, specifically for objects of class \
 This method facilitates visualizing transcript-level data from ribosome footprint profiling and RNA-seq analyses. The \code{type} parameter enables viewing raw ribosome or RNA data and scaled metrics. Annotations, such as UTR and CDS regions, are included for transcript-specific structural context.
 
 The plots are arranged in facets by sample and transcript ID, and plotting options (lines or bars) are easily customizable via the \code{layer} parameter.
+}
+\examples{
+\dontrun{
+# Plot ribosome footprint occupancy
+trans_plot(ribo_obj, type = "ribo")
+
+# Plot RNA coverage with custom sample order
+trans_plot(ribo_obj, type = "rna",
+          sample_order = c("Sample1", "Sample2"))
+
+# Plot combined ribo-RNA view in codon mode
+trans_plot(ribo_obj, type = "ribo_rna",
+          position_mode = "codon")
+}
+
 }
 \seealso{
 \code{\link{trans_plot,ribotrans-method}} for the method implementation specific to the \code{ribotrans} class.

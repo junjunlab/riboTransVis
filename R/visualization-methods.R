@@ -2,6 +2,7 @@
 # visualization
 # ==============================================================================
 
+
 #' @title Visualize transcript signals
 #'
 #' @description Generic function definition for visualizing transcript-level signals, including ribosome occupancy and RNA-seq coverage.
@@ -39,6 +40,9 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #' @param facet_layer ggplot2 faceting specification, default facet_grid(sample~rname,switch = "y").
 #' @param sep_mer_sample  Logical. Whether show samples separately and merged for different panels. Default: `FALSE`.
 #' @param new_signal_range Logical. If `TRUE`, adds a signal range annotation to the plot. Default: `TRUE`.
+#' @param position_mode Character, position display mode. One of:
+#'   * "nt": nucleotide positions
+#'   * "codon": codon positions.
 #' @param range_x Numerics specifying the x position of the signal range annotation
 #'   in normalized parent coordinates `[0, 1]`. Default: `0.9`.
 #' @param range_y Numerics specifying the y position of the signal range annotation
@@ -61,10 +65,24 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #' The plots are arranged in facets by sample and transcript ID, and plotting options (lines or bars) are easily customizable via the `layer` parameter.
 #'
 #' @seealso \code{\link{trans_plot}} for the generic function definition.
+#'
+#' @examples
+#' \dontrun{
+#' # Plot ribosome footprint occupancy
+#' trans_plot(ribo_obj, type = "ribo")
+#'
+#' # Plot RNA coverage with custom sample order
+#' trans_plot(ribo_obj, type = "rna",
+#'           sample_order = c("Sample1", "Sample2"))
+#'
+#' # Plot combined ribo-RNA view in codon mode
+#' trans_plot(ribo_obj, type = "ribo_rna",
+#'           position_mode = "codon")
+#' }
+#'
 #' @import ggplot2
 #' @importFrom ggside geom_xsidesegment scale_xsidey_continuous ggside
 #' @importFrom cowplot plot_grid
-#' @importFrom ggpp annotate
 #' @export
 #' @rdname trans_plot
 setMethod("trans_plot",
@@ -77,6 +95,7 @@ setMethod("trans_plot",
                    facet_layer = ggplot2::facet_grid(sample~rname,switch = "y"),
                    sep_mer_sample = FALSE,
                    new_signal_range = TRUE,
+                   position_mode = c("nt", "codon"),
                    range_x = 0.9,
                    range_y = 0.9,
                    range_size = 4,
@@ -90,6 +109,7 @@ setMethod("trans_plot",
             # check plot type
             type <- match.arg(type,choices = c("ribo","rna","ribo_rna","scaled_ribo"))
             layer <- match.arg(layer, choices = c("line", "col"))
+            position_mode <- match.arg(position_mode, choices = c("nt", "codon"))
 
             if(type == "ribo"){
               # check data
@@ -181,6 +201,36 @@ setMethod("trans_plot",
               tmp.df <- subset(pldf, rname == tids[x])
               tanno.tmp <- subset(tanno, rname == tids[x])
 
+              # check position_mode
+              if(position_mode == "codon"){
+                tmp.df <- tmp.df %>%
+                  dplyr::filter(pos >= tanno.tmp$mstart & pos <= tanno.tmp$mstop) %>%
+                  dplyr::mutate(pos = pos - tanno.tmp$mstart + 1) %>%
+                  dplyr::mutate(codon = (pos - 1) %/% 3 + 1) %>%
+                  dplyr::group_by(sample,rname,codon) %>%
+                  dplyr::summarise(smooth = mean(smooth)) %>%
+                  dplyr::rename(pos = codon)
+
+                xlab <- "Position along transcript (codon/AA)"
+
+                struc_layer1 <-
+                  geom_xsidesegment(data = tanno.tmp,
+                                    aes(x = 1,xend = tanno.tmp$cds/3,y = 0.5,yend = 0.5),
+                                    linewidth = cds_width,color = cds_col)
+                struc_layer2 <- NULL
+              }else{
+                xlab <- "Position along transcript (nt)"
+
+                struc_layer1 <-
+                  geom_xsidesegment(data = tanno.tmp,
+                                    aes(x = 1,xend = translen,y = 0.5,yend = 0.5),
+                                    linewidth = utr_width,color = utr_col)
+                struc_layer2 <-
+                  geom_xsidesegment(data = tanno.tmp,
+                                    aes(x = mstart,xend = mstop,y = 0.5,yend = 0.5),
+                                    linewidth = cds_width,color = cds_col)
+              }
+
               # whether add new signal range
               if(new_signal_range == TRUE){
                 axis.text.y = element_blank()
@@ -188,10 +238,10 @@ setMethod("trans_plot",
 
                 range <- paste("[0-",round(max(tmp.df$smooth),digits = range_digit),"]",sep = "")
 
-                range_label <- ggpp::annotate(geom = "text_npc",
-                                              npcx = range_x,npcy = range_y,
-                                              label = range,
-                                              size = range_size)
+                range_label <- annotate(geom = "text_npc",
+                                        npcx = range_x,npcy = range_y,
+                                        label = range,
+                                        size = range_size)
               }else{
                 axis.text.y = NULL
                 axis.ticks.y = NULL
@@ -239,10 +289,7 @@ setMethod("trans_plot",
                       ggside.panel.background = element_blank(),
                       ggside.panel.border = element_blank()) +
                 # gene structure
-                geom_xsidesegment(data = tanno.tmp,aes(x = 0,xend = translen,y = 0.5,yend = 0.5),
-                                  linewidth = utr_width,color = utr_col) +
-                geom_xsidesegment(data = tanno.tmp,aes(x = mstart,xend = mstop,y = 0.5,yend = 0.5),
-                                  linewidth = cds_width,color = cds_col) +
+                struc_layer1 + struc_layer2 +
                 ggside::scale_xsidey_continuous(breaks = NULL) +
                 xlab("Position along transcript") +
                 ylab(ylab) +
@@ -338,7 +385,7 @@ setMethod("length_plot",
 
             # plot
             p <-
-            ggplot(pltdf) +
+              ggplot(pltdf) +
               ptlayer +
               col +
               theme(panel.grid = element_blank(),
@@ -480,7 +527,7 @@ setMethod("relative_dist_plot",
 
             # plot
             p <-
-            ggplot(pltdf) +
+              ggplot(pltdf) +
               geom_col(aes(x = rel, y = counts, fill = factor(frame)),
                        width = 0.6, position = position_dodge2()) +
               theme(panel.grid = element_blank(),
