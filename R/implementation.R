@@ -175,7 +175,6 @@ prepareTransInfo <- function(gtf_file = NULL){
 #' @importFrom dplyr filter mutate if_else left_join
 #' @importFrom Biostrings writeXStringSet readDNAStringSet
 #' @importFrom GenomicFeatures extractTranscriptSeqs
-#' @importFrom AnnotationDbi select keys
 #' @importFrom GenomicRanges GRanges
 #'
 #' @export
@@ -255,10 +254,15 @@ get_transcript_sequence <- function(genome_file = NULL,
     }
 
     # id
-    tx2gene <- AnnotationDbi::select(txdb.fl,
-                                     keys = AnnotationDbi::keys(txdb.fl, "TXNAME"),
-                                     columns = c("TXNAME", "GENEID"),
-                                     keytype = "TXNAME")
+    if (requireNamespace("AnnotationDbi", quietly = TRUE)) {
+      tx2gene <- AnnotationDbi::select(txdb.fl,
+                                       keys = AnnotationDbi::keys(txdb.fl, "TXNAME"),
+                                       columns = c("TXNAME", "GENEID"),
+                                       keytype = "TXNAME")
+    } else {
+      warning("Package 'AnnotationDbi' is needed for this function to work.")
+    }
+
 
     # extract sequence
     totaltrans.seq <- GenomicFeatures::extractTranscriptSeqs(x = fa_file,
