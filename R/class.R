@@ -1,8 +1,8 @@
 globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","allexp", "ave", "cds", "relexp",
                   "mstart", "mstop", "n", "na.omit", "new","count", "counts", "frame", "qwidth",
                   "pos", "rname", "smooth", "rpm.x", "rpm.y", "transcript_id", "strand", "codon",
-                  "translen", "type", "utr3","utr5", "which_label", "width","f_len", "object",
-                  "mappped_reads", "normval", "rpm","start","end","gene_id", "seqnames"))
+                  "translen", "type", "utr3","utr5", "which_label", "width","f_len", "object", "len",
+                  "mappped_reads", "normval", "rpm","start","end","gene_id", "seqnames","idx", "idx.mx"))
 
 
 #' ribotrans Class
@@ -52,6 +52,12 @@ ribotrans <- setClass("ribotrans",
 #' @param mapping_type Character. Either `"transcriptome"` or `"genome"`, indicating whether
 #'        RNA-seq/Ribo-seq alignments are transcriptome-based or genome-based. Default is `"transcriptome"`.
 #' @param assignment_mode Character. Specifies the read assignment strategy: `"end5"` (5' end) or `"end3"` (3' end).
+#' @param extend Logical. Whether to extend sequences upstream and downstream of transcripts.
+#'              Default is FALSE.
+#' @param extend_upstream Numeric. Number of bases to extend upstream of transcript start.
+#'                       Only used when extend = TRUE. Default is 0.
+#' @param extend_downstream Numeric. Number of bases to extend downstream of transcript end.
+#'                         Only used when extend = TRUE. Default is 0.
 #' @param RNA_bam_file A `character` vector containing paths to RNA-seq BAM files.
 #' @param RNA_sample_name A `character` vector representing RNA-seq sample names.
 #' @param Ribo_bam_file A `character` vector containing paths to ribosome profiling BAM files.
@@ -88,13 +94,15 @@ ribotrans <- setClass("ribotrans",
 #'
 #'
 #' @importFrom Rsamtools idxstatsBam
-#' @importFrom data.table as.data.table
 #' @importFrom methods new
 #' @importFrom parallel detectCores
 #' @export
 construct_ribotrans <- function(gtf_file = NULL,
                                 mapping_type = c("transcriptome", "genome"),
                                 assignment_mode = c("end5", "end3"),
+                                extend = FALSE,
+                                extend_upstream = 0,
+                                extend_downstream = 0,
                                 RNA_bam_file = NULL,
                                 RNA_sample_name = NULL,
                                 Ribo_bam_file = NULL,
@@ -109,6 +117,17 @@ construct_ribotrans <- function(gtf_file = NULL,
   # transcriptome features
   features <- prepareTransInfo(gtf_file = gtf_file)
 
+  # check extend information
+  if(extend){
+    features <- features %>%
+      dplyr::mutate(utr5 = utr5 + extend_upstream,
+                    utr3 = utr3 + extend_downstream,
+                    exonlen = exonlen + extend_upstream + extend_downstream,
+                    translen = translen + extend_upstream + extend_downstream,
+                    mstart = dplyr::if_else(cds != 0,mstart + extend_upstream,mstart),
+                    mstop = dplyr::if_else(cds != 0,mstop + extend_upstream,mstop))
+  }
+
   # whether select longest transcript
   if(choose_longest_trans == TRUE){
     features <- features %>%
@@ -119,11 +138,27 @@ construct_ribotrans <- function(gtf_file = NULL,
 
   # check mapping_type
   if(mapping_type == "genome"){
-    features.g <- prepareTransInfo_forGenome(gtf_file = gtf_file)
 
-    data.table::setDT(features.g)
-    data.table::setDT(features)
-    features.g2 <- features.g[transcript_id %in% features$transcript_id]
+    if(extend){
+      gtf_input <- get_transcript_sequence(gtf_file = gtf_file,
+                                           extend = extend,
+                                           extend_upstream = extend_upstream,
+                                           extend_downstream = extend_downstream,
+                                           return_extend_region = TRUE)
+
+      features.g <- prepareTransInfo_forGenome(gtf_file = gtf_input)
+    }else{
+      features.g <- prepareTransInfo_forGenome(gtf_file = gtf_file)
+    }
+
+    if (requireNamespace("data.table", quietly = TRUE)) {
+      data.table::setDT(features.g)
+      data.table::setDT(features)
+      features.g2 <- features.g[transcript_id %in% features$transcript_id]
+    } else {
+      warning("Package 'data.table' is needed for this function to work.")
+    }
+
   }else{
     features.g <- data.frame()
   }

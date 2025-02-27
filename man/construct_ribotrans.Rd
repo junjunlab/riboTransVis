@@ -8,6 +8,9 @@ construct_ribotrans(
   gtf_file = NULL,
   mapping_type = c("transcriptome", "genome"),
   assignment_mode = c("end5", "end3"),
+  extend = FALSE,
+  extend_upstream = 0,
+  extend_downstream = 0,
   RNA_bam_file = NULL,
   RNA_sample_name = NULL,
   Ribo_bam_file = NULL,
@@ -22,6 +25,15 @@ construct_ribotrans(
 RNA-seq/Ribo-seq alignments are transcriptome-based or genome-based. Default is \code{"transcriptome"}.}
 
 \item{assignment_mode}{Character. Specifies the read assignment strategy: \code{"end5"} (5' end) or \code{"end3"} (3' end).}
+
+\item{extend}{Logical. Whether to extend sequences upstream and downstream of transcripts.
+Default is FALSE.}
+
+\item{extend_upstream}{Numeric. Number of bases to extend upstream of transcript start.
+Only used when extend = TRUE. Default is 0.}
+
+\item{extend_downstream}{Numeric. Number of bases to extend downstream of transcript end.
+Only used when extend = TRUE. Default is 0.}
 
 \item{RNA_bam_file}{A \code{character} vector containing paths to RNA-seq BAM files.}
 

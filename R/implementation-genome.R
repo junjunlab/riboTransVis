@@ -19,7 +19,6 @@
 #'   \item `f_len`: Total length of the transcript.
 #' }
 #'
-#' @importFrom rtracklayer import.gff
 #' @importFrom dplyr filter group_by summarise arrange mutate left_join select
 #'
 #' @examples
@@ -32,8 +31,17 @@
 #' @export
 prepareTransInfo_forGenome <- function(gtf_file = NULL){
   # load gtf
-  gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>%
-    data.frame()
+  if(is.character(gtf_file)){
+    if (requireNamespace("rtracklayer", quietly = TRUE)) {
+      gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>%
+        data.frame()
+    } else {
+      warning("Package 'rtracklayer' is needed for this function to work.")
+    }
+  }else if("data.frame" %in% class(gtf_file)){
+    gtf <- gtf_file
+  }
+
 
   # total transcript lenth
   features_len <- gtf %>%
@@ -95,7 +103,6 @@ prepareTransInfo_forGenome <- function(gtf_file = NULL){
 #' @importFrom GenomicRanges GRanges
 #' @importFrom IRanges findOverlaps
 #' @importFrom Rsamtools scanBam ScanBamParam scanBamFlag
-#' @importFrom S4Vectors queryHits subjectHits
 #' @importFrom parallel detectCores
 #'
 #' @examples
@@ -164,8 +171,13 @@ getOccupancyGenome <- function(bam_file = NULL,
   ov <- IRanges::findOverlaps(query = bminfo.rg,subject = trans_rg)
 
   # get overlap data
-  lo <- cbind(as.data.frame(bminfo.rg[S4Vectors::queryHits(ov)]),
-              as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+  if (requireNamespace("S4Vectors", quietly = TRUE)) {
+    lo <- cbind(as.data.frame(bminfo.rg[S4Vectors::queryHits(ov)]),
+                as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+  } else {
+    warning("Package 'S4Vectors' is needed for this function to work.")
+  }
+
 
   # make unique names
   names(lo) <- make.names(names(lo),unique = T)
@@ -218,7 +230,6 @@ getOccupancyGenome <- function(bam_file = NULL,
 #' @importFrom GenomicRanges GRanges
 #' @importFrom IRanges findOverlaps
 #' @importFrom Rsamtools pileup BamFile PileupParam ScanBamParam
-#' @importFrom S4Vectors queryHits subjectHits
 #'
 #' @examples
 #' \dontrun{
@@ -273,8 +284,13 @@ getCoverageGenome <- function(bam_file = NULL,
   ov <- IRanges::findOverlaps(query = pileinfo.rg,subject = trans_rg)
 
   # get overlap data
-  lo <- cbind(as.data.frame(pileinfo.rg[S4Vectors::queryHits(ov)]),
-              as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+  if (requireNamespace("S4Vectors", quietly = TRUE)) {
+    lo <- cbind(as.data.frame(pileinfo.rg[S4Vectors::queryHits(ov)]),
+                as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+  } else {
+    warning("Package 'S4Vectors' is needed for this function to work.")
+  }
+
 
   # make unique names
   names(lo) <- make.names(names(lo),unique = T)

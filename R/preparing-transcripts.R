@@ -50,7 +50,11 @@ pyExtractSeq <- function(gtf_file = NULL,
     })
 
     # sort gtf first
-    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf")
+    if (requireNamespace("rtracklayer", quietly = TRUE)) {
+      gtf <- rtracklayer::import.gff(gtf_file,format = "gtf")
+    } else {
+      warning("Package 'rtracklayer' is needed for this function to work.")
+    }
 
     # sort
     sorted_gtf <- gtf |> data.frame() |>

@@ -57,7 +57,6 @@ setGeneric("generate_summary",function(object,...) standardGeneric("generate_sum
 #' @importFrom Rsamtools scanBam ScanBamParam scanBamFlag
 #' @importFrom GenomicRanges GRanges
 #' @importFrom IRanges findOverlaps
-#' @importFrom S4Vectors queryHits subjectHits
 #' @importFrom dplyr mutate rename group_by summarise n case_when
 #' @importFrom fastplyr f_group_by f_summarise f_left_join
 #' @importFrom purrr map_df
@@ -124,8 +123,13 @@ setMethod("generate_summary",
                 ov <- IRanges::findOverlaps(query = tinfo.gr,subject = trans_rg)
 
                 # get overlap data
-                lo <- cbind(as.data.frame(tinfo.gr[S4Vectors::queryHits(ov)]),
-                            as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+                if (requireNamespace("S4Vectors", quietly = TRUE)) {
+                  lo <- cbind(as.data.frame(tinfo.gr[S4Vectors::queryHits(ov)]),
+                              as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+                } else {
+                  warning("Package 'S4Vectors' is needed for this function to work.")
+                }
+
 
                 # make unique names
                 names(lo) <- make.names(names(lo),unique = T)
@@ -455,7 +459,6 @@ setGeneric("get_scaled_occupancy",function(object,...) standardGeneric("get_scal
 #'
 #' @importFrom dplyr select left_join mutate filter
 #' @importFrom purrr map_df
-#' @importFrom zoo rollmean
 #' @export
 #' @rdname get_scaled_occupancy
 setMethod("get_scaled_occupancy",
@@ -503,7 +506,12 @@ setMethod("get_scaled_occupancy",
                     dplyr::filter(sample == sp[x])
 
                   # smooth data
-                  tmp3$smooth <- zoo::rollmean(tmp3$enrich, k = slide_window, fill = 0)
+                  if (requireNamespace("zoo", quietly = TRUE)) {
+                    tmp3$smooth <- zoo::rollmean(tmp3$enrich, k = slide_window, fill = 0)
+                  } else {
+                    warning("Package 'zoo' is needed for this function to work.")
+                  }
+
 
                   return(tmp3)
                 }) -> smooth.df

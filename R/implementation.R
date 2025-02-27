@@ -34,14 +34,17 @@
 #'   \item{gene}{Character: Gene name associated with the transcript.}
 #' }
 #'
-#' @importFrom rtracklayer import.gff
 #' @importFrom dplyr filter group_by summarise mutate select left_join
 #' @importFrom stats na.omit
 #' @export
 prepareTransInfo <- function(gtf_file = NULL){
   # load gtf
-  gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>%
-    data.frame()
+  if (requireNamespace("rtracklayer", quietly = TRUE)) {
+    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>%
+      data.frame()
+  } else {
+    warning("Package 'rtracklayer' is needed for this function to work.")
+  }
 
   # filter type
   exon <- gtf %>%
@@ -96,6 +99,183 @@ prepareTransInfo <- function(gtf_file = NULL){
 
 
 
+# ==============================================================================
+# function to extract transcript sequence
+# ==============================================================================
+
+#' Extract transcript sequences from genome and GTF files
+#'
+#' @description
+#' This function extracts transcript sequences based on genome and GTF annotation files.
+#' It supports extending sequences upstream and downstream of transcripts, and can
+#' return either the extended regions or the extracted sequences.
+#'
+#' @param genome_file Character. Path to the genome FASTA file.
+#' @param gtf_file Character. Path to the GTF annotation file.
+#' @param extend Logical. Whether to extend sequences upstream and downstream of transcripts.
+#'              Default is FALSE.
+#' @param extend_upstream Numeric. Number of bases to extend upstream of transcript start.
+#'                       Only used when extend = TRUE. Default is 0.
+#' @param extend_downstream Numeric. Number of bases to extend downstream of transcript end.
+#'                         Only used when extend = TRUE. Default is 0.
+#' @param return_extend_region Logical. If TRUE, returns the extended regions information
+#'                            instead of sequences. Default is FALSE.
+#' @param output_file Character. Path to save the output FASTA file. Required when
+#'                    return_extend_region = FALSE.
+#'
+#' @return If return_extend_region = TRUE, returns a data frame containing extended regions
+#'         information. Otherwise, writes sequences to the specified output file.
+#'
+#' @details
+#' The function performs the following steps:
+#' 1. Reads genome and GTF files
+#' 2. Processes exon information
+#' 3. Extends sequences if requested
+#' 4. Extracts transcript sequences or returns extended regions
+#'
+#' For transcript names, it combines transcript_id and gene_name with "|" as separator.
+#' If gene_name is not available, transcript_id is used instead.
+#'
+#' @note
+#' - Ensure input files exist and have correct formats
+#' - Genome file must have corresponding .fai index file or will be created
+#' - Extended regions are automatically adjusted to chromosome boundaries
+#'
+#' @examples
+#' \dontrun{
+#' # Basic usage
+#' get_transcript_sequence(
+#'   genome_file = "genome.fa",
+#'   gtf_file = "annotation.gtf",
+#'   output_file = "transcripts.fa"
+#' )
+#'
+#' # With extension
+#' get_transcript_sequence(
+#'   genome_file = "genome.fa",
+#'   gtf_file = "annotation.gtf",
+#'   extend = TRUE,
+#'   extend_upstream = 100,
+#'   extend_downstream = 100,
+#'   output_file = "transcripts_extended.fa"
+#' )
+#'
+#' # Return extended regions
+#' regions <- get_transcript_sequence(
+#'   genome_file = "genome.fa",
+#'   gtf_file = "annotation.gtf",
+#'   extend = TRUE,
+#'   extend_upstream = 100,
+#'   extend_downstream = 100,
+#'   return_extend_region = TRUE
+#' )
+#' }
+#'
+#' @importFrom Rsamtools FaFile indexFa
+#' @importFrom dplyr filter mutate if_else left_join
+#' @importFrom Biostrings writeXStringSet readDNAStringSet
+#' @importFrom GenomicFeatures extractTranscriptSeqs
+#' @importFrom AnnotationDbi select keys
+#' @importFrom GenomicRanges GRanges
+#'
+#' @export
+get_transcript_sequence <- function(genome_file = NULL,
+                                    gtf_file = NULL,
+                                    extend = FALSE,
+                                    extend_upstream = 0,
+                                    extend_downstream = 0,
+                                    return_extend_region = FALSE,
+                                    output_file = NULL){
+  # ============================================================================
+  # load genome and gtf
+  # ============================================================================
+  if(!is.null(genome_file)){
+    # extact chromosome length
+    fa <- Biostrings::readDNAStringSet(filepath = genome_file)
+    names(fa) <- sapply(strsplit(names(fa),split = " "),"[",1)
+
+    # chromosome length
+    chr_len <- data.frame(seqnames = names(fa),len = width(fa))
+
+    # load genome file
+    fa_file <- Rsamtools::FaFile(genome_file)
+    Rsamtools::indexFa(file = genome_file)
+  }
+
+  # load gtf file
+  if (requireNamespace("rtracklayer", quietly = TRUE)) {
+    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>%
+      data.frame()
+
+  } else {
+    warning("Package 'rtracklayer' is needed for this function to work.")
+  }
+
+  # ============================================================================
+  # prepare info to extract
+  # ============================================================================
+  exon <- gtf %>%
+    dplyr::filter(type == "exon") %>%
+    # add tid for non gene symbol
+    dplyr::mutate(gene_name = dplyr::if_else(is.na(gene_name),
+                                             transcript_id,gene_name)) %>%
+    # add new tid
+    dplyr::mutate(transcript_id = paste(transcript_id,gene_name,sep = "|"))
+
+  # check whether extend
+  if(extend){
+    exon.final <- exon %>%
+      # add exon index for each transcript
+      dplyr::mutate(idx = dplyr::if_else(strand == "+",1:dplyr::n(),dplyr::n():1),
+                    idx.mx = dplyr::n(),
+                    .by = transcript_id) %>%
+      # extend upstream and downstream
+      dplyr::mutate(start = dplyr::if_else(idx == 1 ,start - extend_upstream,start),
+                    end = dplyr::if_else(idx == idx.mx, end + extend_downstream, end)) %>%
+      # merge with chromosome length info
+      dplyr::left_join(y = chr_len,by = "seqnames") %>%
+      # check start and end boundary
+      dplyr::mutate(start = dplyr::if_else(start <= 0,1,start),
+                    end = dplyr::if_else(end > len,len,end)) %>%
+      # redefine region width
+      dplyr::mutate(width = abs(end - start) + 1)
+  }else{
+    exon.final <- exon
+  }
+
+  # check return what
+  if(return_extend_region == TRUE){
+    return(exon.final)
+  }else{
+    # to txdb format
+    if (requireNamespace("txdbmaker", quietly = TRUE)) {
+      txdb.fl <- txdbmaker::makeTxDbFromGRanges(GenomicRanges::GRanges(exon.final))
+    } else {
+      warning("Package 'txdbmaker' is needed for this function to work.")
+    }
+
+    # id
+    tx2gene <- AnnotationDbi::select(txdb.fl,
+                                     keys = AnnotationDbi::keys(txdb.fl, "TXNAME"),
+                                     columns = c("TXNAME", "GENEID"),
+                                     keytype = "TXNAME")
+
+    # extract sequence
+    totaltrans.seq <- GenomicFeatures::extractTranscriptSeqs(x = fa_file,
+                                                             transcripts = txdb.fl)
+
+    # assign names
+    names(totaltrans.seq) <- tx2gene$TXNAME
+
+
+    # output
+    Biostrings::writeXStringSet(x = totaltrans.seq,filepath = output_file,format = "fasta")
+  }
+
+}
+
+
+
 
 # ==============================================================================
 # smooth data for each position
@@ -135,7 +315,6 @@ prepareTransInfo <- function(gtf_file = NULL){
 #'
 #' @importFrom dplyr filter left_join
 #' @importFrom purrr map_df
-#' @importFrom zoo rollmean
 #' @export
 smoothEachPosition <- function(features = NULL, posdf= NULL,slide_window = 30){
   genesymbol <- sapply(strsplit(as.character(posdf$rname[1]), split = "\\|"),"[",2)
@@ -165,7 +344,12 @@ smoothEachPosition <- function(features = NULL, posdf= NULL,slide_window = 30){
       pos.df[is.na(pos.df)] <- 0
 
       # smooth data
-      pos.df$smooth <- zoo::rollmean(pos.df$rpm, k = slide_window, fill = 0)
+      if (requireNamespace("zoo", quietly = TRUE)) {
+        pos.df$smooth <- zoo::rollmean(pos.df$rpm, k = slide_window, fill = 0)
+      } else {
+        warning("Package 'zoo' is needed for this function to work.")
+      }
+
 
       return(pos.df)
     }) -> smooth.df

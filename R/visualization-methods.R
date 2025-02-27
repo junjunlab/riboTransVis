@@ -82,7 +82,6 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #'
 #' @import ggplot2
 #' @importFrom ggside geom_xsidesegment scale_xsidey_continuous ggside
-#' @importFrom cowplot plot_grid
 #' @export
 #' @rdname trans_plot
 setMethod("trans_plot",
@@ -300,7 +299,12 @@ setMethod("trans_plot",
             }) -> plist
 
             # combine plot list
-            cowplot::plot_grid(plotlist = plist,nrow = nrow,ncol = ncol)
+            if (requireNamespace("cowplot", quietly = TRUE)) {
+              cowplot::plot_grid(plotlist = plist,nrow = nrow,ncol = ncol)
+            } else {
+              warning("Package 'cowplot' is needed for this function to work.")
+            }
+
 
           }
 )
@@ -617,7 +621,6 @@ setGeneric("metagene_plot",function(object,...) standardGeneric("metagene_plot")
 #' @importFrom ggplot2 theme element_text element_blank
 #' @importFrom dplyr mutate filter left_join select summarise
 #' @importFrom fastplyr f_group_by f_summarise f_filter f_select f_left_join
-#' @importFrom zoo rollmean
 #' @importFrom purrr map_df
 #'
 #' @export
@@ -721,7 +724,11 @@ setMethod("metagene_plot",
                 tmp2 <- tmp2 %>%
                   dplyr::left_join(y = tmp,by = c("sample","rel"))
 
-                tmp2$smooth <- zoo::rollmean(tmp2$normval, k = slide_window, fill = 0)
+                if (requireNamespace("zoo", quietly = TRUE)) {
+                  tmp2$smooth <- zoo::rollmean(tmp2$normval, k = slide_window, fill = 0)
+                } else {
+                  warning("Package 'zoo' is needed for this function to work.")
+                }
 
                 return(tmp2)
               })-> sm.df

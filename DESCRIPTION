@@ -16,32 +16,36 @@ RoxygenNote: 7.3.2
 URL: https://github.com/junjunlab/riboTransVis
 BugReports: https://github.com/junjunlab/riboTransVis/issues
 Imports: 
+    AnnotationDbi,
     Biostrings,
-    cli,
-    cowplot,
-    data.table,
     dplyr,
     fastplyr,
+    GenomicFeatures,
     GenomicRanges,
     ggh4x,
     ggplot2,
-    ggpp,
     ggside,
     IRanges,
     magrittr,
-    methods,
     parallel,
     purrr,
     reticulate,
     Rsamtools,
-    rtracklayer,
-    S4Vectors,
-    scales,
-    zoo
+    scales
 Suggests: 
     glue,
     knitr,
     rlang,
     rmarkdown,
-    tibble
+    rtracklayer,
+    S4Vectors,
+    txdbmaker,
+    cowplot,
+    cli,
+    data.table,
+    tibble,
+    zoo,
+    pkgconfig
 VignetteBuilder: knitr
+Depends: 
+    methods
