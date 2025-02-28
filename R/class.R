@@ -151,13 +151,15 @@ construct_ribotrans <- function(gtf_file = NULL,
       features.g <- prepareTransInfo_forGenome(gtf_file = gtf_file)
     }
 
-    if (requireNamespace("data.table", quietly = TRUE)) {
-      data.table::setDT(features.g)
-      data.table::setDT(features)
-      features.g2 <- features.g[transcript_id %in% features$transcript_id]
-    } else {
-      warning("Package 'data.table' is needed for this function to work.")
-    }
+    features.g2 <- subset(features.g, transcript_id %in% features$transcript_id)
+
+    # if (requireNamespace("data.table", quietly = TRUE)) {
+    #   data.table::setDT(features.g)
+    #   data.table::setDT(features)
+    #   features.g2 <- features.g[transcript_id %in% features$transcript_id]
+    # } else {
+    #   warning("Package 'data.table' is needed for this function to work.")
+    # }
 
   }else{
     features.g <- data.frame()
