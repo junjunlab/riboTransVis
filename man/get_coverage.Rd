@@ -23,7 +23,8 @@ get_coverage(object, ...)
 \item{gene_name}{Character. Name of the gene from which to extract coverage.
 If \code{NULL} (default), retrieves coverage for all genes.}
 
-\item{smooth}{Character. Should the data be smoothed? Options: \code{FALSE} or \code{TRUE}. Default is \code{FALSE}.}
+\item{smooth}{Character. Should the data be smoothed? Options: \code{FALSE} or \code{TRUE}. Default is \code{FALSE}.
+If coordinate_to_trans is FALSE and mapping_type is genome, data will not be smoothed.}
 
 \item{coordinate_to_trans}{Logical. Whether to convert genomic coordinates to transcript
 coordinates. Default is FALSE.}

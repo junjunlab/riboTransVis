@@ -191,6 +191,7 @@ setGeneric("get_coverage",function(object,...) standardGeneric("get_coverage"))
 #' @param gene_name Character. Name of the gene from which to extract coverage.
 #'    If `NULL` (default), retrieves coverage for all genes.
 #' @param smooth Character. Should the data be smoothed? Options: `FALSE` or `TRUE`. Default is `FALSE`.
+#' If coordinate_to_trans is FALSE and mapping_type is genome, data will not be smoothed.
 #' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
 #'        coordinates. Default is FALSE.
 #' @param slide_window Integer. The window size for smoothing (only used if `smooth = "TRUE"`). Default: `30`.
@@ -317,6 +318,7 @@ setGeneric("get_occupancy",function(object,...) standardGeneric("get_occupancy")
 #' @param gene_name Character. Name of the gene from which to extract coverage.
 #'    If `NULL` (default), retrieves coverage for all genes.
 #' @param smooth Character. Should the data be smoothed? Options: `FALSE` or `TRUE`. Default is `FALSE`.
+#' If coordinate_to_trans is FALSE and mapping_type is genome, data will not be smoothed.
 #' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
 #'        coordinates. Default is FALSE.
 #' @param slide_window Integer. The number of nucleotides for smoothing (used only if `smooth = "TRUE"`). Default is `30`.
@@ -334,6 +336,7 @@ setGeneric("get_occupancy",function(object,...) standardGeneric("get_occupancy")
 #'    - `getOccupancy()` for **transcript-based BAM files**.
 #' 4. Merges all samples into a single `data.frame`.
 #' 5. **If `smooth = "TRUE"`**, applies a **sliding window smoothing** (`smoothEachPosition()`).
+#'
 #'
 #' The processed data is stored in `object@ribo_occupancy`, and the smoothing status is recorded in `object@ribo.smoothed`.
 #'

@@ -18,6 +18,8 @@ An S4 class to represent ribosome profiling data and associated information.
 
 \item{\code{library}}{A \code{data.frame} representing the sequencing library information.}
 
+\item{\code{gtf_data}}{A \code{GRanges} representing the gtf data for gene annotations.}
+
 \item{\code{assignment_mode}}{A \code{character} string indicating the methodology used for read assignment.}
 
 \item{\code{mapping_type}}{A \code{character} string specifying the mapping type (\code{"transcriptome"} or \code{"genome"}).}

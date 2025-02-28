@@ -159,7 +159,9 @@ getOccupancyGenome <- function(bam_file = NULL,
 
   bminfo <- bminfo %>%
     dplyr::group_by(rname,pos) %>%
-    dplyr::summarise(count = dplyr::n(),.groups = "drop")
+    dplyr::summarise(count = dplyr::n(),.groups = "drop") %>%
+    dplyr::filter(pos >= min(IRanges::start(query_region@ranges)) &
+                    pos <= max(IRanges::end(query_region@ranges)))
 
   # ============================================================================
   # check coordinate transform
@@ -323,7 +325,9 @@ getCoverageGenome <- function(bam_file = NULL,
     tdf <- lo %>%
       dplyr::select(rname,pos,count)
   }else{
-    tdf <- pileup_result
+    tdf <- pileup_result %>%
+      dplyr::filter(pos >= min(IRanges::start(query_region@ranges)) &
+                      pos <= max(IRanges::end(query_region@ranges)))
   }
 
 

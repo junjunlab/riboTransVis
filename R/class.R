@@ -11,6 +11,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
 #'
 #' @slot bam_file A `data.frame` containing BAM file data.
 #' @slot library A `data.frame` representing the sequencing library information.
+#' @slot gtf_data A `GRanges` representing the gtf data for gene annotations.
 #' @slot assignment_mode A `character` string indicating the methodology used for read assignment.
 #' @slot mapping_type A `character` string specifying the mapping type (`"transcriptome"` or `"genome"`).
 #' @slot features A `data.frame` describing transcript features (e.g., exons, genes).
@@ -28,6 +29,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
 ribotrans <- setClass("ribotrans",
                       slots = list("bam_file" = "data.frame",
                                    "library" = "data.frame",
+                                   "gtf_data" = "GRanges",
                                    "mapping_type" = "character",
                                    "assignment_mode" = "character",
                                    "features" = "data.frame",
@@ -114,6 +116,14 @@ construct_ribotrans <- function(gtf_file = NULL,
   # ============================================================================
   # prepare trans info
   # ============================================================================
+  # load gtf
+  if (requireNamespace("rtracklayer", quietly = TRUE)) {
+    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf")
+  } else {
+    warning("Package 'rtracklayer' is needed for this function to work.")
+  }
+
+
   # transcriptome features
   features <- prepareTransInfo(gtf_file = gtf_file)
 
@@ -153,14 +163,6 @@ construct_ribotrans <- function(gtf_file = NULL,
 
     features.g <- subset(features.g, transcript_id %in% features$transcript_id)
 
-    # if (requireNamespace("data.table", quietly = TRUE)) {
-    #   data.table::setDT(features.g)
-    #   data.table::setDT(features)
-    #   features.g <- features.g[transcript_id %in% features$transcript_id]
-    # } else {
-    #   warning("Package 'data.table' is needed for this function to work.")
-    # }
-
   }else{
     features.g <- data.frame()
   }
@@ -198,6 +200,7 @@ construct_ribotrans <- function(gtf_file = NULL,
 
   res <- methods::new("ribotrans",
                       "bam_file" = bam_file,
+                      "gtf_data" = gtf,
                       "library" = library,
                       "features" = features,
                       "mapping_type" = mapping_type,
