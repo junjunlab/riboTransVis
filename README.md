@@ -31,4 +31,10 @@ remotes::install_github("junjunlab/riboTransVis")
 
 > Jun Zhang (2025). *A Package for Ribosome Profiling Data Analysis.*  https://github.com/junjunlab/riboTransVis
 
+## Future plans
+
+We welcome any ideas or suggestions you may have for **riboTransVis**. Your feedback is invaluable in helping us improve the project. If you are interested in contributing, please feel free to reach out to us directly.
+
+Additionally, we invite you to contribute your code on our GitHub repository for ribotransvis. Collaborating with the community is key to enhancing the functionality and usability of our tools, and we would love to see your contributions!
+
 
