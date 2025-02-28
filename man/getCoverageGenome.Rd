@@ -8,7 +8,8 @@ getCoverageGenome(
   bam_file = NULL,
   gene_name = NULL,
   features = NULL,
-  total_reads = NULL
+  total_reads = NULL,
+  coordinate_to_trans = NULL
 )
 }
 \arguments{
@@ -19,6 +20,9 @@ getCoverageGenome(
 \item{features}{A \code{data.frame} or \code{GRanges} object containing transcript annotation.}
 
 \item{total_reads}{Numeric. The total number of mapped reads (for RPM normalization).}
+
+\item{coordinate_to_trans}{Logical. Whether to convert genomic coordinates to transcript
+coordinates. Default is FALSE.}
 }
 \value{
 A \code{data.frame} with transcript coverage information:

@@ -7,7 +7,13 @@
 \usage{
 get_occupancy(object, ...)
 
-\S4method{get_occupancy}{ribotrans}(object, gene_name = NULL, smooth = FALSE, slide_window = 30)
+\S4method{get_occupancy}{ribotrans}(
+  object,
+  gene_name = NULL,
+  smooth = FALSE,
+  coordinate_to_trans = NULL,
+  slide_window = 30
+)
 }
 \arguments{
 \item{object}{A \code{ribotrans} object containing ribosome profiling BAM files and library metadata.}
@@ -18,6 +24,9 @@ get_occupancy(object, ...)
 If \code{NULL} (default), retrieves coverage for all genes.}
 
 \item{smooth}{Character. Should the data be smoothed? Options: \code{FALSE} or \code{TRUE}. Default is \code{FALSE}.}
+
+\item{coordinate_to_trans}{Logical. Whether to convert genomic coordinates to transcript
+coordinates. Default is FALSE.}
 
 \item{slide_window}{Integer. The number of nucleotides for smoothing (used only if \code{smooth = "TRUE"}). Default is \code{30}.}
 }

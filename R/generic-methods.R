@@ -191,6 +191,8 @@ setGeneric("get_coverage",function(object,...) standardGeneric("get_coverage"))
 #' @param gene_name Character. Name of the gene from which to extract coverage.
 #'    If `NULL` (default), retrieves coverage for all genes.
 #' @param smooth Character. Should the data be smoothed? Options: `FALSE` or `TRUE`. Default is `FALSE`.
+#' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
+#'        coordinates. Default is FALSE.
 #' @param slide_window Integer. The window size for smoothing (only used if `smooth = "TRUE"`). Default: `30`.
 #'
 #' @details
@@ -232,6 +234,7 @@ setMethod("get_coverage",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
                    smooth = FALSE,
+                   coordinate_to_trans = NULL,
                    slide_window = 30){
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
 
@@ -250,7 +253,8 @@ setMethod("get_coverage",
                 tmp <- getCoverageGenome(bam_file = rnabams[x],
                                          gene_name = gene_name,
                                          features = object@genome_trans_features,
-                                         total_reads = totalreads[x])
+                                         total_reads = totalreads[x],
+                                         coordinate_to_trans = coordinate_to_trans)
               }else{
                 tmp <- getCoverage(bam_file = rnabams[x],
                                    gene_name = gene_name,
@@ -309,6 +313,8 @@ setGeneric("get_occupancy",function(object,...) standardGeneric("get_occupancy")
 #' @param gene_name Character. Name of the gene from which to extract coverage.
 #'    If `NULL` (default), retrieves coverage for all genes.
 #' @param smooth Character. Should the data be smoothed? Options: `FALSE` or `TRUE`. Default is `FALSE`.
+#' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
+#'        coordinates. Default is FALSE.
 #' @param slide_window Integer. The number of nucleotides for smoothing (used only if `smooth = "TRUE"`). Default is `30`.
 #'
 #' @details
@@ -351,6 +357,7 @@ setMethod("get_occupancy",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
                    smooth = FALSE,
+                   coordinate_to_trans = NULL,
                    slide_window = 30){
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
             assignment_mode <- object@assignment_mode
@@ -371,7 +378,8 @@ setMethod("get_occupancy",
                                           gene_name = gene_name,
                                           features = object@genome_trans_features,
                                           total_reads = totalreads[x],
-                                          assignment_mode = assignment_mode)
+                                          assignment_mode = assignment_mode,
+                                          coordinate_to_trans = coordinate_to_trans)
               }else{
                 tmp <- getOccupancy(bam_file = ribobams[x],
                                     gene_name = gene_name,

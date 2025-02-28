@@ -9,7 +9,8 @@ getOccupancyGenome(
   gene_name = NULL,
   features = NULL,
   total_reads = NULL,
-  assignment_mode = NULL
+  assignment_mode = NULL,
+  coordinate_to_trans = NULL
 )
 }
 \arguments{
@@ -22,6 +23,9 @@ getOccupancyGenome(
 \item{total_reads}{Numeric. The total number of mapped reads (for RPM normalization).}
 
 \item{assignment_mode}{Character. Specifies the read assignment strategy: \code{"end5"} (5' end) or \code{"end3"} (3' end).}
+
+\item{coordinate_to_trans}{Logical. Whether to convert genomic coordinates to transcript
+coordinates. Default is FALSE.}
 }
 \value{
 A \code{data.frame} with read occupancy information:

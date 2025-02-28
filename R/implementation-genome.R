@@ -89,6 +89,8 @@ prepareTransInfo_forGenome <- function(gtf_file = NULL){
 #' @param features A `data.frame` or `GRanges` object containing transcript annotation.
 #' @param total_reads Numeric. The total number of mapped reads (for RPM normalization).
 #' @param assignment_mode Character. Specifies the read assignment strategy: `"end5"` (5' end) or `"end3"` (3' end).
+#' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
+#'        coordinates. Default is FALSE.
 #'
 #' @return A `data.frame` with read occupancy information:
 #' \itemize{
@@ -126,7 +128,8 @@ getOccupancyGenome <- function(bam_file = NULL,
                                gene_name = NULL,
                                features = NULL,
                                total_reads = NULL,
-                               assignment_mode = NULL){
+                               assignment_mode = NULL,
+                               coordinate_to_trans = NULL){
   # filter genes
   query_region <- features %>%
     dplyr::rename(gene = gene_name) %>%
@@ -156,42 +159,50 @@ getOccupancyGenome <- function(bam_file = NULL,
 
   bminfo <- bminfo %>%
     dplyr::group_by(rname,pos) %>%
-    dplyr::summarise(count = dplyr::n(),.groups = "drop") %>%
-    dplyr::rename(seqnames = rname, start = pos) %>%
-    dplyr::mutate(end = start,.after = "start")
+    dplyr::summarise(count = dplyr::n(),.groups = "drop")
 
-  # to GRanges
-  bminfo.rg <- GenomicRanges::GRanges(bminfo)
+  # ============================================================================
+  # check coordinate transform
+  if(coordinate_to_trans == TRUE){
+    bminfo <- bminfo %>%
+      dplyr::rename(seqnames = rname, start = pos) %>%
+      dplyr::mutate(end = start,.after = "start")
 
-  # transcript annotation regions
-  trans_rg <- GenomicRanges::GRanges(features)
+    # to GRanges
+    bminfo.rg <- GenomicRanges::GRanges(bminfo)
+
+    # transcript annotation regions
+    trans_rg <- GenomicRanges::GRanges(features)
 
 
-  # genomic position to transcriptome position
-  ov <- IRanges::findOverlaps(query = bminfo.rg,subject = trans_rg)
+    # genomic position to transcriptome position
+    ov <- IRanges::findOverlaps(query = bminfo.rg,subject = trans_rg)
 
-  # get overlap data
-  if (requireNamespace("S4Vectors", quietly = TRUE)) {
-    lo <- cbind(as.data.frame(bminfo.rg[S4Vectors::queryHits(ov)]),
-                as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
-  } else {
-    warning("Package 'S4Vectors' is needed for this function to work.")
+    # get overlap data
+    if (requireNamespace("S4Vectors", quietly = TRUE)) {
+      lo <- cbind(as.data.frame(bminfo.rg[S4Vectors::queryHits(ov)]),
+                  as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+    } else {
+      warning("Package 'S4Vectors' is needed for this function to work.")
+    }
+
+
+    # make unique names
+    names(lo) <- make.names(names(lo),unique = T)
+
+    # calculate transcript position
+    tgene <- gene_name
+    lo <- lo %>%
+      dplyr::mutate(pos = dplyr::case_when(strand.1 == "+" ~ tx_len - abs(end.1 - start),
+                                           strand.1 == "-" ~ tx_len - abs(start - start.1)),
+                    rname = paste(transcript_id,gene_name,sep = "|")) %>%
+      dplyr::filter(gene_name == tgene)
+
+    # output
+    tdf <- lo %>% dplyr::select(rname,pos,count)
+  }else{
+    tdf <- bminfo
   }
-
-
-  # make unique names
-  names(lo) <- make.names(names(lo),unique = T)
-
-  # calculate transcript position
-  tgene <- gene_name
-  lo <- lo %>%
-    dplyr::mutate(pos = dplyr::case_when(strand.1 == "+" ~ tx_len - abs(end.1 - start),
-                                         strand.1 == "-" ~ tx_len - abs(start - start.1)),
-                  rname = paste(transcript_id,gene_name,sep = "|")) %>%
-    dplyr::filter(gene_name == tgene)
-
-  # output
-  tdf <- lo %>% dplyr::select(rname,pos,count)
 
   # rpm normalization
   tdf$rpm <- (tdf$count/total_reads)*10^6
@@ -216,6 +227,8 @@ getOccupancyGenome <- function(bam_file = NULL,
 #' @param gene_name Character. The gene name for which transcript coverage is extracted.
 #' @param features A `data.frame` or `GRanges` object containing transcript annotation.
 #' @param total_reads Numeric. The total number of mapped reads (for RPM normalization).
+#' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
+#'        coordinates. Default is FALSE.
 #'
 #' @return A `data.frame` with transcript coverage information:
 #' \itemize{
@@ -251,7 +264,8 @@ getOccupancyGenome <- function(bam_file = NULL,
 getCoverageGenome <- function(bam_file = NULL,
                               gene_name = NULL,
                               features = NULL,
-                              total_reads = NULL){
+                              total_reads = NULL,
+                              coordinate_to_trans = NULL){
   # filter genes
   query_region <- features %>%
     dplyr::rename(gene = gene_name) %>%
@@ -268,44 +282,50 @@ getCoverageGenome <- function(bam_file = NULL,
 
   colnames(pileup_result)[1] <- "rname"
 
+  # ============================================================================
+  # check coordinate transform
+  if(coordinate_to_trans == TRUE){
+    pileinfo <- pileup_result %>%
+      dplyr::rename(seqnames = rname, start = pos) %>%
+      dplyr::mutate(end = start,.after = "start")
 
-  pileinfo <- pileup_result %>%
-    dplyr::rename(seqnames = rname, start = pos) %>%
-    dplyr::mutate(end = start,.after = "start")
+    # to GRanges
+    pileinfo.rg <- GenomicRanges::GRanges(pileinfo)
 
-  # to GRanges
-  pileinfo.rg <- GenomicRanges::GRanges(pileinfo)
-
-  # transcript annotation regions
-  trans_rg <- GenomicRanges::GRanges(features)
+    # transcript annotation regions
+    trans_rg <- GenomicRanges::GRanges(features)
 
 
-  # genomic position to transcriptome position
-  ov <- IRanges::findOverlaps(query = pileinfo.rg,subject = trans_rg)
+    # genomic position to transcriptome position
+    ov <- IRanges::findOverlaps(query = pileinfo.rg,subject = trans_rg)
 
-  # get overlap data
-  if (requireNamespace("S4Vectors", quietly = TRUE)) {
-    lo <- cbind(as.data.frame(pileinfo.rg[S4Vectors::queryHits(ov)]),
-                as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
-  } else {
-    warning("Package 'S4Vectors' is needed for this function to work.")
+    # get overlap data
+    if (requireNamespace("S4Vectors", quietly = TRUE)) {
+      lo <- cbind(as.data.frame(pileinfo.rg[S4Vectors::queryHits(ov)]),
+                  as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+    } else {
+      warning("Package 'S4Vectors' is needed for this function to work.")
+    }
+
+
+    # make unique names
+    names(lo) <- make.names(names(lo),unique = T)
+
+    # calculate transcript position
+    tgene <- gene_name
+    lo <- lo %>%
+      dplyr::mutate(pos = dplyr::case_when(strand.1 == "+" ~ tx_len - abs(end.1 - start),
+                                           strand.1 == "-" ~ tx_len - abs(start - start.1)),
+                    rname = paste(transcript_id,gene_name,sep = "|")) %>%
+      dplyr::filter(gene_name == tgene)
+
+    # output
+    tdf <- lo %>%
+      dplyr::select(rname,pos,count)
+  }else{
+    tdf <- pileup_result
   }
 
-
-  # make unique names
-  names(lo) <- make.names(names(lo),unique = T)
-
-  # calculate transcript position
-  tgene <- gene_name
-  lo <- lo %>%
-    dplyr::mutate(pos = dplyr::case_when(strand.1 == "+" ~ tx_len - abs(end.1 - start),
-                                         strand.1 == "-" ~ tx_len - abs(start - start.1)),
-                  rname = paste(transcript_id,gene_name,sep = "|")) %>%
-    dplyr::filter(gene_name == tgene)
-
-  # output
-  tdf <- lo %>%
-    dplyr::select(rname,pos,count)
 
   # rpm normalization
   tdf$rpm <- (tdf$count/total_reads)*10^6
