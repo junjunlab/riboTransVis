@@ -237,10 +237,15 @@ setMethod("trans_plot",
 
                 range <- paste("[0-",round(max(tmp.df$smooth),digits = range_digit),"]",sep = "")
 
-                range_label <- annotate(geom = "text_npc",
-                                        npcx = range_x,npcy = range_y,
-                                        label = range,
-                                        size = range_size)
+                if (requireNamespace("ggpp", quietly = TRUE)) {
+                  range_label <- ggpp::annotate(geom = "text_npc",
+                                                npcx = range_x,npcy = range_y,
+                                                label = range,
+                                                size = range_size)
+                } else {
+                  warning("Package 'ggpp' is needed for this function to work.")
+                }
+
               }else{
                 axis.text.y = NULL
                 axis.ticks.y = NULL
