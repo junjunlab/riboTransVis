@@ -222,7 +222,7 @@ get_transcript_sequence <- function(genome_file = NULL,
     dplyr::mutate(transcript_id = paste(transcript_id,gene_name,sep = "|"))
 
   # check whether extend
-  if(extend){
+  if(extend == TRUE){
     exon.final <- exon %>%
       # add exon index for each transcript
       dplyr::mutate(idx = dplyr::if_else(strand == "+",1:dplyr::n(),dplyr::n():1),

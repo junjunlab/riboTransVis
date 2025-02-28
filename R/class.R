@@ -118,7 +118,7 @@ construct_ribotrans <- function(gtf_file = NULL,
   features <- prepareTransInfo(gtf_file = gtf_file)
 
   # check extend information
-  if(extend){
+  if(extend == TRUE){
     features <- features %>%
       dplyr::mutate(utr5 = utr5 + extend_upstream,
                     utr3 = utr3 + extend_downstream,
@@ -139,7 +139,7 @@ construct_ribotrans <- function(gtf_file = NULL,
   # check mapping_type
   if(mapping_type == "genome"){
 
-    if(extend){
+    if(extend == TRUE){
       gtf_input <- get_transcript_sequence(gtf_file = gtf_file,
                                            extend = extend,
                                            extend_upstream = extend_upstream,
