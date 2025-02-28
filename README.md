@@ -11,6 +11,10 @@
 
 ---
 
+## Workflow
+
+<img src="vignettes/ribotrans-workflow.png" align="right" height="auto" />
+
 ## Installation
 
 You can install the development version of riboTransVis like so:

@@ -146,8 +146,13 @@ setMethod("trans_plot",
               ylab <- "Ribsome footprint occupancy \n (RNA reads coverage)"
 
               # check data
-              if(nrow(object@scaled_occupancy) == 0){
-                stop("Please run `get_scaled_occupancy` first!")
+              if(nrow(object@ribo_occupancy) == 0){
+                stop("Please run `get_occupancy` first!")
+              }
+
+              # check data
+              if(nrow(object@RNA_coverage) == 0){
+                stop("Please run `get_coverage` first!")
               }
 
               ribo <- object@ribo_occupancy
@@ -169,6 +174,12 @@ setMethod("trans_plot",
 
             }else if(type == "scaled_ribo"){
               ylab <- "Scaled ribosome footprint occupancy"
+
+              # check data
+              if(nrow(object@scaled_occupancy) == 0){
+                stop("Please run `get_scaled_occupancy` first!")
+              }
+
 
               pldf <- object@scaled_occupancy
 
@@ -295,7 +306,7 @@ setMethod("trans_plot",
                 # gene structure
                 struc_layer1 + struc_layer2 +
                 ggside::scale_xsidey_continuous(breaks = NULL) +
-                xlab("Position along transcript") +
+                xlab(xlab) +
                 ylab(ylab) +
                 ggside(collapse = "x") +
                 col
