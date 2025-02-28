@@ -9,7 +9,7 @@ getCoverageGenome(
   gene_name = NULL,
   features = NULL,
   total_reads = NULL,
-  coordinate_to_trans = NULL
+  coordinate_to_trans = FALSE
 )
 }
 \arguments{

@@ -10,7 +10,7 @@ getOccupancyGenome(
   features = NULL,
   total_reads = NULL,
   assignment_mode = NULL,
-  coordinate_to_trans = NULL
+  coordinate_to_trans = FALSE
 )
 }
 \arguments{

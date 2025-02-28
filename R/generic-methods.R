@@ -234,7 +234,7 @@ setMethod("get_coverage",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
                    smooth = FALSE,
-                   coordinate_to_trans = NULL,
+                   coordinate_to_trans = FALSE,
                    slide_window = 30){
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
 
@@ -269,9 +269,13 @@ setMethod("get_coverage",
             }) -> rna.df
 
             # smooth for each position
-            sm.df <- smoothEachPosition(features = object@features,
-                                        posdf = rna.df,
-                                        slide_window = slide_window)
+            if(coordinate_to_trans == TRUE){
+              sm.df <- smoothEachPosition(features = object@features,
+                                          posdf = rna.df,
+                                          slide_window = slide_window)
+            }else{
+              sm.df <- rna.df
+            }
 
             if(smooth == TRUE){
               object@RNA_coverage <- sm.df
@@ -357,7 +361,7 @@ setMethod("get_occupancy",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
                    smooth = FALSE,
-                   coordinate_to_trans = NULL,
+                   coordinate_to_trans = FALSE,
                    slide_window = 30){
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
             assignment_mode <- object@assignment_mode
@@ -394,9 +398,14 @@ setMethod("get_occupancy",
             }) -> ribo.df
 
             # smooth for each position
-            sm.df <- smoothEachPosition(features = object@features,
-                                        posdf = ribo.df,
-                                        slide_window = slide_window)
+            if(coordinate_to_trans == TRUE){
+              sm.df <- smoothEachPosition(features = object@features,
+                                          posdf = ribo.df,
+                                          slide_window = slide_window)
+            }else{
+              sm.df <- ribo.df
+            }
+
 
             if(smooth == TRUE){
               object@ribo_occupancy <- sm.df

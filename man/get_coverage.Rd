@@ -11,7 +11,7 @@ get_coverage(object, ...)
   object,
   gene_name = NULL,
   smooth = FALSE,
-  coordinate_to_trans = NULL,
+  coordinate_to_trans = FALSE,
   slide_window = 30
 )
 }

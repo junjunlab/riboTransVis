@@ -129,7 +129,7 @@ getOccupancyGenome <- function(bam_file = NULL,
                                features = NULL,
                                total_reads = NULL,
                                assignment_mode = NULL,
-                               coordinate_to_trans = NULL){
+                               coordinate_to_trans = FALSE){
   # filter genes
   query_region <- features %>%
     dplyr::rename(gene = gene_name) %>%
@@ -265,7 +265,7 @@ getCoverageGenome <- function(bam_file = NULL,
                               gene_name = NULL,
                               features = NULL,
                               total_reads = NULL,
-                              coordinate_to_trans = NULL){
+                              coordinate_to_trans = FALSE){
   # filter genes
   query_region <- features %>%
     dplyr::rename(gene = gene_name) %>%
