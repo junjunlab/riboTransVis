@@ -139,7 +139,7 @@ getOccupancyGenome <- function(bam_file = NULL,
   # get position
   bam_data <- Rsamtools::scanBam(file = bam_file,
                                  nThreads = parallel::detectCores(),
-                                 param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "flag"),
+                                 param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
                                                                  which = query_region,
                                                                  flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE))
   )
