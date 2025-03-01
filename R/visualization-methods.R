@@ -690,6 +690,167 @@ setMethod("relative_heatmap_plot",
 )
 
 
+
+
+# ==============================================================================
+# function for reads offset check plot
+# ==============================================================================
+#' @title Generic function for plotting relative offset in ribosome profiling data
+#'
+#' @description This generic function is used to plot the relative offset of reads
+#' in ribosome profiling data.
+#'
+#' @param object An object of class \code{ribotrans}.
+#' @param ... Additional arguments passed to specific methods.
+#'
+#' @return A plot showing the relative offset of reads.
+#'
+#' @seealso \code{\link{relative_offset_plot,ribotrans-method}}
+#'
+#' @export
+#' @rdname relative_offset_plot
+setGeneric("relative_offset_plot",function(object,...) standardGeneric("relative_offset_plot"))
+
+
+
+#' @title Plot relative offset distribution in ribosome profiling data
+#'
+#' @description This method generates a plot of relative offsets of ribosome profiling
+#' reads mapped to either the start or stop codon.
+#'
+#' @param object A \code{ribotrans} object containing ribosome profiling data.
+#' @param type Character string specifying the reference point: \code{"rel2start"} for
+#' start codon or \code{"rel2stop"} for stop codon. Default is \code{"rel2start"}.
+#' @param read_length A numeric vector of length two specifying the range of read
+#' lengths to include (default: \code{c(20, 35)}).
+#' @param rel_dist A numeric vector of length two specifying the relative distance
+#' range to include (default: \code{c(-30, 30)}).
+#' @param rm_yaxis_label Logical; if \code{TRUE}, removes y-axis labels (default: \code{TRUE}).
+#' @param max_offset_labelx Numeric value (between 0 and 1) specifying the x position
+#' of the label showing the most frequent offset (default: \code{0.9}).
+#' @param max_offset_labely Numeric value (between 0 and 1) specifying the y position
+#' of the label showing the most frequent offset (default: \code{0.9}).
+#' @param return_offset Logical; if \code{TRUE}, returns the most frequently observed
+#' relative offsets instead of plotting (default: \code{FALSE}).
+#'
+#' @details This function visualizes the distribution of ribosome footprint
+#' offsets relative to the start or stop codon. The plot includes read length on
+#' the y-axis and relative position on the x-axis. The most frequent offset positions
+#' are labeled, and vertical dashed lines highlight expected P-site positions.
+#'
+#' @return If \code{return_offset = FALSE}, returns a \code{ggplot} object with
+#' the relative offset plot. If \code{return_offset = TRUE}, returns a data frame
+#' containing the most frequently observed offsets.
+#'
+#' @examples
+#' \dontrun{
+#'   # Generate summary information before plotting
+#'   ribo_obj <- generate_summary(ribo_obj)
+#'
+#'   # Plot relative offsets with default parameters
+#'   relative_offset_plot(ribo_obj)
+#'
+#'   # Get the most frequent offset information
+#'   offsets <- relative_offset_plot(ribo_obj, return_offset = TRUE)
+#' }
+#'
+#' @seealso \code{\link{generate_summary}}
+#'
+#' @export
+#' @rdname relative_offset_plot
+setMethod("relative_offset_plot",
+          signature(object = "ribotrans"),
+          function(object,
+                   type = c("rel2start","rel2stop"),
+                   read_length = c(20,35),
+                   rel_dist = c(-30,30),
+                   rm_yaxis_label = TRUE,
+                   max_offset_labelx = 0.9,
+                   max_offset_labely = 0.9,
+                   return_offset = FALSE){
+
+            type <- match.arg(type,choices = c("rel2start","rel2stop"))
+
+            # check data
+            if(nrow(object@summary_info) == 0){
+              stop("Please run `generate_summary` first!")
+            }
+
+            # extarct data to plot
+            if(type == "rel2start"){
+              summary.info <- object@summary_info %>%
+                fastplyr::f_filter(mstart > 0 & mstop > 0) %>%
+                dplyr::mutate(rel_pos = pos - mstart)
+
+              xlab <- "Distance to start codon (nt)"
+              xpos <- c(-12,-15,-18)
+            }else{
+              summary.info <- object@summary_info %>%
+                fastplyr::f_filter(mstart > 0 & mstop > 0) %>%
+                dplyr::mutate(rel_pos = pos - mstop)
+
+              xlab <- "Distance to stop codon (nt)"
+              xpos <- c(12,15,18)
+            }
+
+            # filter data
+            summary.info <- summary.info %>%
+              fastplyr::f_filter(rel_pos >= rel_dist[1] & rel_pos <= rel_dist[2]) %>%
+              fastplyr::f_filter(qwidth >= read_length[1] & qwidth <= read_length[2]) %>%
+              fastplyr::f_group_by(sample, rel_pos, qwidth) %>%
+              fastplyr::f_summarise(counts = sum(count))
+
+            # check y axis
+            if(rm_yaxis_label == TRUE){
+              axis.text.y = element_blank()
+              axis.ticks.y = element_blank()
+            }else{
+              axis.text.y = NULL
+              axis.ticks.y = NULL
+            }
+
+            # max offset position
+            mx.pos <- summary.info %>%
+              dplyr::slice_max(order_by = counts,n = 1,by = c(sample,qwidth))
+
+            if (requireNamespace("ggpp", quietly = TRUE)) {
+              mx.label <- ggpp::geom_label_npc(data = mx.pos,aes(npcx = max_offset_labelx,
+                                                                 npcy = max_offset_labely,
+                                                                 label = rel_pos))
+            } else {
+              warning("Package 'ggpp' is needed for this function to work.")
+              mx.label <- NULL
+            }
+
+
+            # plot
+            p <-
+              ggplot(summary.info) +
+              geom_path(aes(x = rel_pos,y = counts)) +
+              mx.label +
+              geom_vline(xintercept = xpos,lty ="dashed", color = "orange") +
+              ggh4x::facet_grid2(qwidth~sample,scales = "free",independent = "y",axes = "y") +
+              theme(axis.text = element_text(colour = "black"),
+                    panel.grid = element_blank(),
+                    axis.text.y = axis.text.y,
+                    axis.ticks.y = axis.ticks.y,
+                    strip.text = element_text(colour = "black",size = rel(1),face = "bold")) +
+              scale_fill_viridis_c(option = "mako") +
+              scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
+              xlab(xlab) +
+              ylab("Reads length (nt)")
+
+
+            # check return type
+            if(return_offset == FALSE){
+              return(p)
+            }else{
+              return(mx.pos)
+            }
+
+          }
+)
+
 # ==============================================================================
 # function for metagene plot
 # ==============================================================================
