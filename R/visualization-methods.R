@@ -571,6 +571,124 @@ setMethod("relative_dist_plot",
 
 
 
+# ==============================================================================
+# function for relative heatmap plot
+# ==============================================================================
+
+#' Relative Heatmap Plot Generic Function
+#'
+#' @description This is a generic function for creating relative heatmap plots
+#' across different data objects.
+#'
+#' @param object An object that contains the necessary data for plotting.
+#' @param ... Additional arguments passed to specific methods.
+#'
+#' @return A heatmap plot specific to the method invoked.
+#'
+#' @export
+#' @rdname relative_heatmap_plot
+setGeneric("relative_heatmap_plot",function(object,...) standardGeneric("relative_heatmap_plot"))
+
+
+
+#' Generate a Relative Heatmap Plot
+#'
+#' @description This function creates a heatmap that represents the relative position
+#' of reads with respect to either start or stop codons of genes.
+#'
+#'
+#' @param object An object of class \code{ribotrans}, containing summary information from ribosome profiling data.
+#' @param type A character string indicating the type of plot. Options are:
+#'  \code{"rel2start"} to plot relative to start codon or
+#'  \code{"rel2stop"} to plot relative to stop codon. Default is \code{"rel2start"}.
+#' @param read_length A numeric vector of length 2 specifying the range of read lengths to include in the plot. Default is \code{c(20, 35)}.
+#' @param rel_dist A numeric vector of length 2 specifying the range of relative distances to plot. Default is \code{c(-100, 100)}.
+#' @param log_scale A logical value indicating whether to apply a logarithmic transformation to counts. Default is \code{FALSE}.
+#' @param return_data A logical value determining the return type. If \code{TRUE}, the summarized data is returned; if \code{FALSE}, the plot object is returned. Default is \code{FALSE}.
+#'
+#' @return A ggplot object if \code{return_data} is \code{FALSE}, otherwise a data.table with summarized counts and relevant metadata.
+#'
+#' @details
+#' The function checks whether the summary information is available in the provided
+#' \code{ribotrans} object and filters data based on the specified criteria.
+#' The resulting heatmap visualizes the distribution of read counts along with
+#' their relative positions to the coding features.
+#'
+#' @import ggplot2
+#' @importFrom dplyr mutate filter group_by summarise
+#' @importFrom fastplyr f_filter f_group_by f_summarise
+#'
+#'
+#' @export
+#' @rdname relative_heatmap_plot
+setMethod("relative_heatmap_plot",
+          signature(object = "ribotrans"),
+          function(object,
+                   type = c("rel2start","rel2stop"),
+                   read_length = c(20,35),
+                   rel_dist = c(-100,100),
+                   log_scale = FALSE,
+                   return_data = FALSE){
+
+            type <- match.arg(type,choices = c("rel2start","rel2stop"))
+
+            # check data
+            if(nrow(object@summary_info) == 0){
+              stop("Please run `generate_summary` first!")
+            }
+
+            # extarct data to plot
+            if(type == "rel2start"){
+              summary.info <- object@summary_info %>%
+                fastplyr::f_filter(mstart > 0 & mstop > 0) %>%
+                dplyr::mutate(rel_pos = pos - mstart)
+
+              xlab <- "Distance to start codon (nt)"
+            }else{
+              summary.info <- object@summary_info %>%
+                fastplyr::f_filter(mstart > 0 & mstop > 0) %>%
+                dplyr::mutate(rel_pos = pos - mstop)
+
+              xlab <- "Distance to stop codon (nt)"
+            }
+
+            # filter data
+            summary.info <- summary.info %>%
+              fastplyr::f_filter(rel_pos >= rel_dist[1] & rel_pos <= rel_dist[2]) %>%
+              fastplyr::f_filter(qwidth >= read_length[1] & qwidth <= read_length[2]) %>%
+              fastplyr::f_group_by(sample, rel_pos, qwidth) %>%
+              fastplyr::f_summarise(counts = sum(count))
+
+            # check log_scale
+            if(log_scale == TRUE){
+              layer <- geom_tile(aes(x = rel_pos,y = qwidth, fill = log2(counts)))
+            }else{
+              layer <- geom_tile(aes(x = rel_pos,y = qwidth, fill = counts))
+            }
+
+            # plot
+            p <-
+              ggplot(summary.info) +
+              layer +
+              facet_wrap(~sample,scales = "free") +
+              theme(axis.text = element_text(colour = "black"),
+                    panel.grid = element_blank(),
+                    strip.text = element_text(colour = "black",size = rel(1),face = "bold")) +
+              scale_fill_viridis_c(option = "mako") +
+              xlab(xlab) +
+              ylab("Reads length (nt)")
+
+
+            # check return type
+            if(return_data == FALSE){
+              return(p)
+            }else{
+              return(summary.info)
+            }
+
+          }
+)
+
 
 # ==============================================================================
 # function for metagene plot

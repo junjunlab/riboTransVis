@@ -1,6 +1,6 @@
 globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","allexp", "ave", "cds", "relexp",
                   "mstart", "mstop", "n", "na.omit", "new","count", "counts", "frame", "qwidth", "group_id",
-                  "pos", "rname", "smooth", "rpm.x", "rpm.y", "transcript_id", "strand", "codon",
+                  "pos", "rname", "smooth", "rpm.x", "rpm.y", "transcript_id", "strand", "codon", "rel_pos",
                   "translen", "type", "utr3","utr5", "which_label", "width","f_len", "object", "len",
                   "mappped_reads", "normval", "rpm","start","end","gene_id", "seqnames","idx", "idx.mx"))
 
