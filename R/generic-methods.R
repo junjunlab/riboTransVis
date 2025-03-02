@@ -321,6 +321,8 @@ setGeneric("get_occupancy",function(object,...) standardGeneric("get_occupancy")
 #' If coordinate_to_trans is FALSE and mapping_type is genome, data will not be smoothed.
 #' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
 #'        coordinates. Default is FALSE.
+#' @param do_reads_offset Logical; if set to \code{TRUE}, adjusts read positions based on
+#' precomputed offset information stored in the \code{reads_offset_info} slot (default: \code{FALSE}).
 #' @param slide_window Integer. The number of nucleotides for smoothing (used only if `smooth = "TRUE"`). Default is `30`.
 #'
 #' @details
@@ -365,6 +367,7 @@ setMethod("get_occupancy",
           function(object, gene_name = NULL,
                    smooth = FALSE,
                    coordinate_to_trans = FALSE,
+                   do_reads_offset = FALSE,
                    slide_window = 30){
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
             assignment_mode <- object@assignment_mode
@@ -397,7 +400,40 @@ setMethod("get_occupancy",
               # add sample name
               tmp$sample <- gp[x]
 
-              return(tmp)
+              # ================================================================
+              # whether do read offset
+              if(do_reads_offset == TRUE){
+                # check offset data
+                if(nrow(object@reads_offset_info) == 0){
+                  stop("No reads offset information in object!")
+                }
+
+                offset <- object@reads_offset_info
+
+                if(object@mapping_type == "genome" & coordinate_to_trans == FALSE){
+                  adjusted <- tmp %>%
+                    dplyr::left_join(y = offset[,c("sample","rel_pos","qwidth")],by = c("sample","qwidth")) %>%
+                    stats::na.omit() %>%
+                    dplyr::mutate(pos = dplyr::if_else(strand == "+",
+                                                       pos - rel_pos,pos + rel_pos)) %>%
+                    dplyr::select(-strand,-qwidth,-rel_pos)
+                }else{
+                  adjusted <- tmp %>%
+                    dplyr::left_join(y = offset[,c("sample","rel_pos","qwidth")],by = c("sample","qwidth")) %>%
+                    stats::na.omit() %>%
+                    dplyr::mutate(pos = pos - rel_pos) %>%
+                    dplyr::select(-qwidth,-rel_pos)
+                }
+
+              }else{
+                adjusted <- tmp
+              }
+
+              adjusted <- adjusted %>%
+                dplyr::group_by(sample,rname,pos) %>%
+                dplyr::summarise(count = sum(count),rpm = sum(rpm), .groups = "drop")
+
+              return(adjusted)
             }) -> ribo.df
 
             # smooth for each position

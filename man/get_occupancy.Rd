@@ -12,6 +12,7 @@ get_occupancy(object, ...)
   gene_name = NULL,
   smooth = FALSE,
   coordinate_to_trans = FALSE,
+  do_reads_offset = FALSE,
   slide_window = 30
 )
 }
@@ -28,6 +29,9 @@ If coordinate_to_trans is FALSE and mapping_type is genome, data will not be smo
 
 \item{coordinate_to_trans}{Logical. Whether to convert genomic coordinates to transcript
 coordinates. Default is FALSE.}
+
+\item{do_reads_offset}{Logical; if set to \code{TRUE}, adjusts read positions based on
+precomputed offset information stored in the \code{reads_offset_info} slot (default: \code{FALSE}).}
 
 \item{slide_window}{Integer. The number of nucleotides for smoothing (used only if \code{smooth = "TRUE"}). Default is \code{30}.}
 }

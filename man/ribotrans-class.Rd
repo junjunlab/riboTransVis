@@ -11,6 +11,19 @@ An object of class \code{ribotrans}.
 \description{
 An S4 class to represent ribosome profiling data and associated information.
 }
+\details{
+The \code{ribotrans} class is designed to facilitate the analysis of ribosome profiling data
+by organizing relevant information, including BAM file metadata, gene annotations (GTF),
+and various summary statistics related to ribosome and RNA-seq reads.
+
+Key functionalities include:
+\itemize{
+\item Storing and accessing essential metadata
+\item Aggregating ribosome profiling signals
+\item Computing P-site offsets
+\item Normalizing ribosome occupancy with RNA-seq coverage
+}
+}
 \section{Slots}{
 
 \describe{
@@ -29,6 +42,8 @@ An S4 class to represent ribosome profiling data and associated information.
 \item{\code{genome_trans_features}}{A \code{data.frame} containing genomic transcript features for genome-based mappings.}
 
 \item{\code{summary_info}}{A \code{data.frame} describing all reads detailed information.}
+
+\item{\code{reads_offset_info}}{A \code{data.frame} recording information on ribosome P-site offsets.}
 
 \item{\code{gene_name}}{A \code{character} string specifying the target gene name.}
 

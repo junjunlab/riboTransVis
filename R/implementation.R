@@ -508,7 +508,7 @@ getOccupancy <- function(bam_file = NULL,
   # get position
   bam_data <- Rsamtools::scanBam(file = bam_file,
                                  nThreads = parallel::detectCores(),
-                                 param = Rsamtools::ScanBamParam(what = c("rname", "pos"),
+                                 param = Rsamtools::ScanBamParam(what = c("rname", "pos", "qwidth"),
                                                                  which = region,
                                                                  flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE))
   )
@@ -516,7 +516,7 @@ getOccupancy <- function(bam_file = NULL,
   # list to data frame
   tmpdf <- purrr::map_df(seq_along(bam_data),function(x){
     tmp <- data.frame(bam_data[[x]]) %>%
-      dplyr::group_by(rname,pos) %>%
+      dplyr::group_by(rname,pos,qwidth) %>%
       dplyr::summarise(count = dplyr::n(),.groups = "drop")
 
     return(tmp)

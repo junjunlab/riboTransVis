@@ -91,6 +91,8 @@ prepareTransInfo_forGenome <- function(gtf_file = NULL){
 #' @param assignment_mode Character. Specifies the read assignment strategy: `"end5"` (5' end) or `"end3"` (3' end).
 #' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
 #'        coordinates. Default is FALSE.
+#' @param return_all_position Logical; if \code{TRUE}, extracts data for **all mapped regions**,
+#' not just the specified gene (default: \code{FALSE}).
 #'
 #' @return A `data.frame` with read occupancy information:
 #' \itemize{
@@ -129,20 +131,30 @@ getOccupancyGenome <- function(bam_file = NULL,
                                features = NULL,
                                total_reads = NULL,
                                assignment_mode = NULL,
-                               coordinate_to_trans = FALSE){
-  # filter genes
-  query_region <- features %>%
-    dplyr::rename(gene = gene_name) %>%
-    fastplyr::f_filter(gene == gene_name) %>%
-    GenomicRanges::GRanges()
+                               coordinate_to_trans = FALSE,
+                               return_all_position = FALSE){
+  # check return type
+  if(return_all_position == TRUE){
+    # get position
+    bam_data <- Rsamtools::scanBam(file = bam_file,
+                                   nThreads = parallel::detectCores(),
+                                   param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
+                                                                   flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE)))
+  }else{
+    # filter genes
+    query_region <- features %>%
+      dplyr::rename(gene = gene_name) %>%
+      fastplyr::f_filter(gene == gene_name) %>%
+      GenomicRanges::GRanges()
 
-  # get position
-  bam_data <- Rsamtools::scanBam(file = bam_file,
-                                 nThreads = parallel::detectCores(),
-                                 param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
-                                                                 which = query_region,
-                                                                 flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE))
-  )
+    # get position
+    bam_data <- Rsamtools::scanBam(file = bam_file,
+                                   nThreads = parallel::detectCores(),
+                                   param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
+                                                                   which = query_region,
+                                                                   flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE)))
+
+  }
 
   # list to data frame
   bminfo <- lapply(bam_data,FUN = data.frame) %>% do.call("rbind",.)
@@ -157,11 +169,17 @@ getOccupancyGenome <- function(bam_file = NULL,
       dplyr::mutate(pos = ifelse(strand == "+", pos + qwidth - 1, pos))
   }
 
+  # summarise
   bminfo <- bminfo %>%
-    dplyr::group_by(rname,pos) %>%
-    dplyr::summarise(count = dplyr::n(),.groups = "drop") %>%
-    dplyr::filter(pos >= min(IRanges::start(query_region@ranges)) &
-                    pos <= max(IRanges::end(query_region@ranges)))
+    dplyr::group_by(rname,pos,strand,qwidth) %>%
+    dplyr::summarise(count = dplyr::n(),.groups = "drop")
+
+  if(return_all_position == FALSE){
+    bminfo <- bminfo %>%
+      dplyr::filter(pos >= min(IRanges::start(query_region@ranges)) &
+                      pos <= max(IRanges::end(query_region@ranges)))
+  }
+
 
   # ============================================================================
   # check coordinate transform
@@ -201,7 +219,7 @@ getOccupancyGenome <- function(bam_file = NULL,
       dplyr::filter(gene_name == tgene)
 
     # output
-    tdf <- lo %>% dplyr::select(rname,pos,count)
+    tdf <- lo %>% dplyr::select(rname,pos,qwidth,count)
   }else{
     tdf <- bminfo
   }

@@ -10,7 +10,8 @@ getOccupancyGenome(
   features = NULL,
   total_reads = NULL,
   assignment_mode = NULL,
-  coordinate_to_trans = FALSE
+  coordinate_to_trans = FALSE,
+  return_all_position = FALSE
 )
 }
 \arguments{
@@ -26,6 +27,9 @@ getOccupancyGenome(
 
 \item{coordinate_to_trans}{Logical. Whether to convert genomic coordinates to transcript
 coordinates. Default is FALSE.}
+
+\item{return_all_position}{Logical; if \code{TRUE}, extracts data for \strong{all mapped regions},
+not just the specified gene (default: \code{FALSE}).}
 }
 \value{
 A \code{data.frame} with read occupancy information:

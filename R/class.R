@@ -1,7 +1,7 @@
 globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","allexp", "ave", "cds", "relexp",
                   "mstart", "mstop", "n", "na.omit", "new","count", "counts", "frame", "qwidth", "group_id",
                   "pos", "rname", "smooth", "rpm.x", "rpm.y", "transcript_id", "strand", "codon", "rel_pos",
-                  "translen", "type", "utr3","utr5", "which_label", "width","f_len", "object", "len",
+                  "translen", "type", "utr3","utr5", "which_label", "width","f_len", "object", "len", "chr",
                   "mappped_reads", "normval", "rpm","start","end","gene_id", "seqnames","idx", "idx.mx"))
 
 
@@ -17,12 +17,25 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
 #' @slot features A `data.frame` describing transcript features (e.g., exons, genes).
 #' @slot genome_trans_features A `data.frame` containing genomic transcript features for genome-based mappings.
 #' @slot summary_info A `data.frame` describing all reads detailed information.
+#' @slot reads_offset_info A \code{data.frame} recording information on ribosome P-site offsets.
 #' @slot gene_name A `character` string specifying the target gene name.
 #' @slot ribo_occupancy A `data.frame` storing ribosome occupancy data.
 #' @slot ribo.smoothed A `character` representing smoothed ribosome profiles.
 #' @slot RNA_coverage A `data.frame` containing RNA coverage data from sequencing.
 #' @slot RNA.smoothed A `character` representing smoothed RNA profiles.
 #' @slot scaled_occupancy A `data.frame` with normalized ribosome occupancy data.
+#'
+#' @details
+#' The `ribotrans` class is designed to facilitate the analysis of ribosome profiling data
+#' by organizing relevant information, including BAM file metadata, gene annotations (GTF),
+#' and various summary statistics related to ribosome and RNA-seq reads.
+#'
+#' Key functionalities include:
+#' - Storing and accessing essential metadata
+#' - Aggregating ribosome profiling signals
+#' - Computing P-site offsets
+#' - Normalizing ribosome occupancy with RNA-seq coverage
+#'
 #'
 #' @return An object of class \code{ribotrans}.
 #' @export
@@ -35,6 +48,7 @@ ribotrans <- setClass("ribotrans",
                                    "features" = "data.frame",
                                    "genome_trans_features" = "data.frame",
                                    "summary_info" = "data.frame",
+                                   "reads_offset_info" = "data.frame",
                                    "gene_name" = "character",
                                    "ribo_occupancy" = "data.frame",
                                    "ribo.smoothed" = "character",
