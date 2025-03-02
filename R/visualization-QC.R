@@ -751,13 +751,13 @@ setMethod("metagene_plot",
 
             ave.tmp <- sm.df %>%
               dplyr::group_by(sample) %>%
-              dplyr::summarise(allexp = sum(normval)) %>%
+              dplyr::summarise(allexp = sum(smooth)) %>%
               dplyr::mutate(ave = allexp/length(distrg)) %>%
               dplyr::select(sample, ave)
 
             sm.df <- sm.df %>%
               dplyr::left_join(y = ave.tmp,by = "sample") %>%
-              dplyr::mutate(relexp = normval/ave)
+              dplyr::mutate(relexp = smooth/ave)
 
             # plot
             p <-
