@@ -5,6 +5,7 @@
 \title{Construct a Ribotrans Object for Transcriptome or Genome Mapping}
 \usage{
 construct_ribotrans(
+  genome_file = NULL,
   gtf_file = NULL,
   mapping_type = c("transcriptome", "genome"),
   assignment_mode = c("end5", "end3"),
@@ -19,6 +20,9 @@ construct_ribotrans(
 )
 }
 \arguments{
+\item{genome_file}{A \code{character} string indicating the path to the genome sequence file
+if the extend option is \code{TRUE}. Default is NULL.}
+
 \item{gtf_file}{A \code{character} string indicating the path to the GTF annotation file.}
 
 \item{mapping_type}{Character. Either \code{"transcriptome"} or \code{"genome"}, indicating whether

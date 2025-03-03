@@ -65,6 +65,8 @@ ribotrans <- setClass("ribotrans",
 #' `construct_ribotrans()` generates a structured object with transcript or genomic annotations
 #' and mapped RNA-seq / Ribo-seq library information. It supports selecting the longest transcript for each gene.
 #'
+#' @param genome_file A `character` string indicating the path to the genome sequence file
+#' if the extend option is `TRUE`. Default is NULL.
 #' @param gtf_file A `character` string indicating the path to the GTF annotation file.
 #' @param mapping_type Character. Either `"transcriptome"` or `"genome"`, indicating whether
 #'        RNA-seq/Ribo-seq alignments are transcriptome-based or genome-based. Default is `"transcriptome"`.
@@ -114,7 +116,8 @@ ribotrans <- setClass("ribotrans",
 #' @importFrom methods new
 #' @importFrom parallel detectCores
 #' @export
-construct_ribotrans <- function(gtf_file = NULL,
+construct_ribotrans <- function(genome_file = NULL,
+                                gtf_file = NULL,
                                 mapping_type = c("transcriptome", "genome"),
                                 assignment_mode = c("end5", "end3"),
                                 extend = FALSE,
@@ -166,6 +169,7 @@ construct_ribotrans <- function(gtf_file = NULL,
 
     if(extend == TRUE){
       gtf_input <- get_transcript_sequence(gtf_file = gtf_file,
+                                           genome_file = genome_file,
                                            extend = extend,
                                            extend_upstream = extend_upstream,
                                            extend_downstream = extend_downstream,
