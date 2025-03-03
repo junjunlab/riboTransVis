@@ -219,7 +219,7 @@ get_transcript_sequence <- function(genome_file = NULL,
     dplyr::mutate(gene_name = dplyr::if_else(is.na(gene_name),
                                              transcript_id,gene_name)) %>%
     # add new tid
-    dplyr::mutate(transcript_id = paste(transcript_id,gene_name,sep = "|"))
+    dplyr::mutate(idnew = paste(transcript_id,gene_name,sep = "|"))
 
   # check whether extend
   if(extend == TRUE){
@@ -244,10 +244,12 @@ get_transcript_sequence <- function(genome_file = NULL,
 
   # check return what
   if(return_extend_region == TRUE){
+    exon.final <- exon.final %>% dplyr::select(-idnew)
     return(exon.final)
   }else{
     # to txdb format
     if (requireNamespace("txdbmaker", quietly = TRUE)) {
+      exon.final <- exon.final %>% dplyr::mutate(transcript_id = idnew)
       txdb.fl <- txdbmaker::makeTxDbFromGRanges(GenomicRanges::GRanges(exon.final))
     } else {
       warning("Package 'txdbmaker' is needed for this function to work.")
