@@ -194,7 +194,7 @@ get_transcript_sequence <- function(genome_file = NULL,
     names(fa) <- sapply(strsplit(names(fa),split = " "),"[",1)
 
     # chromosome length
-    chr_len <- data.frame(seqnames = names(fa),len = width(fa))
+    chr_len <- data.frame(seqnames = names(fa),len = GenomicRanges::width(fa))
 
     # load genome file
     fa_file <- Rsamtools::FaFile(genome_file)
