@@ -13,3 +13,9 @@
 #' @return The result of calling `rhs(lhs)`.
 NULL
 
+
+# Function to calculate probability to odds
+prob2odds <- function(p){p / ( 1 - p )}
+
+
+

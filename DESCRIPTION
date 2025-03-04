@@ -46,6 +46,7 @@ Suggests:
     data.table,
     tibble,
     zoo,
+    binom,
     pkgconfig
 VignetteBuilder: knitr
 Depends: 

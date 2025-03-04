@@ -44,9 +44,9 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #'   * "nt": nucleotide positions
 #'   * "codon": codon positions.
 #' @param range_x Numerics specifying the x position of the signal range annotation
-#'   in normalized parent coordinates `[0, 1]`. Default: `0.9`.
+#'   in normalized parent coordinates `[0, 1]`. Default: `0.98`.
 #' @param range_y Numerics specifying the y position of the signal range annotation
-#'   in normalized parent coordinates `[0, 1]`. Default: `0.9`.
+#'   in normalized parent coordinates `[0, 1]`. Default: `0.99`.
 #' @param range_size Numeric. Text size for the signal range label. Default: `4`.
 #' @param range_digit Numeric. Number of decimal places for rounding signal range values. Default: `1`.
 #' @param scale_factor Numeric, a scaling factor for RNA-seq reads when \code{type = "ribo_rna"} (default = 1.0).
@@ -95,8 +95,8 @@ setMethod("trans_plot",
                    sep_mer_sample = FALSE,
                    new_signal_range = TRUE,
                    position_mode = c("nt", "codon"),
-                   range_x = 0.9,
-                   range_y = 0.9,
+                   range_x = 0.99,
+                   range_y = 0.98,
                    range_size = 4,
                    range_digit = 1,
                    scale_factor = 1,

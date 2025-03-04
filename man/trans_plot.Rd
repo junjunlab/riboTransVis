@@ -17,8 +17,8 @@ trans_plot(object, ...)
   sep_mer_sample = FALSE,
   new_signal_range = TRUE,
   position_mode = c("nt", "codon"),
-  range_x = 0.9,
-  range_y = 0.9,
+  range_x = 0.99,
+  range_y = 0.98,
   range_size = 4,
   range_digit = 1,
   scale_factor = 1,
@@ -67,10 +67,10 @@ Possible values are:
 }}
 
 \item{range_x}{Numerics specifying the x position of the signal range annotation
-in normalized parent coordinates \verb{[0, 1]}. Default: \code{0.9}.}
+in normalized parent coordinates \verb{[0, 1]}. Default: \code{0.98}.}
 
 \item{range_y}{Numerics specifying the y position of the signal range annotation
-in normalized parent coordinates \verb{[0, 1]}. Default: \code{0.9}.}
+in normalized parent coordinates \verb{[0, 1]}. Default: \code{0.99}.}
 
 \item{range_size}{Numeric. Text size for the signal range label. Default: \code{4}.}
 

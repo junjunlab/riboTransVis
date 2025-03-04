@@ -270,10 +270,15 @@ setMethod("get_coverage",
             }) -> rna.df
 
             # smooth for each position
-            if(coordinate_to_trans == TRUE){
-              sm.df <- smoothEachPosition(features = object@features,
-                                          posdf = rna.df,
-                                          slide_window = slide_window)
+            cond <- object@mapping_type == "genome" & coordinate_to_trans == TRUE | object@mapping_type == "transcriptome"
+            if(cond){
+              if(smooth == TRUE){
+                sm.df <- smoothEachPosition(features = object@features,
+                                            posdf = rna.df,
+                                            slide_window = slide_window)
+              }else{
+                sm.df <- rna.df
+              }
             }else{
               sm.df <- rna.df
             }
@@ -437,14 +442,18 @@ setMethod("get_occupancy",
             }) -> ribo.df
 
             # smooth for each position
-            if(coordinate_to_trans == TRUE){
-              sm.df <- smoothEachPosition(features = object@features,
-                                          posdf = ribo.df,
-                                          slide_window = slide_window)
+            cond <- object@mapping_type == "genome" & coordinate_to_trans == TRUE | object@mapping_type == "transcriptome"
+            if(cond){
+              if(smooth == TRUE){
+                sm.df <- smoothEachPosition(features = object@features,
+                                            posdf = ribo.df,
+                                            slide_window = slide_window)
+              }else{
+                sm.df <- ribo.df
+              }
             }else{
               sm.df <- ribo.df
             }
-
 
             if(smooth == TRUE){
               object@ribo_occupancy <- sm.df
@@ -547,38 +556,41 @@ setMethod("get_scaled_occupancy",
             tanno <- subset(object@features, gene == object@gene_name)
 
             # check whether smooth data
-            if(smooth == TRUE){
-              purrr::map_df(1:nrow(tanno),function(x){
-                tmp <- tanno[x,]
+            purrr::map_df(1:nrow(tanno),function(x){
+              tmp <- tanno[x,]
 
-                tmp2 <- mb %>%
-                  dplyr::filter(rname == tmp$idnew)
+              tmp2 <- mb %>%
+                dplyr::filter(rname == tmp$idnew)
 
-                sp <- unique(tmp2$sample)
+              sp <- unique(tmp2$sample)
 
-                # loop for each sample
-                purrr::map_df(seq_along(sp),function(x){
-                  tmp3 <- tmp2 %>%
-                    dplyr::filter(sample == sp[x])
+              # loop for each sample
+              purrr::map_df(seq_along(sp),function(x){
+                tmp3 <- tmp2 %>%
+                  dplyr::filter(sample == sp[x])
 
+                # merge with value
+                pos.df <- pos.df %>%
+                  dplyr::left_join(y = tmp3,by = c("rname", "pos"))
+                pos.df$sample <- tmp3$sample[1]
+                pos.df[is.na(pos.df)] <- 0
+
+                if(smooth == TRUE){
                   # smooth data
                   if (requireNamespace("zoo", quietly = TRUE)) {
-                    tmp3$smooth <- zoo::rollmean(tmp3$enrich, k = slide_window, fill = 0)
+                    pos.df$smooth <- zoo::rollmean(pos.df$enrich, k = slide_window, fill = 0)
                   } else {
                     warning("Package 'zoo' is needed for this function to work.")
                   }
+                }else{
+                  pos.df$smooth <- pos.df$enrich
+                }
 
+                return(pos.df)
+              }) -> smooth.df
 
-                  return(tmp3)
-                }) -> smooth.df
-
-                return(smooth.df)
-              }) -> mb.smoothed
-            }else{
-              mb$smooth <- mb$enrich
-              mb.smoothed <- mb
-            }
-
+              return(smooth.df)
+            }) -> mb.smoothed
 
             object@scaled_occupancy <- mb.smoothed
             return(object)
