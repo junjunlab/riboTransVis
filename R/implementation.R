@@ -433,6 +433,11 @@ getCoverage <- function(bam_file = NULL,
                                      scanBamParam = Rsamtools::ScanBamParam(which = region)) %>%
     dplyr::select(-which_label)
 
+  # check data
+  if(nrow(pileup_result) == 0){
+    pileup_result <- data.frame(seqnames = gene.ft$idnew, pos = 1, count = 0)
+  }
+
   colnames(pileup_result)[1] <- "rname"
 
   # total mapped reads
