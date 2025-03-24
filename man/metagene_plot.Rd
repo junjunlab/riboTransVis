@@ -10,11 +10,9 @@ metagene_plot(object, ...)
 \S4method{metagene_plot}{ribotrans}(
   object,
   type = c("rel2start", "rel2stop"),
-  smooth = FALSE,
   return_data = FALSE,
-  show_frame = FALSE,
+  mode = c("nt", "codon"),
   read_length = c(25, 31),
-  slide_window = 3,
   rel2st_dist = c(-50, 100),
   rel2sp_dist = c(-100, 50),
   facet_wrap = ggplot2::facet_wrap(~sample)
@@ -31,15 +29,15 @@ metagene_plot(object, ...)
 \item \code{"rel2stop"} - Distance relative to the stop codon.
 }}
 
-\item{smooth}{Logical indicating if a rolling average should be applied to smooth the data (default: \code{FALSE}).}
-
 \item{return_data}{Logical, if \code{TRUE}, returns the processed data instead of a plot (default: \code{FALSE}).}
 
-\item{show_frame}{Logical, if \code{TRUE}, visualizes data by reading frame (default: \code{FALSE}).}
+\item{mode}{Character string specifying the unit for the x-axis:
+\itemize{
+\item \code{"nt"}: Nucleotide level resolution (default).
+\item \code{"codon"}: Codon-level resolution.
+}}
 
 \item{read_length}{Numeric vector of length two specifying the range of read lengths to include (default: \code{c(25,31)}).}
-
-\item{slide_window}{Integer defining the sliding window size for smoothing when \code{smooth = TRUE} (default: \code{3}).}
 
 \item{rel2st_dist}{Numeric vector of length two, specifying distance range to include relative to start codon (default: \code{c(-50,100)}).}
 
@@ -78,8 +76,6 @@ start or stop codon.
 # Generate standard metagene plot relative to start codon
 metagene_plot(ribo_obj, type = "rel2start")
 
-# Generate smoothed metagene plot
-metagene_plot(ribo_obj, type = "rel2stop", smooth = TRUE, slide_window = 3)
 
 # Get the underlying data instead of a plot
 data <- metagene_plot(ribo_obj, type = "rel2start", return_data = TRUE)

@@ -237,6 +237,11 @@ setMethod("get_coverage",
                    smooth = FALSE,
                    coordinate_to_trans = FALSE,
                    slide_window = 30){
+            # check gene name
+            if(gene_name %in% object@features$gene){
+              stop("Can't find this gene symbol, please have a check!")
+            }
+
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
 
             bf <- subset(object@bam_file, type == "rna")
@@ -374,6 +379,11 @@ setMethod("get_occupancy",
                    coordinate_to_trans = FALSE,
                    do_reads_offset = FALSE,
                    slide_window = 30){
+            # check gene name
+            if(gene_name %in% object@features$gene){
+              stop("Can't find this gene symbol, please have a check!")
+            }
+
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
             assignment_mode <- object@assignment_mode
 

@@ -597,11 +597,11 @@ setGeneric("metagene_plot",function(object,...) standardGeneric("metagene_plot")
 #'   \item `"rel2start"` - Distance relative to the start codon.
 #'   \item `"rel2stop"` - Distance relative to the stop codon.
 #' }
-#' @param smooth Logical indicating if a rolling average should be applied to smooth the data (default: `FALSE`).
 #' @param return_data Logical, if `TRUE`, returns the processed data instead of a plot (default: `FALSE`).
-#' @param show_frame Logical, if `TRUE`, visualizes data by reading frame (default: `FALSE`).
+#' @param mode Character string specifying the unit for the x-axis:
+#'   - `"nt"`: Nucleotide level resolution (default).
+#'   - `"codon"`: Codon-level resolution.
 #' @param read_length Numeric vector of length two specifying the range of read lengths to include (default: `c(25,31)`).
-#' @param slide_window Integer defining the sliding window size for smoothing when `smooth = TRUE` (default: `3`).
 #' @param rel2st_dist Numeric vector of length two, specifying distance range to include relative to start codon (default: `c(-50,100)`).
 #' @param rel2sp_dist Numeric vector of length two, specifying distance range to include relative to stop codon (default: `c(-100,50)`).
 #' @param facet_wrap A `ggplot2::facet_wrap()` object to control faceting by sample (default behavior).
@@ -619,8 +619,6 @@ setGeneric("metagene_plot",function(object,...) standardGeneric("metagene_plot")
 #' # Generate standard metagene plot relative to start codon
 #' metagene_plot(ribo_obj, type = "rel2start")
 #'
-#' # Generate smoothed metagene plot
-#' metagene_plot(ribo_obj, type = "rel2stop", smooth = TRUE, slide_window = 3)
 #'
 #' # Get the underlying data instead of a plot
 #' data <- metagene_plot(ribo_obj, type = "rel2start", return_data = TRUE)
@@ -638,146 +636,83 @@ setMethod("metagene_plot",
           signature(object = "ribotrans"),
           function(object,
                    type = c("rel2start","rel2stop"),
-                   smooth = FALSE,
                    return_data = FALSE,
-                   show_frame = FALSE,
+                   mode = c("nt", "codon"),
                    read_length = c(25,31),
-                   slide_window = 3,
                    rel2st_dist = c(-50,100),
                    rel2sp_dist = c(-100,50),
                    facet_wrap = ggplot2::facet_wrap(~sample)){
             type <- match.arg(type, choices = c("rel2start","rel2stop"))
+            mode <- match.arg(mode, choices = c("nt", "codon"))
+
+            # check type
+            if(type == "rel2start"){
+              dist <- rel2st_dist
+              var <- "mstart"
+            }else{
+              dist <- rel2sp_dist
+              var <- "mstop"
+            }
 
             features <- object@features
 
-            pltdf <- object@summary_info %>%
-              fastplyr::f_filter(mstart != 0 | mstop != 0,
-                                 qwidth >= read_length[1] & qwidth <= read_length[2]) %>%
-              fastplyr::f_group_by(sample,rname, pos) %>%
-              fastplyr::f_summarise(counts = sum(count))
+            sry <- object@summary_info %>%
+              fastplyr::f_filter(mstart != 0 | mstop != 0)
 
-            # get total mapped reads
-            lib <- object@library
-            dpt <- subset(lib, type == "ribo" & sample %in% unique(pltdf$sample)) %>%
-              dplyr::select(mappped_reads,sample)
+            # average counts per position
+            avg.ct <- sry %>%
+              dplyr::mutate(cdslen = mstop - mstart + 1) %>%
+              fastplyr::f_group_by(sample,rname,cdslen) %>%
+              fastplyr::f_summarise(counts = sum(count)) %>%
+              dplyr::mutate(avg_ct = counts/cdslen) %>%
+              dplyr::select(sample,rname,avg_ct)
 
-            # rpm normalization
+            # filter relative distance
+            pltdf <- sry %>%
+              dplyr::left_join(y = avg.ct,by = c("sample", "rname")) %>%
+              dplyr::filter(mstop - mstart >= max(abs(dist))) %>%
+              dplyr::mutate(rel = pos - .data[[var]], norm = count/avg_ct) %>%
+              fastplyr::f_group_by(sample,rel) %>%
+              fastplyr::f_summarise(normsm = sum(norm)) %>%
+              dplyr::filter(rel >= dist[1] & rel <= dist[2])
+
+            # average occupancy
+            sm <- pltdf %>%
+              fastplyr::f_group_by(sample) %>%
+              fastplyr::f_summarise(norm_avg = sum(normsm)/(abs(dist[2]) + abs(dist[1]) + 1))
+
             pltdf <- pltdf %>%
-              dplyr::left_join(y = dpt,by = "sample") %>%
-              dplyr::mutate(rpm = (counts/mappped_reads)*10^6) %>%
-              dplyr::select(-mappped_reads)
+              dplyr::left_join(y = sm,by = "sample") %>%
+              dplyr::mutate(avg = normsm/norm_avg)
 
-            # total transcipts
-            ttt <- length(unique(pltdf$rname))
-
-            pltdf <- pltdf %>%
-              fastplyr::f_left_join(y = features[,c("idnew","mstart","mstop")],
-                                    by = c("rname" = "idnew"))
-
-
-            # calculate frame and relative distance
-            if(type == "rel2start"){
+            # check show mode
+            if(mode == "codon"){
               pltdf <- pltdf %>%
-                dplyr::mutate(frame = (pos - mstart)%%3,
-                              rel = pos - mstart) %>%
-                fastplyr::f_select(sample,frame,pos,rel,rpm)
-            }else{
-              pltdf <- pltdf %>%
-                dplyr::mutate(frame = (pos - mstop)%%3,
-                              rel = pos - mstop) %>%
-                fastplyr::f_select(sample,frame,pos,rel,rpm)
-            }
-
-
-            # check whether plot for each read length
-            if(show_frame == TRUE){
-              pltdf <- pltdf %>%
-                fastplyr::f_group_by(sample,rel,frame) %>%
-                fastplyr::f_summarise(normval = sum(rpm)/ttt)
-
-              pltlayer <- geom_line(aes(x = rel, y = relexp, color = factor(frame)))
-              col <- scale_fill_manual(values = c("0" = "#003366", "1" = "#336699", "2" = "#CCCCCC"),
-                                       name = "frame")
-            }else{
-              pltdf <- pltdf %>%
-                fastplyr::f_group_by(sample,rel) %>%
-                fastplyr::f_summarise(normval = sum(rpm)/ttt)
-
-              pltlayer <- geom_line(aes(x = rel, y = relexp))
-              col <- NULL
-            }
-
-
-            # filter length and distance
-            if(type == "rel2start"){
-              pltdf <- pltdf %>%
-                dplyr::filter(rel >= rel2st_dist[1] & rel <= rel2st_dist[2])
-
-              distrg <- seq(rel2st_dist[1],rel2st_dist[2],1)
-            }else{
-              pltdf <- pltdf %>%
-                dplyr::filter(rel >= rel2sp_dist[1] & rel <= rel2sp_dist[2])
-
-              distrg <- seq(rel2sp_dist[1],rel2sp_dist[2],1)
+                dplyr::mutate(codon = rel %/% 3 + 1) %>%
+                fastplyr::f_group_by(sample,codon) %>%
+                fastplyr::f_summarise(avg = mean(avg)) %>%
+                dplyr::rename(rel = codon)
             }
 
             # ==================================================================
-            # whether smooth data
-            if(smooth == TRUE){
-              sp <- unique(pltdf$sample)
-
-              # x = 1
-              purrr::map_df(seq_along(sp),function(x){
-                tmp <- subset(pltdf, sample == sp[x])
-
-                tmp2 <- data.frame(sample = sp[x],rel = distrg)
-                tmp2 <- tmp2 %>%
-                  dplyr::left_join(y = tmp,by = c("sample","rel"))
-
-                if (requireNamespace("zoo", quietly = TRUE)) {
-                  tmp2$smooth <- zoo::rollmean(tmp2$normval, k = slide_window, fill = 0)
-                } else {
-                  warning("Package 'zoo' is needed for this function to work.")
-                }
-
-                return(tmp2)
-              })-> sm.df
-            }else{
-              sm.df <- pltdf %>%
-                dplyr::mutate(smooth = normval)
-
-            }
-
-
-            ave.tmp <- sm.df %>%
-              dplyr::group_by(sample) %>%
-              dplyr::summarise(allexp = sum(smooth)) %>%
-              dplyr::mutate(ave = allexp/length(distrg)) %>%
-              dplyr::select(sample, ave)
-
-            sm.df <- sm.df %>%
-              dplyr::left_join(y = ave.tmp,by = "sample") %>%
-              dplyr::mutate(relexp = smooth/ave)
-
             # plot
             p <-
-              ggplot(sm.df) +
-              pltlayer +
+              ggplot(pltdf) +
+              geom_path(aes(x = rel,y = avg)) +
               theme(panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
               # facet_wrap(~sample) +
               facet_wrap +
-              col +
-              xlab("Distance to start/stop codon (nt)") + ylab("Normalized reads")
-
+              xlab("Distance to start/stop codon (nt)") +
+              ylab("Normalized reads")
 
             # return
             if(return_data == FALSE){
               return(p)
             }else{
-              return(sm.df)
+              return(pltdf)
             }
-
           }
 )
+
