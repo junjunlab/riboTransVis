@@ -142,9 +142,16 @@ setMethod("generate_summary",
                   fastplyr::f_select(rname,pos,qwidth,count)
 
               }else{
+                if(object@assignment_mode == "end3"){
+                  # check strand to assign 5'end position
+                  tinfo <- tinfo %>%
+                    dplyr::mutate(pos = ifelse(strand == "-", pos + qwidth - 1, pos))
+                }
+
                 tinfo <- tinfo %>%
                   fastplyr::f_group_by(rname,pos,qwidth) %>%
                   fastplyr::f_summarise(count = dplyr::n())
+
               }
 
               tinfo$sample <- gp[x]
