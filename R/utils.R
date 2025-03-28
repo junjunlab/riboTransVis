@@ -97,7 +97,7 @@ do_offset_correction <- function(object = NULL, shift = 0) {
   if (nrow(object@reads_offset_info) > 0) {
     if (all(colnames(object@reads_offset_info) %in% c("sample", "qwidth", "rel_pos"))) {
       sry_offset <- object@reads_offset_info %>%
-        fastplyr::f_left_join(y = sry, by = c("sample", "qwidth")) %>%
+        fastplyr::f_inner_join(y = sry, by = c("sample", "qwidth")) %>%
         dplyr::mutate(pos = pos - rel_pos + shift)
 
       return(sry_offset)
