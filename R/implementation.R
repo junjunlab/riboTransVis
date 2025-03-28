@@ -215,11 +215,18 @@ get_transcript_sequence <- function(genome_file = NULL,
   # ============================================================================
   # prepare info to extract
   # ============================================================================
+
   exon <- gtf %>%
-    dplyr::filter(type == feature) %>%
+    dplyr::filter(type == feature)
+
+  # check type
+  if(feature != "exon"){
+    exon$type <- "exon"
+  }
+
+  exon <- exon %>%
     # add tid for non gene symbol
-    dplyr::mutate(gene_name = dplyr::if_else(is.na(gene_name),
-                                             transcript_id,gene_name)) %>%
+    dplyr::mutate(gene_name = dplyr::if_else(is.na(gene_name),transcript_id,gene_name)) %>%
     # add new tid
     dplyr::mutate(idnew = paste(transcript_id,gene_name,sep = "|"))
 

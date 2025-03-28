@@ -779,64 +779,63 @@ setMethod("relative_offset_plot",
 # function for metagene plot
 # ==============================================================================
 
-#' Generate Metagene Plots for Ribosome Profiling Data
+#' Metagene Plot for Ribosome Profiling Data
 #'
-#' This function creates **metagene plots**, visualizing **ribosome occupancy** relative
-#' to **start/stop codons** in translated mRNA regions (CDS).
+#' @description
+#' Generate a metagene plot to visualize ribosome occupancy across coding sequences.
+#' The plot can be generated relative to the start or stop codon, with various
+#' normalization and visualization options.
 #'
-#' @param object A `ribotrans` object containing ribosome profiling data.
-#' @param do_offset_correct Logical. If `TRUE`, performs **offset correction**
-#' using `do_offset_correction()`. **Default**: `FALSE`.
-#' @param position_shift Integer defining how much to adjust **ribosome footprint positions**
-#' during offset correction. **Default**: `0`.
-#' @param type Character. Defines metagene analysis type:
-#'   - `"rel2start"` (default): Plots occupancy relative to **start codon**.
-#'   - `"rel2stop"`: Plots occupancy relative to **stop codon**.
-#' @param return_data Logical. If `TRUE`, returns processed **occupancy data**
-#' instead of plotting. **Default**: `FALSE`.
-#' @param mode Character. Defines the **x-axis resolution**:
-#'   - `"nt"` (default): Positions in **nucleotides (nt)**.
-#'   - `"codon"`: Positions in **codon units (3-nt bins)**.
-#' @param read_length Numeric vector, specifying accepted **ribosome-protected fragment (RPF) lengths**.
-#' **Default**: `c(25,31)`.
-#' @param rel2st_dist Numeric vector of length 2, defining the **window range** (**nt**)
-#' for `"rel2start"` plots. **Default**: `c(-50,100)`.
-#' @param rel2sp_dist Numeric vector of length 2, defining the **window range** (**nt**)
-#' for `"rel2stop"` plots. **Default**: `c(-100,50)`.
-#' @param facet_wrap A `ggplot2::facet_wrap()` object to define **faceting** for multiple samples.
-#' **Default**: `ggplot2::facet_wrap(~sample)`.
+#' @param object A \code{ribotrans} object containing ribosome profiling data
+#' @param do_offset_correct Logical, whether to perform read position offset correction (default: FALSE)
+#' @param position_shift Numeric, shift value for offset correction (default: 0)
+#' @param norm_method Normalization method, either "average" or "tpm" (default: "average")
+#' @param min_cds_length Minimum CDS length to include in analysis (default: 600)
+#' @param min_counts Minimum read counts for a transcript to be included (default: 64)
+#' @param exclude_length A vector of two values specifying excluded regions near start and stop codons (default: c(90,90))
+#' @param type Plot relative to "rel2start" or "rel2stop" (default: "rel2start")
+#' @param return_data Logical, whether to return processed data instead of plot (default: FALSE)
+#' @param mode Visualization mode, either "nt" or "codon" (default: "nt")
+#' @param read_length Range of read lengths to include (default: c(25,31))
+#' @param rel2st_dist Distance range for plotting relative to start codon (default: c(-50,100))
+#' @param rel2sp_dist Distance range for plotting relative to stop codon (default: c(-100,50))
+#' @param facet_wrap ggplot2 facet_wrap function for sample visualization (default: facet_wrap(~sample))
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return
-#' - If `return_data = FALSE`: Returns a `ggplot` object of the **metagene plot**.
-#' - If `return_data = TRUE`: Returns a `data.frame` with:
-#'   - `sample`: Sample names.
-#'   - `rel`: Relative position (nt or codon).
-#'   - `avg`: **Mean normalized ribosome occupancy** at each position.
+#' A ggplot object showing ribosome occupancy, or a data frame if \code{return_data = TRUE}
 #'
 #' @details
-#' - The function computes **ribosome footprint density** aligned to **start or stop codons**.
-#' - If `mode = "codon"`, positions are converted to **codon units** (i.e., `rel/3`).
-#' - The occupancy is **normalized by average translation density** to account for
-#' differences in transcript lengths.
+#' This method creates a metagene plot from ribosome profiling data with several key features:
+#' \itemize{
+#'   \item Supports offset correction for read positioning
+#'   \item Multiple normalization methods (average, TPM)
+#'   \item Filtering for CDS length and read counts
+#'   \item Visualization by nucleotide or codon
+#'   \item Flexible plotting relative to start or stop codon
+#' }
 #'
 #' @examples
 #' \dontrun{
-#' # Metagene profile aligned to start codon (default)
-#' p <- metagene_plot(obj, type = "rel2start", mode = "nt")
-#' print(p)
+#' # Basic usage
+#' metagene_plot(ribo_object)
 #'
-#' # Return occupancy data instead of a plot
-#' data <- metagene_plot(obj, type = "rel2stop", mode = "codon", return_data = TRUE)
-#' head(data)
+#' # With custom parameters
+#' metagene_plot(ribo_object,
+#'               do_offset_correct = TRUE,
+#'               norm_method = "tpm",
+#'               type = "rel2stop")
 #'
-#' # Customize plot with ggplot2
-#' ggplot(data, aes(x = rel, y = avg, color = sample)) +
-#'     geom_line() +
-#'     theme_minimal()
+#' # Return data instead of plot
+#' metagene_data <- metagene_plot(ribo_object, return_data = TRUE)
 #' }
 #'
-#' @importFrom Biostrings readDNAStringSet translate vmatchPattern
+#'
+#' @seealso
+#' \code{\link{do_offset_correction}} for read position correction
+#'
+#' @export
+#'
 #' @importFrom ggplot2 ggplot geom_path theme element_blank element_text facet_wrap
 #' @importFrom dplyr filter mutate select left_join rename
 #' @importFrom fastplyr f_filter f_select f_group_by f_summarise
@@ -853,6 +852,10 @@ setMethod("metagene_plot",
           function(object,
                    do_offset_correct = FALSE,
                    position_shift = 0,
+                   norm_method = c("average", "tpm"),
+                   min_cds_length = 600,
+                   min_counts = 64,
+                   exclude_length = c(90,90),
                    type = c("rel2start","rel2stop"),
                    return_data = FALSE,
                    mode = c("nt", "codon"),
@@ -860,6 +863,7 @@ setMethod("metagene_plot",
                    rel2st_dist = c(-50,100),
                    rel2sp_dist = c(-100,50),
                    facet_wrap = ggplot2::facet_wrap(~sample)){
+            norm_method <- match.arg(norm_method, choices = c("average", "tpm"))
             type <- match.arg(type, choices = c("rel2start","rel2stop"))
             mode <- match.arg(mode, choices = c("nt", "codon"))
 
@@ -881,24 +885,51 @@ setMethod("metagene_plot",
               sry <- object@summary_info
             }
 
-            sry <- sry %>% fastplyr::f_filter(mstart != 0 | mstop != 0)
+            sry <- sry %>% fastplyr::f_filter(mstart != 0 | mstop != 0,
+                                              qwidth >= read_length[1] & qwidth <= read_length[2])
 
             # average counts per position
             avg.ct <- sry %>%
               dplyr::mutate(cdslen = mstop - mstart + 1) %>%
+              dplyr::mutate(relst = pos - mstart, relsp = pos - mstop) %>%
+              fastplyr::f_filter(relst > exclude_length[1] & relsp < -exclude_length[2]) %>%
               fastplyr::f_group_by(sample,rname,cdslen) %>%
               fastplyr::f_summarise(counts = sum(count)) %>%
-              dplyr::mutate(avg_ct = counts/cdslen) %>%
-              dplyr::select(sample,rname,avg_ct)
+              fastplyr::f_filter(counts > min_counts) %>%
+              dplyr::mutate(avg_ct = counts/cdslen)
 
-            # filter relative distance
-            pltdf <- sry %>%
-              dplyr::left_join(y = avg.ct,by = c("sample", "rname")) %>%
-              dplyr::filter(mstop - mstart >= max(abs(dist))) %>%
-              dplyr::mutate(rel = pos - .data[[var]], norm = count/avg_ct) %>%
-              fastplyr::f_group_by(sample,rel) %>%
-              fastplyr::f_summarise(normsm = sum(norm)) %>%
-              dplyr::filter(rel >= dist[1] & rel <= dist[2])
+            # check norma method
+            if(norm_method == "average"){
+              # filter relative distance
+              pltdf <- sry %>%
+                dplyr::inner_join(y = avg.ct,by = c("sample", "rname")) %>%
+                dplyr::filter(mstop - mstart >= min_cds_length) %>%
+                dplyr::mutate(rel = pos - get(var), norm = count/avg_ct) %>%
+                fastplyr::f_group_by(sample,rel) %>%
+                fastplyr::f_summarise(normsm = sum(norm)) %>%
+                dplyr::filter(rel >= dist[1] & rel <= dist[2])
+            }else{
+              pltdf <- avg.ct %>%
+                fastplyr::f_inner_join(y = sry,by = c("sample","rname")) %>%
+                dplyr::filter(mstop - mstart >= min_cds_length) %>%
+                dplyr::mutate(rel = pos - get(var),rpk = count/(cdslen/1000)) %>%
+                dplyr::filter(rel >= dist[1] & rel <= dist[2]) %>%
+                fastplyr::f_group_by(sample, rel) %>%
+                fastplyr::f_summarise(rpks = sum(rpk))
+
+              # get total mapped reads
+              lib <- object@library
+              dpt <- subset(lib, type == "ribo" & sample %in% unique(sry$sample)) %>%
+                dplyr::select(mappped_reads,sample)
+
+              # rpm normalization
+              pltdf <- pltdf %>%
+                fastplyr::f_inner_join(y = dpt,by = "sample") %>%
+                dplyr::mutate(normsm = (rpks/mappped_reads)*10^6) %>%
+                dplyr::select(-mappped_reads)
+
+            }
+
 
             # average occupancy
             sm <- pltdf %>%
@@ -906,7 +937,7 @@ setMethod("metagene_plot",
               fastplyr::f_summarise(norm_avg = sum(normsm)/(abs(dist[2]) + abs(dist[1]) + 1))
 
             pltdf <- pltdf %>%
-              dplyr::left_join(y = sm,by = "sample") %>%
+              dplyr::inner_join(y = sm,by = "sample") %>%
               dplyr::mutate(avg = normsm/norm_avg)
 
             # check show mode
@@ -918,6 +949,19 @@ setMethod("metagene_plot",
                 dplyr::rename(rel = codon)
             }
 
+            if(type == "rel2start"){
+              if(mode == "codon"){
+                xlb <- "Distance to start codon (codon)"
+              }else{
+                xlb <- "Distance to start codon (nt)"
+              }
+            }else{
+              if(mode == "codon"){
+                xlb <- "Distance to stop codon (codon)"
+              }else{
+                xlb <- "Distance to stop codon (nt)"
+              }
+            }
             # ==================================================================
             # plot
             p <-
@@ -928,7 +972,7 @@ setMethod("metagene_plot",
                     axis.text = element_text(colour = "black")) +
               # facet_wrap(~sample) +
               facet_wrap +
-              xlab("Distance to start/stop codon (nt)") +
+              xlab(xlb) +
               ylab("Average ribosome occupancy")
 
             # return
@@ -939,4 +983,5 @@ setMethod("metagene_plot",
             }
           }
 )
+
 

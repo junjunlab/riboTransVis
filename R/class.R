@@ -5,8 +5,8 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
                   "mappped_reads", "normval", "rpm","start","end","gene_id", "seqnames","idx", "idx.mx","rel_scale",
                   "all_counts", "periodicity","lower", "upper", "win_ip", "win_total", "xend","codon_pos",
                   "avg", "avg_ct", "cdslen", "norm_avg", "normsm","count.tt", "density", "label", "relsp",
-                  "relst", "rpm.tt", "sp", "wi", "x", "y", "yend","reloccup", "value","avg_val",  "dist",
-                  "Abbreviation1", "Abbreviation3", "AminoAcid", "abbrev", "codon_seq", "freq", "occup",
+                  "relst", "rpm.tt", "sp", "wi", "x", "y", "yend","reloccup", "value","avg_val",  "dist","rpks",
+                  "Abbreviation1", "Abbreviation3", "AminoAcid", "abbrev", "codon_seq", "freq", "occup","rpk",
                   "occurrence", "pause_score", "pep_seq", "ratio", "rel_pause", "tripep_val","motif","nt_pos"))
 
 
@@ -74,7 +74,96 @@ ribotrans <- setClass("ribotrans",
 #' @param gtf_file A `character` string indicating the path to the GTF annotation file.
 #' @param mapping_type Character. Either `"transcriptome"` or `"genome"`, indicating whether
 #'        RNA-seq/Ribo-seq alignments are transcriptome-based or genome-based. Default is `"transcriptome"`.
-#' @param assignment_mode Character. Specifies the read assignment strategy: `"end5"` (5' end) or `"end3"` (3' end).
+#'
+##' \strong{Read alignment strategy:}
+#'
+#' \describe{
+#' \item{Transcriptome alignment:}{
+#' Reads are aligned directly to the reference transcriptome (i.e., all RNA sequences).
+#'
+#' In this case, both single-end and paired-end reads—regardless of being aligned to the positive or negative strand—have their BAM \code{pos} field consistently representing the biological 5' end of the read. This makes assignment straightforward.
+#' }
+#'
+#' \item{Genome alignment:}{
+#' Reads are aligned to the reference genome (chromosomal DNA sequences), which requires strand-aware determination of the biological 5' end.
+#'
+#' \strong{Single-end sequencing:}
+#' \itemize{
+#' \item{If read is aligned to the positive strand (flag = 0), and the gene is on the positive strand → 5' end = BAM \code{pos}.}
+#' \item{If read is aligned to the negative strand (flag = 16), and the gene is on the negative strand → 5' end = \code{pos + read_length - 1}.}
+#' }
+#'
+#' \strong{Paired-end sequencing (R1 and R2 considered separately):}
+#' For ribosome profiling libraries (~30 nt insert size), both ends generally contain the same fragment; typically one end (e.g., R1) is used. However, the biological 5' end depends on whether data is from R1 or R2:
+#'
+#' \emph{R1 (first read in pair):}
+#' \itemize{
+#' \item{If read aligns to the negative strand (flag = 16, R1), gene is on the positive strand → 5' end = BAM \code{pos}.}
+#' \item{If read aligns to the positive strand (flag = 0, R1), gene is on the negative strand → 5' end = \code{pos + read_length - 1}.}
+#' }
+#'
+#' \emph{R2 (second read in pair):}
+#' \itemize{
+#' \item{If read aligns to the positive strand (flag = 0), gene is on the positive strand → 5' end = BAM \code{pos}.}
+#' \item{If read aligns to the negative strand (flag = 16), gene is on the negative strand → 5' end = \code{pos + read_length - 1}.}
+#' }
+#' }
+#' }
+#'
+#' @param assignment_mode Character. Specifies the read assignment strategy. Choices are:
+#' \itemize{
+#' \item{\code{"end5"}: Assign reads based on the 5' end of each aligned read.}
+#' \item{\code{"end3"}: Assign reads based on the 3' end of each aligned read.}
+#' }
+#'
+#' \strong{Interpretation depends on \code{mapping_type} and sequencing type:}
+#'
+#' \describe{
+#' \item{When \code{mapping_type == "transcriptome"}:}{
+#' Reads are aligned to transcript sequences (i.e., spliced mRNA).
+#'
+#' In this case, the BAM \code{pos} field always represents the biological 5' end of a read, regardless of strand or read direction.
+#'
+#' Therefore:
+#' \itemize{
+#' \item{\code{assignment_mode = "end5"} assigns reads by their biological 5' end}
+#' \item{\code{assignment_mode = "end3"} assigns reads by their biological 3' end}
+#' }
+#' }
+#'
+#' \item{When \code{mapping_type == "genome"}:}{
+#' Reads are aligned to the genome; strand information is essential to determine the biological 5' end. Behavior differs by sequencing type:
+#'
+#' \strong{Single-end reads:}
+#' \itemize{
+#' \item{For reads aligned to the positive strand (flag = 0), biological 5' end = \code{pos}}
+#' \item{For reads aligned to the negative strand (flag = 16), biological 5' end = \code{pos + read length - 1}}
+#' \item{→ Set \code{assignment_mode = "end5"} to assign reads to their biological 5' end}
+#' }
+#'
+#' \strong{Paired-end reads:}
+#' In ribosome profiling, only one read (e.g., R1 or R2) is typically analyzed. The biological 5' end of the RNA fragment depends on which read you use:
+#'
+#' \emph{If using R1 (first read in pair):}
+#' \itemize{
+#' \item{Flag = 0 (R1 on + strand): R1 represents the 3' end of the fragment}
+#' \item{Flag = 16 (R1 on − strand): R1 represents the 5' end of the fragment}
+#'
+#' \item{→ To assign reads to biological 5' end, set \code{assignment_mode = "end3"} (uses read's 3' end)}
+#' \item{→ To assign reads to biological 3' end, set \code{assignment_mode = "end5"} (uses read's 5' end)}
+#' }
+#'
+#' \emph{If using R2 (second read in pair):}
+#' \itemize{
+#' \item{Flag = 0 (R2 on + strand): R2 represents the 5' end of the fragment}
+#' \item{Flag = 16 (R2 on − strand): R2 represents the 3' end of the fragment}
+#'
+#' \item{→ To assign reads to biological 5' end, set \code{assignment_mode = "end5"} if R2 flag = 0, or \code{"end3"} if R2 flag = 16}
+#' }
+#' }
+#' }
+#'
+#'
 #' @param extend Logical. Whether to extend sequences upstream and downstream of transcripts.
 #'              Default is FALSE.
 #' @param extend_upstream Numeric. Number of bases to extend upstream of transcript start.

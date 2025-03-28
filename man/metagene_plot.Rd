@@ -3,7 +3,7 @@
 \name{metagene_plot}
 \alias{metagene_plot}
 \alias{metagene_plot,ribotrans-method}
-\title{Generate Metagene Plots for Ribosome Profiling Data}
+\title{Metagene Plot for Ribosome Profiling Data}
 \usage{
 metagene_plot(object, ...)
 
@@ -11,6 +11,10 @@ metagene_plot(object, ...)
   object,
   do_offset_correct = FALSE,
   position_shift = 0,
+  norm_method = c("average", "tpm"),
+  min_cds_length = 600,
+  min_counts = 64,
+  exclude_length = c(90, 90),
   type = c("rel2start", "rel2stop"),
   return_data = FALSE,
   mode = c("nt", "codon"),
@@ -21,80 +25,71 @@ metagene_plot(object, ...)
 )
 }
 \arguments{
-\item{object}{A \code{ribotrans} object containing ribosome profiling data.}
+\item{object}{A \code{ribotrans} object containing ribosome profiling data}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{do_offset_correct}{Logical. If \code{TRUE}, performs \strong{offset correction}
-using \code{do_offset_correction()}. \strong{Default}: \code{FALSE}.}
+\item{do_offset_correct}{Logical, whether to perform read position offset correction (default: FALSE)}
 
-\item{position_shift}{Integer defining how much to adjust \strong{ribosome footprint positions}
-during offset correction. \strong{Default}: \code{0}.}
+\item{position_shift}{Numeric, shift value for offset correction (default: 0)}
 
-\item{type}{Character. Defines metagene analysis type:
-\itemize{
-\item \code{"rel2start"} (default): Plots occupancy relative to \strong{start codon}.
-\item \code{"rel2stop"}: Plots occupancy relative to \strong{stop codon}.
-}}
+\item{norm_method}{Normalization method, either "average" or "tpm" (default: "average")}
 
-\item{return_data}{Logical. If \code{TRUE}, returns processed \strong{occupancy data}
-instead of plotting. \strong{Default}: \code{FALSE}.}
+\item{min_cds_length}{Minimum CDS length to include in analysis (default: 600)}
 
-\item{mode}{Character. Defines the \strong{x-axis resolution}:
-\itemize{
-\item \code{"nt"} (default): Positions in \strong{nucleotides (nt)}.
-\item \code{"codon"}: Positions in \strong{codon units (3-nt bins)}.
-}}
+\item{min_counts}{Minimum read counts for a transcript to be included (default: 64)}
 
-\item{read_length}{Numeric vector, specifying accepted \strong{ribosome-protected fragment (RPF) lengths}.
-\strong{Default}: \code{c(25,31)}.}
+\item{exclude_length}{A vector of two values specifying excluded regions near start and stop codons (default: c(90,90))}
 
-\item{rel2st_dist}{Numeric vector of length 2, defining the \strong{window range} (\strong{nt})
-for \code{"rel2start"} plots. \strong{Default}: \code{c(-50,100)}.}
+\item{type}{Plot relative to "rel2start" or "rel2stop" (default: "rel2start")}
 
-\item{rel2sp_dist}{Numeric vector of length 2, defining the \strong{window range} (\strong{nt})
-for \code{"rel2stop"} plots. \strong{Default}: \code{c(-100,50)}.}
+\item{return_data}{Logical, whether to return processed data instead of plot (default: FALSE)}
 
-\item{facet_wrap}{A \code{ggplot2::facet_wrap()} object to define \strong{faceting} for multiple samples.
-\strong{Default}: \code{ggplot2::facet_wrap(~sample)}.}
+\item{mode}{Visualization mode, either "nt" or "codon" (default: "nt")}
+
+\item{read_length}{Range of read lengths to include (default: c(25,31))}
+
+\item{rel2st_dist}{Distance range for plotting relative to start codon (default: c(-50,100))}
+
+\item{rel2sp_dist}{Distance range for plotting relative to stop codon (default: c(-100,50))}
+
+\item{facet_wrap}{ggplot2 facet_wrap function for sample visualization (default: facet_wrap(~sample))}
 }
 \value{
-\itemize{
-\item If \code{return_data = FALSE}: Returns a \code{ggplot} object of the \strong{metagene plot}.
-\item If \code{return_data = TRUE}: Returns a \code{data.frame} with:
-\itemize{
-\item \code{sample}: Sample names.
-\item \code{rel}: Relative position (nt or codon).
-\item \code{avg}: \strong{Mean normalized ribosome occupancy} at each position.
-}
-}
+A ggplot object showing ribosome occupancy, or a data frame if \code{return_data = TRUE}
 }
 \description{
-This function creates \strong{metagene plots}, visualizing \strong{ribosome occupancy} relative
-to \strong{start/stop codons} in translated mRNA regions (CDS).
+Generate a metagene plot to visualize ribosome occupancy across coding sequences.
+The plot can be generated relative to the start or stop codon, with various
+normalization and visualization options.
 }
 \details{
+This method creates a metagene plot from ribosome profiling data with several key features:
 \itemize{
-\item The function computes \strong{ribosome footprint density} aligned to \strong{start or stop codons}.
-\item If \code{mode = "codon"}, positions are converted to \strong{codon units} (i.e., \code{rel/3}).
-\item The occupancy is \strong{normalized by average translation density} to account for
-differences in transcript lengths.
+\item Supports offset correction for read positioning
+\item Multiple normalization methods (average, TPM)
+\item Filtering for CDS length and read counts
+\item Visualization by nucleotide or codon
+\item Flexible plotting relative to start or stop codon
 }
 }
 \examples{
 \dontrun{
-# Metagene profile aligned to start codon (default)
-p <- metagene_plot(obj, type = "rel2start", mode = "nt")
-print(p)
+# Basic usage
+metagene_plot(ribo_object)
 
-# Return occupancy data instead of a plot
-data <- metagene_plot(obj, type = "rel2stop", mode = "codon", return_data = TRUE)
-head(data)
+# With custom parameters
+metagene_plot(ribo_object,
+              do_offset_correct = TRUE,
+              norm_method = "tpm",
+              type = "rel2stop")
 
-# Customize plot with ggplot2
-ggplot(data, aes(x = rel, y = avg, color = sample)) +
-    geom_line() +
-    theme_minimal()
+# Return data instead of plot
+metagene_data <- metagene_plot(ribo_object, return_data = TRUE)
 }
 
+
+}
+\seealso{
+\code{\link{do_offset_correction}} for read position correction
 }

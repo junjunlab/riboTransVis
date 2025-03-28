@@ -138,7 +138,6 @@ setMethod("codon_occupancy_plot",
                             abbrev = paste(Abbreviation3, Abbreviation1,sep = " | "),)
 
             # check plot type
-            plot_abbreviation = T
             if(plot_abbreviation == TRUE){
               pdf <- pltdf3 %>%
                 dplyr::group_by(sample,abbrev,AminoAcid) %>%
@@ -155,7 +154,6 @@ setMethod("codon_occupancy_plot",
             }
 
             # check facet
-            facet = T
             if(facet == TRUE){
               facetlyr <- facet_wrap(~AminoAcid,scales = "free")
               angle <- 0
