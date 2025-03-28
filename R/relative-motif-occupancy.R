@@ -167,7 +167,7 @@ setMethod("relative_motif_occupancy",
 
             # average reads
             density.tt <- sry %>%
-              dplyr::left_join(y = avg.ct,by = c("sample", "rname")) %>%
+              dplyr::inner_join(y = avg.ct,by = c("sample", "rname")) %>%
               # filter low counts
               fastplyr::f_filter(counts > min_counts) %>%
               dplyr::mutate(norm = count/avg_ct) %>%
@@ -183,7 +183,7 @@ setMethod("relative_motif_occupancy",
             tid <- unique(density.tt$rname)
 
             rel2motif.df <- density.tt %>%
-              dplyr::left_join(y = motif.pos,by = "rname",relationship = "many-to-many") %>%
+              dplyr::inner_join(y = motif.pos,by = "rname",relationship = "many-to-many") %>%
               dplyr::mutate(dist = relst - nt_pos) %>%
               fastplyr::f_filter(dist >= -motif_upstream & dist <= motif_downstream)
 

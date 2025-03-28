@@ -10,6 +10,8 @@ multi_peptide_occupancy(object, ...)
 \S4method{multi_peptide_occupancy}{ribotrans}(
   object,
   cds_fa = NULL,
+  do_offset_correct = FALSE,
+  position_shift = 0,
   exclude_length = c(100, 100),
   min_counts = 64,
   peptide_length = 3,
@@ -22,6 +24,12 @@ multi_peptide_occupancy(object, ...)
 \item{...}{Additional arguments (currently unused).}
 
 \item{cds_fa}{A \strong{FASTA file path} containing CDS sequences for translation.}
+
+\item{do_offset_correct}{Logical. If \code{TRUE}, performs \strong{offset correction}
+using \code{do_offset_correction()}. \strong{Default}: \code{FALSE}.}
+
+\item{position_shift}{Integer defining how much to adjust \strong{ribosome footprint positions}
+during offset correction. \strong{Default}: \code{0}.}
 
 \item{exclude_length}{A numeric vector of length 2 (default: \code{c(100,100)})
 specifying the number of nucleotides to exclude from the start and end of CDS.}

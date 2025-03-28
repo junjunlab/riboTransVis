@@ -16,6 +16,10 @@
 #'
 #' @param object A `ribotrans` object containing **Ribo-seq** data.
 #' @param cds_fa A **FASTA file path** containing CDS sequences for translation.
+#' @param do_offset_correct Logical. If `TRUE`, performs **offset correction**
+#' using `do_offset_correction()`. **Default**: `FALSE`.
+#' @param position_shift Integer defining how much to adjust **ribosome footprint positions**
+#' during offset correction. **Default**: `0`.
 #' @param exclude_length A numeric vector of length 2 (default: `c(100,100)`)
 #'   specifying the number of nucleotides to exclude from the start and end of CDS.
 #' @param min_counts An integer (default: `64`), the minimum read count threshold
@@ -65,6 +69,8 @@ setMethod("multi_peptide_occupancy",
           signature(object = "ribotrans"),
           function(object,
                    cds_fa = NULL,
+                   do_offset_correct = FALSE,
+                   position_shift = 0,
                    exclude_length = c(100,100),
                    min_counts = 64,
                    peptide_length = 3,
@@ -81,8 +87,15 @@ setMethod("multi_peptide_occupancy",
             aa <- aa[features$idnew]
 
             # ==================================================================
+            # whether do reads offset correction
+            if(do_offset_correct == TRUE){
+              sry <- do_offset_correction(object = object,shift = position_shift)
+            }else{
+              sry <- object@summary_info
+            }
+
             # exclude cds first and last nts
-            sry <- object@summary_info %>%
+            sry <- sry %>%
               fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
               fastplyr::f_select(-qwidth,-translen) %>%
               dplyr::mutate(relst = pos - mstart, relsp = pos - mstop) %>%
@@ -99,7 +112,7 @@ setMethod("multi_peptide_occupancy",
 
             # average reads
             density.tt <- sry %>%
-              dplyr::left_join(y = avg.ct,by = c("sample", "rname")) %>%
+              dplyr::inner_join(y = avg.ct,by = c("sample", "rname")) %>%
               # filter low counts
               fastplyr::f_filter(counts > min_counts) %>%
               dplyr::mutate(norm = count/avg_ct) %>%
@@ -134,7 +147,7 @@ setMethod("multi_peptide_occupancy",
 
             # merge with density
             fullanno <- idfull %>%
-              fastplyr::f_left_join(y = density.tt,by = c("sample","rname","rel"))
+              fastplyr::f_inner_join(y = density.tt,by = c("sample","rname","rel"))
             fullanno[is.na(fullanno)] <- 0
 
             # ==================================================================
@@ -168,7 +181,7 @@ setMethod("multi_peptide_occupancy",
                 dplyr::mutate(tripep_val = zoo::rollsum(value, k = peptide_length, fill = NA),
                               .by = c(sample,rname)) %>%
                 na.omit() %>%
-                fastplyr::f_left_join(y = peptide_info,by = c("rname","rel")) %>%
+                fastplyr::f_inner_join(y = peptide_info,by = c("rname","rel")) %>%
                 fastplyr::f_group_by(sample,pep_seq) %>%
                 fastplyr::f_summarise(pause_score = sum(tripep_val),
                                       occurrence = n()) %>%

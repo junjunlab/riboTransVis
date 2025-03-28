@@ -85,7 +85,7 @@ setMethod("codon_occupancy_plot",
 
             # average reads
             pltdf <- sry %>%
-              dplyr::left_join(y = avg.ct,by = c("sample", "rname")) %>%
+              dplyr::inner_join(y = avg.ct,by = c("sample", "rname")) %>%
               dplyr::mutate(rel = pos - mstart, norm = count/avg_ct) %>%
               fastplyr::f_filter(rel >= 0 & rel <= (mstop - mstart + 1)) %>%
               fastplyr::f_group_by(sample,rname,rel) %>%
@@ -122,7 +122,7 @@ setMethod("codon_occupancy_plot",
 
             # merge with occupancy
             pltdf2 <- pltdf %>%
-              fastplyr::f_left_join(y = codon_info,by = c("rname", "rel")) %>%
+              fastplyr::f_inner_join(y = codon_info,by = c("rname", "rel")) %>%
               fastplyr::f_group_by(sample,codon_seq) %>%
               fastplyr::f_summarise(occup = sum(value),freq = dplyr::n()) %>%
               dplyr::mutate(reloccup = occup/freq) %>% na.omit()
@@ -133,7 +133,7 @@ setMethod("codon_occupancy_plot",
 
             # annotatate with amino acid info
             pltdf3 <- pltdf2 %>%
-              fastplyr::f_left_join(y = aa_info,by = c("codon_seq" = "Codon")) %>%
+              fastplyr::f_inner_join(y = aa_info,by = c("codon_seq" = "Codon")) %>%
               dplyr::mutate(codon = paste(codon_seq, Abbreviation1,sep = " | "),
                             abbrev = paste(Abbreviation3, Abbreviation1,sep = " | "),)
 
