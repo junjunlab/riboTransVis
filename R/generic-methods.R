@@ -245,7 +245,7 @@ setMethod("get_coverage",
                    coordinate_to_trans = FALSE,
                    slide_window = 30){
             # check gene name
-            if(gene_name %in% object@features$gene){
+            if(!(gene_name %in% object@features$gene)){
               stop("Can't find this gene symbol, please have a check!")
             }
 
@@ -387,7 +387,7 @@ setMethod("get_occupancy",
                    do_reads_offset = FALSE,
                    slide_window = 30){
             # check gene name
-            if(gene_name %in% object@features$gene){
+            if(!(gene_name %in% object@features$gene)){
               stop("Can't find this gene symbol, please have a check!")
             }
 

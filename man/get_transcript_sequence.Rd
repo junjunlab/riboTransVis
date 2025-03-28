@@ -7,7 +7,7 @@
 get_transcript_sequence(
   genome_file = NULL,
   gtf_file = NULL,
-  type = "exon",
+  feature = "exon",
   extend = FALSE,
   extend_upstream = 0,
   extend_downstream = 0,
@@ -20,7 +20,7 @@ get_transcript_sequence(
 
 \item{gtf_file}{Character. Path to the GTF annotation file.}
 
-\item{type}{Character. Feature type in gtf file to extract (e.g., \code{"exon"}, \code{"CDS"}). (Default: \code{"exon"}).}
+\item{feature}{Character. Feature type in gtf file to extract (e.g., \code{"exon"}, \code{"CDS"}). (Default: \code{"exon"}).}
 
 \item{extend}{Logical. Whether to extend sequences upstream and downstream of transcripts.
 Default is FALSE.}
