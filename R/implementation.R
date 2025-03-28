@@ -112,6 +112,7 @@ prepareTransInfo <- function(gtf_file = NULL){
 #'
 #' @param genome_file Character. Path to the genome FASTA file.
 #' @param gtf_file Character. Path to the GTF annotation file.
+#' @param type Character. Feature type in gtf file to extract (e.g., `"exon"`, `"CDS"`). (Default: `"exon"`).
 #' @param extend Logical. Whether to extend sequences upstream and downstream of transcripts.
 #'              Default is FALSE.
 #' @param extend_upstream Numeric. Number of bases to extend upstream of transcript start.
@@ -180,6 +181,7 @@ prepareTransInfo <- function(gtf_file = NULL){
 #' @export
 get_transcript_sequence <- function(genome_file = NULL,
                                     gtf_file = NULL,
+                                    type = "exon",
                                     extend = FALSE,
                                     extend_upstream = 0,
                                     extend_downstream = 0,
@@ -214,7 +216,7 @@ get_transcript_sequence <- function(genome_file = NULL,
   # prepare info to extract
   # ============================================================================
   exon <- gtf %>%
-    dplyr::filter(type == "exon") %>%
+    dplyr::filter(type == type) %>%
     # add tid for non gene symbol
     dplyr::mutate(gene_name = dplyr::if_else(is.na(gene_name),
                                              transcript_id,gene_name)) %>%

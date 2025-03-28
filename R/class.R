@@ -2,9 +2,12 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
                   "mstart", "mstop", "n", "na.omit", "new","count", "counts", "frame", "qwidth", "group_id",
                   "pos", "rname", "smooth", "rpm.x", "rpm.y", "transcript_id", "strand", "codon", "rel_pos",
                   "translen", "type", "utr3","utr5", "which_label", "width","f_len", "object", "len", "chr",
-                  "mappped_reads", "normval", "rpm","start","end","gene_id", "seqnames","idx", "idx.mx",
-                  "all_counts", "periodicity","lower", "upper", "win_ip", "win_total", "xend",
-                  "avg", "avg_ct", "cdslen", "norm_avg", "normsm"))
+                  "mappped_reads", "normval", "rpm","start","end","gene_id", "seqnames","idx", "idx.mx","rel_scale",
+                  "all_counts", "periodicity","lower", "upper", "win_ip", "win_total", "xend","codon_pos",
+                  "avg", "avg_ct", "cdslen", "norm_avg", "normsm","count.tt", "density", "label", "relsp",
+                  "relst", "rpm.tt", "sp", "wi", "x", "y", "yend","reloccup", "value","avg_val",  "dist",
+                  "Abbreviation1", "Abbreviation3", "AminoAcid", "abbrev", "codon_seq", "freq", "occup",
+                  "occurrence", "pause_score", "pep_seq", "ratio", "rel_pause", "tripep_val","motif","nt_pos"))
 
 
 #' ribotrans Class

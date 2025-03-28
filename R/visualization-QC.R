@@ -140,6 +140,213 @@ setMethod("length_plot",
 )
 
 
+# ==============================================================================
+# function for feature plot
+# ==============================================================================
+
+#' Plot Read Distribution Across RNA Features
+#'
+#' This function generates a bar plot showing the distribution of ribosome profiling reads
+#' across different RNA features (5' UTR, CDS, 3' UTR).
+#'
+#' @param object A `ribotrans` object that contains summary read information.
+#' @param return_data A logical value indicating whether to return the processed
+#' summary data instead of the plot. Default is `FALSE` (returns a `ggplot` object).
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return If `return_data = FALSE`, a `ggplot2` object visualizing the **read counts**
+#' in different regions (_5' UTR, CDS, 3' UTR_) is returned.
+#' If `return_data = TRUE`, a `data.frame` summarizing the read counts by region
+#' and sample is returned.
+#'
+#' @details
+#' - Reads are assigned to **5' UTR, CDS, or 3' UTR** based on the midpoint of the read position.
+#' - The function uses `dplyr` and `fastplyr` for efficient data manipulation.
+#' - The resulting bar plot groups reads by `sample` and scales axes using a log-10 transformation.
+#'
+#' @examples
+#' \dontrun{
+#' # Example: Generate a feature plot
+#' feature_plot(obj)
+#'
+#' # Example: Retrieve summarized data
+#' res <- feature_plot(obj, return_data = TRUE)
+#' head(res)
+#' }
+#'
+#' @export
+setGeneric("feature_plot",function(object,...) standardGeneric("feature_plot"))
+
+
+#' @rdname feature_plot
+#' @export
+setMethod("feature_plot",
+          signature(object = "ribotrans"),
+          function(object,return_data = FALSE){
+            # assign features
+            sry <- object@summary_info %>%
+              fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
+              dplyr::mutate(type = dplyr::case_when(pos + qwidth/2 < mstart ~ "5'UTR",
+                                                    pos + qwidth/2 >= mstart & pos + qwidth/2 < mstop ~ "CDS",
+                                                    pos + qwidth/2 >= mstop ~ "3'UTR")) %>%
+              fastplyr::f_group_by(sample, type) %>%
+              fastplyr::f_summarise(counts = sum(count))
+
+            # plot
+            # order
+            sry$type <- factor(sry$type,levels = c("CDS","5'UTR","3'UTR"))
+
+            p <-
+              ggplot(sry) +
+              geom_col(aes(x = type,y = counts,fill = type),width = 0.6,show.legend = F) +
+              facet_wrap(~sample,scales = "free_y")+
+              theme(panel.grid = element_blank(),
+                    strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
+                    axis.text = element_text(colour = "black")) +
+              scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
+              xlab("Read features") + ylab("Number of reads")
+
+            # return
+            if(return_data == FALSE){
+              return(p)
+            }else{
+              return(sry)
+            }
+          }
+)
+
+
+
+# ==============================================================================
+# function for whole_metagene plot
+# ==============================================================================
+
+#' Generate Metagene Profile Plot for Ribosome Density
+#'
+#' This function creates a **metagene profile plot** to visualize ribosome density
+#' across different transcript features (5' UTR, CDS, and 3' UTR).
+#'
+#' @param object A `ribotrans` object containing summarized ribosome profiling data.
+#' @param auto_scale Logical. If `TRUE`, the function automatically scales UTR lengths
+#' relative to the CDS region using the median UTR/CDS lengths across all transcripts.
+#' Default is `FALSE`, meaning manual scaling is used (via `custom_scale`).
+#' @param custom_scale A numeric vector of length **2** specifying the relative scaling
+#' factors for **5' UTR and 3' UTR** (relative to CDS length).
+#' **Default**: `c(0.3, 0.3)`, where both UTRs are **30% the size of the CDS region**.
+#' @param geom_density_bw Bandwidth for `geom_density()`. Controls the smoothness
+#' of the density plot. **Default**: `0.0005`.
+#' @param geom_density_n Number of points used to generate the density estimate.
+#' **Default**: `512`. Lower values can speed up computations.
+#' @param return_data Logical. If `FALSE`, returns a `ggplot2` object for visualization.
+#' If `TRUE`, returns **processed transcript-level ribosome density data** as a `data.frame`.
+#' **Default**: `FALSE` (returns plot).
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return If `return_data = FALSE`, returns a `ggplot2` object displaying **ribosome density profiles** across `5' UTR`, `CDS`, and `3' UTR`.
+#' If `return_data = TRUE`, returns a `data.frame` containing the **scaled relative ribosome density positions**.
+#'
+#' @details
+#' - This function calculates a **relative distance metric** for each read's mapped position and scales them appropriately into **5' UTR, CDS, and 3' UTR regions**.
+#' - If `auto_scale = TRUE`, the function automatically estimates median UTR/CDS
+#' scaling factors from the dataset.
+#' - The **X-axis** represents normalized transcript positions:
+#'   - `1` → start codon of the **CDS**
+#'   - `2` → stop codon of the **CDS**
+#'   - `Scaled values between 0 and 1` → **5' UTR**
+#'   - `Scaled values between 2 and 3` → **3' UTR**
+#' - **Dashed reference lines** (`geom_vline()`) mark **CDS start (1)** and **CDS stop (2)**.
+#'
+#' @examples
+#' \dontrun{
+#' # Generate a metagene plot
+#' whole_metagene_plot(obj)
+#'
+#' # Return processed density data instead of plot
+#' density_data <- whole_metagene_plot(obj, return_data = TRUE)
+#' head(density_data)
+#'
+#' # Adjust kernel density bandwidth for smoother plot
+#' whole_metagene_plot(obj, geom_density_bw = 0.001)
+#' }
+#'
+#' @export
+setGeneric("whole_metagene_plot",function(object,...) standardGeneric("whole_metagene_plot"))
+
+
+
+
+#' @rdname whole_metagene_plot
+#' @export
+setMethod("whole_metagene_plot",
+          signature(object = "ribotrans"),
+          function(object,
+                   auto_scale = FALSE,
+                   custom_scale = c(0.3,0.3),
+                   geom_density_bw = 0.0005,
+                   geom_density_n = 512,
+                   return_data = FALSE){
+            # ==================================================================
+            # calculate relative distance
+            sry <- object@summary_info %>%
+              fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
+              dplyr::mutate(pos = pos + qwidth/2) %>%
+              dplyr::mutate(rel = dplyr::case_when(pos < mstart ~ pos/mstart,
+                                                   pos >= mstart & pos < mstop ~ (pos - mstart)/(mstop - mstart) + 1,
+                                                   pos >= mstop ~ (pos - mstop)/(translen - mstop) + 2)) %>%
+              fastplyr::f_select(sample, rel)
+
+            # ==================================================================
+            # scale to cds region
+            fea <- object@features
+
+            if(auto_scale == TRUE){
+              if (requireNamespace("stats", quietly = TRUE)) {
+                utr5 <- stats::median(fea$utr5)
+                cds <- stats::median(fea$cds)
+                utr3 <- stats::median(fea$utr3)
+              } else {
+                warning("Package 'stats' is needed for this function to work.")
+              }
+
+              sutr5 <- utr5/cds
+              sutr3 <- utr3/cds
+            }else{
+              sutr5 <- custom_scale[1]
+              sutr3 <- custom_scale[2]
+            }
+
+            # re-scale regions
+            sry <- sry %>%
+              dplyr::mutate(rel_scale = dplyr::case_when(
+                rel < 1 ~ scales::rescale(rel,to = c(1 - sutr5,1),from = c(0,1)),
+                rel >= 2 ~ scales::rescale(rel,to = c(2,2 + sutr3),from = c(2,3)),
+                .default = rel))
+
+            # ==================================================================
+            # plot
+            p <-
+              ggplot(sry) +
+              geom_density(aes(x = rel_scale),color = "#003366",bw = geom_density_bw, n = geom_density_n) +
+              facet_wrap(~sample) +
+              theme_bw() +
+              theme(panel.grid = element_blank(),
+                    strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
+                    axis.text = element_text(colour = "black")) +
+              scale_x_continuous(breaks = c(1,1.5,2),
+                                 limits = c(1 - sutr5,2 + sutr3),
+                                 labels = c("start","CDS","stop")) +
+              geom_vline(xintercept = c(1,2),lty = "dashed", color = "grey30") +
+              xlab("Ribosome density (AU)")
+
+            # return
+            if(return_data == FALSE){
+              return(p)
+            }else{
+              return(sry)
+            }
+          }
+)
+
 
 
 # ==============================================================================
@@ -560,7 +767,9 @@ setMethod("relative_offset_plot",
             if(return_offset == FALSE){
               return(p)
             }else{
-              return(mx.pos)
+              offset <- mx.pos[,1:3]
+
+              return(offset)
             }
 
           }
@@ -570,71 +779,80 @@ setMethod("relative_offset_plot",
 # function for metagene plot
 # ==============================================================================
 
-#' Generate Metagene Profile Plot
+#' Generate Metagene Plots for Ribosome Profiling Data
 #'
-#' @description A generic function to generate a metagene profile plot
-#' visualizing read distributions relative to start or stop codons.
+#' This function creates **metagene plots**, visualizing **ribosome occupancy** relative
+#' to **start/stop codons** in translated mRNA regions (CDS).
 #'
-#' @param object An object containing sequencing data.
-#' @param ... Additional arguments passed to specific methods.
+#' @param object A `ribotrans` object containing ribosome profiling data.
+#' @param do_offset_correct Logical. If `TRUE`, performs **offset correction**
+#' using `do_offset_correction()`. **Default**: `FALSE`.
+#' @param position_shift Integer defining how much to adjust **ribosome footprint positions**
+#' during offset correction. **Default**: `0`.
+#' @param type Character. Defines metagene analysis type:
+#'   - `"rel2start"` (default): Plots occupancy relative to **start codon**.
+#'   - `"rel2stop"`: Plots occupancy relative to **stop codon**.
+#' @param return_data Logical. If `TRUE`, returns processed **occupancy data**
+#' instead of plotting. **Default**: `FALSE`.
+#' @param mode Character. Defines the **x-axis resolution**:
+#'   - `"nt"` (default): Positions in **nucleotides (nt)**.
+#'   - `"codon"`: Positions in **codon units (3-nt bins)**.
+#' @param read_length Numeric vector, specifying accepted **ribosome-protected fragment (RPF) lengths**.
+#' **Default**: `c(25,31)`.
+#' @param rel2st_dist Numeric vector of length 2, defining the **window range** (**nt**)
+#' for `"rel2start"` plots. **Default**: `c(-50,100)`.
+#' @param rel2sp_dist Numeric vector of length 2, defining the **window range** (**nt**)
+#' for `"rel2stop"` plots. **Default**: `c(-100,50)`.
+#' @param facet_wrap A `ggplot2::facet_wrap()` object to define **faceting** for multiple samples.
+#' **Default**: `ggplot2::facet_wrap(~sample)`.
+#' @param ... Additional arguments (currently unused).
 #'
-#' @return A `ggplot2` object showing the metagene profile distribution.
+#' @return
+#' - If `return_data = FALSE`: Returns a `ggplot` object of the **metagene plot**.
+#' - If `return_data = TRUE`: Returns a `data.frame` with:
+#'   - `sample`: Sample names.
+#'   - `rel`: Relative position (nt or codon).
+#'   - `avg`: **Mean normalized ribosome occupancy** at each position.
 #'
+#' @details
+#' - The function computes **ribosome footprint density** aligned to **start or stop codons**.
+#' - If `mode = "codon"`, positions are converted to **codon units** (i.e., `rel/3`).
+#' - The occupancy is **normalized by average translation density** to account for
+#' differences in transcript lengths.
+#'
+#' @examples
+#' \dontrun{
+#' # Metagene profile aligned to start codon (default)
+#' p <- metagene_plot(obj, type = "rel2start", mode = "nt")
+#' print(p)
+#'
+#' # Return occupancy data instead of a plot
+#' data <- metagene_plot(obj, type = "rel2stop", mode = "codon", return_data = TRUE)
+#' head(data)
+#'
+#' # Customize plot with ggplot2
+#' ggplot(data, aes(x = rel, y = avg, color = sample)) +
+#'     geom_line() +
+#'     theme_minimal()
+#' }
+#'
+#' @importFrom Biostrings readDNAStringSet translate vmatchPattern
+#' @importFrom ggplot2 ggplot geom_path theme element_blank element_text facet_wrap
+#' @importFrom dplyr filter mutate select left_join rename
+#' @importFrom fastplyr f_filter f_select f_group_by f_summarise
+#' @importFrom purrr map_df
 #' @export
 setGeneric("metagene_plot",function(object,...) standardGeneric("metagene_plot"))
 
 
 
-#' @describeIn metagene_plot Generate a metagene profile plot for `ribotrans` objects.
-#'
-#' @description This method creates a metagene profile plot showing the
-#' distribution of ribosome-protected fragments (RPFs) relative to the
-#' start or stop codon.
-#'
-#' @param object A `ribotrans` object containing RNA sequencing metrics.
-#' @param type Character string specifying the metagene type. Must be one of:
-#' \itemize{
-#'   \item `"rel2start"` - Distance relative to the start codon.
-#'   \item `"rel2stop"` - Distance relative to the stop codon.
-#' }
-#' @param return_data Logical, if `TRUE`, returns the processed data instead of a plot (default: `FALSE`).
-#' @param mode Character string specifying the unit for the x-axis:
-#'   - `"nt"`: Nucleotide level resolution (default).
-#'   - `"codon"`: Codon-level resolution.
-#' @param read_length Numeric vector of length two specifying the range of read lengths to include (default: `c(25,31)`).
-#' @param rel2st_dist Numeric vector of length two, specifying distance range to include relative to start codon (default: `c(-50,100)`).
-#' @param rel2sp_dist Numeric vector of length two, specifying distance range to include relative to stop codon (default: `c(-100,50)`).
-#' @param facet_wrap A `ggplot2::facet_wrap()` object to control faceting by sample (default behavior).
-#'
-#' @return If `return_data = FALSE`, returns a `ggplot2` object showing the metagene profile plot.
-#' If `return_data = TRUE`, returns a processed `data.frame` containing metagene read distributions.
-#'
-#' @details
-#' - The function normalizes read counts based on total mapped reads (RPM normalization).
-#' - Optionally, it applies a rolling average (`slide_window`) to smooth the profile.
-#' - If `show_frame = TRUE`, colors are applied for individual reading frames.
-#'
-#' @examples
-#' \dontrun{
-#' # Generate standard metagene plot relative to start codon
-#' metagene_plot(ribo_obj, type = "rel2start")
-#'
-#'
-#' # Get the underlying data instead of a plot
-#' data <- metagene_plot(ribo_obj, type = "rel2start", return_data = TRUE)
-#' head(data)
-#' }
-#'
-#' @importFrom ggplot2 ggplot geom_line scale_color_manual facet_wrap
-#' @importFrom ggplot2 theme element_text element_blank
-#' @importFrom dplyr mutate filter left_join select summarise
-#' @importFrom fastplyr f_group_by f_summarise f_filter f_select f_left_join
-#' @importFrom purrr map_df
-#'
+#' @rdname metagene_plot
 #' @export
 setMethod("metagene_plot",
           signature(object = "ribotrans"),
           function(object,
+                   do_offset_correct = FALSE,
+                   position_shift = 0,
                    type = c("rel2start","rel2stop"),
                    return_data = FALSE,
                    mode = c("nt", "codon"),
@@ -656,8 +874,14 @@ setMethod("metagene_plot",
 
             features <- object@features
 
-            sry <- object@summary_info %>%
-              fastplyr::f_filter(mstart != 0 | mstop != 0)
+            # whether do reads offset correction
+            if(do_offset_correct == TRUE){
+              sry <- do_offset_correction(object = object,shift = position_shift)
+            }else{
+              sry <- object@summary_info
+            }
+
+            sry <- sry %>% fastplyr::f_filter(mstart != 0 | mstop != 0)
 
             # average counts per position
             avg.ct <- sry %>%
@@ -705,7 +929,7 @@ setMethod("metagene_plot",
               # facet_wrap(~sample) +
               facet_wrap +
               xlab("Distance to start/stop codon (nt)") +
-              ylab("Normalized reads")
+              ylab("Average ribosome occupancy")
 
             # return
             if(return_data == FALSE){
