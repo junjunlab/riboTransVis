@@ -82,9 +82,17 @@ setMethod("multi_peptide_occupancy",
 
             cds <- Biostrings::readDNAStringSet(cds_fa)
 
+            # remove transcript contains Ns in sequence
+            valid_cds <- cds[!grepl("[^ACGTacgt]", as.character(cds))]
+
             # translate codon to amino acid
-            aa <- Biostrings::translate(x = cds,genetic.code = Biostrings::GENETIC_CODE)
-            aa <- aa[features$idnew]
+            aa <- Biostrings::translate(x = valid_cds,genetic.code = Biostrings::GENETIC_CODE)
+
+            ids_retain <- intersect(features$idnew,names(aa))
+            aa <- aa[ids_retain]
+
+            # Filter sequences whose length > peptide_length
+            aa <- aa[Biostrings::width(aa) > peptide_length]
 
             # ==================================================================
             # whether do reads offset correction
@@ -153,7 +161,7 @@ setMethod("multi_peptide_occupancy",
             # ==================================================================
             # prepare tri-peptide info for all transcripts
             # x = 1
-            purrr::map_df(seq_along(aa),function(x){
+            lapply(seq_along(aa),function(x){
               tmp <- aa[x]
               cdslen <- Biostrings::width(tmp)
 
@@ -161,18 +169,13 @@ setMethod("multi_peptide_occupancy",
               interval <- seq(1, cdslen - (peptide_length - 1), by = 1)
 
               # get peptide
-              if (requireNamespace("stringr", quietly = TRUE)) {
-                seqs <- stringr::str_sub(as.character(tmp),
-                                         start = interval,
-                                         end = interval + (peptide_length - 1))
-              } else {
-                warning("Package 'stringr' is needed for this function to work.")
-              }
+              seqs <- stringr::str_sub_all(tmp,start = interval,
+                                           end = interval + (peptide_length - 1))[[1]]
 
               pepdf <- data.frame(rname = names(tmp),rel = 1:length(interval),pep_seq = seqs)
 
               return(pepdf)
-            }) -> peptide_info
+            }) %>% do.call("rbind",.) %>% data.frame() -> peptide_info
 
             # ==================================================================
             # calculate total density for peptide
@@ -233,6 +236,8 @@ setMethod("multi_peptide_occupancy",
 #' @param color A string defining the **scatter color** (default: `"#003366"`).
 #' @param label_size A numeric value controlling the labeled peptide text size
 #'   (default: `3`).
+#' @param hjust A numeric value specifying horizontal justification for the labels. The default is `1.2`.
+#' @param vjust A numeric value specifying vertical justification for the labels. The default is `1.2`.
 #' @param top_motif An integer specifying the number of top peptides to highlight based
 #'   on **highest fold-change (`y / x`)** (default: `20`).
 #'
@@ -257,6 +262,7 @@ peptide_scatter_plot <- function(data = NULL,
                                  x = NULL,y = NULL,
                                  color = "#003366",
                                  label_size = 3,
+                                 hjust = 1.2,vjust = 1.2,
                                  top_motif = 20){
 
   # get ratio
@@ -277,7 +283,7 @@ peptide_scatter_plot <- function(data = NULL,
     geom_point(aes(x = get(x),y = get(y)),color = color) +
     geom_text(data = label_df,
               aes(x = get(x), y = get(y), label = pep_seq),
-              hjust = 1.2, vjust = 1.2, size = label_size, check_overlap = TRUE) +
+              hjust = hjust, vjust = vjust, size = label_size, check_overlap = TRUE) +
     geom_abline(slope = 1,intercept = 0,lty = "dashed", color = "grey40") +
     theme(panel.grid = element_blank(),
           axis.text = element_text(colour = "black")) +

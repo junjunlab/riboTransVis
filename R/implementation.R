@@ -103,81 +103,48 @@ prepareTransInfo <- function(gtf_file = NULL){
 # function to extract transcript sequence
 # ==============================================================================
 
-#' Extract transcript sequences from genome and GTF files
+#' Extract Transcript Sequences from Genome and GTF Annotation
 #'
-#' @description
-#' This function extracts transcript sequences based on genome and GTF annotation files.
-#' It supports extending sequences upstream and downstream of transcripts, and can
-#' return either the extended regions or the extracted sequences.
+#' This function extracts transcript (or other genomic feature) sequences based on genome FASTA and GTF annotations.
+#' It also supports optional region extension upstream/downstream, and can output extended coordinates or the final transcript FASTA.
 #'
-#' @param genome_file Character. Path to the genome FASTA file.
-#' @param gtf_file Character. Path to the GTF annotation file.
-#' @param feature Character. Feature type in gtf file to extract (e.g., `"exon"`, `"CDS"`). (Default: `"exon"`).
-#' @param extend Logical. Whether to extend sequences upstream and downstream of transcripts.
-#'              Default is FALSE.
-#' @param extend_upstream Numeric. Number of bases to extend upstream of transcript start.
-#'                       Only used when extend = TRUE. Default is 0.
-#' @param extend_downstream Numeric. Number of bases to extend downstream of transcript end.
-#'                         Only used when extend = TRUE. Default is 0.
-#' @param return_extend_region Logical. If TRUE, returns the extended regions information
-#'                            instead of sequences. Default is FALSE.
-#' @param output_file Character. Path to save the output FASTA file. Required when
-#'                    return_extend_region = FALSE.
+#' @param genome_file Either a \code{BSgenome} object or the path to an uncompressed genome FASTA file (with accompanying \code{.fai} index or it will be generated).
+#' @param gtf_file Path to a GTF annotation file containing gene models (required).
+#' @param feature Feature type to extract sequences for (Default: "exon"). Could be "exon", "CDS", etc.
+#' @param extend Logical; whether to extend the first and last exons per transcript (Default: \code{FALSE}).
+#' @param extend_upstream Integer; number of bases to extend upstream of the first exon (Default: \code{0}).
+#' @param extend_downstream Integer; number of bases to extend downstream of the last exon (Default: \code{0}).
+#' @param return_extend_region Logical; if \code{TRUE}, returns the genomic coordinates (as a \code{data.frame}) of the extracted (possibly extended) regions instead of sequences (Default: \code{FALSE}).
+#' @param output_file Output file path to write the transcript sequences in FASTA format. Required if \code{return_extend_region = FALSE}.
 #'
-#' @return If return_extend_region = TRUE, returns a data frame containing extended regions
-#'         information. Otherwise, writes sequences to the specified output file.
+#' @return If \code{return_extend_region = TRUE}, returns a \code{data.frame} containing the extended coordinates of the selected feature (e.g., exon). Otherwise, writes transcript sequences to \code{output_file} and returns nothing.
 #'
 #' @details
-#' The function performs the following steps:
-#' 1. Reads genome and GTF files
-#' 2. Processes exon information
-#' 3. Extends sequences if requested
-#' 4. Extracts transcript sequences or returns extended regions
-#'
-#' For transcript names, it combines transcript_id and gene_name with "|" as separator.
-#' If gene_name is not available, transcript_id is used instead.
-#'
-#' @note
-#' - Ensure input files exist and have correct formats
-#' - Genome file must have corresponding .fai index file or will be created
-#' - Extended regions are automatically adjusted to chromosome boundaries
+#' - The function supports both UCSC-style and Ensembl-style chromosome names, and will automatically adjust "chr" prefix if needed.
+#' - Transcript sequences are reconstructed by collapsing all exons (or chosen \code{feature}) for each transcript.
+#' - For \code{feature = "CDS"}, stop codons (+3bp) can optionally be included at the 3' end (or 5' end for minus strand).
+#' - Requires the following Bioconductor packages: \code{rtracklayer}, \code{Rsamtools}, \code{Biostrings}, \code{txdbmaker}, \code{GenomicFeatures}, \code{AnnotationDbi}
 #'
 #' @examples
 #' \dontrun{
-#' # Basic usage
 #' get_transcript_sequence(
-#'   genome_file = "genome.fa",
-#'   gtf_file = "annotation.gtf",
+#'   genome_file = "Homo_sapiens.GRCh38.dna.primary_assembly.fa",
+#'   gtf_file = "Homo_sapiens.GRCh38.110.gtf",
+#'   feature = "exon",
+#'   extend = TRUE,
+#'   extend_upstream = 50,
+#'   extend_downstream = 100,
+#'   return_extend_region = FALSE,
 #'   output_file = "transcripts.fa"
-#' )
-#'
-#' # With extension
-#' get_transcript_sequence(
-#'   genome_file = "genome.fa",
-#'   gtf_file = "annotation.gtf",
-#'   extend = TRUE,
-#'   extend_upstream = 100,
-#'   extend_downstream = 100,
-#'   output_file = "transcripts_extended.fa"
-#' )
-#'
-#' # Return extended regions
-#' regions <- get_transcript_sequence(
-#'   genome_file = "genome.fa",
-#'   gtf_file = "annotation.gtf",
-#'   extend = TRUE,
-#'   extend_upstream = 100,
-#'   extend_downstream = 100,
-#'   return_extend_region = TRUE
 #' )
 #' }
 #'
 #' @importFrom Rsamtools FaFile indexFa
-#' @importFrom dplyr filter mutate if_else left_join
-#' @importFrom Biostrings writeXStringSet readDNAStringSet
-#' @importFrom GenomicFeatures extractTranscriptSeqs
+#' @importFrom GenomicFeatures extractTranscriptSeqs makeTxDbFromGRanges
+#' @importFrom Biostrings writeXStringSet
 #' @importFrom GenomicRanges GRanges
-#'
+#' @importFrom dplyr %>% filter mutate if_else left_join n select
+#' @importFrom fastplyr f_filter f_inner_join
 #' @export
 get_transcript_sequence <- function(genome_file = NULL,
                                     gtf_file = NULL,
@@ -191,23 +158,34 @@ get_transcript_sequence <- function(genome_file = NULL,
   # load genome and gtf
   # ============================================================================
   if(!is.null(genome_file)){
-    # extact chromosome length
-    fa <- Biostrings::readDNAStringSet(filepath = genome_file)
-    names(fa) <- sapply(strsplit(names(fa),split = " "),"[",1)
+    # check db
+    if(inherits(genome_file,"BSgenome")){
+      fa_file <- genome_file
+
+    }else{
+      # extact chromosome length
+      if (!file.exists(paste0(genome_file, ".fai"))) {
+        Rsamtools::indexFa(genome_file)
+      }
+
+      fa_file <- Rsamtools::FaFile(genome_file)
+    }
 
     # chromosome length
-    chr_len <- data.frame(seqnames = names(fa),len = GenomicRanges::width(fa))
+    if (requireNamespace("GenomeInfoDb", quietly = TRUE)) {
+      seqinfo <- GenomeInfoDb::seqinfo(fa_file)
+      chr_len <- data.frame(seqnames = names(seqinfo),
+                            len = as.numeric(GenomeInfoDb::seqlengths(seqinfo))
+      )
+    } else {
+      warning("Package 'GenomeInfoDb' is needed for this function to work.")
+    }
 
-    # load genome file
-    fa_file <- Rsamtools::FaFile(genome_file)
-    Rsamtools::indexFa(file = genome_file)
   }
 
   # load gtf file
   if (requireNamespace("rtracklayer", quietly = TRUE)) {
-    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>%
-      data.frame()
-
+    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>% data.frame()
   } else {
     warning("Package 'rtracklayer' is needed for this function to work.")
   }
@@ -215,9 +193,12 @@ get_transcript_sequence <- function(genome_file = NULL,
   # ============================================================================
   # prepare info to extract
   # ============================================================================
+  exon <- gtf %>% dplyr::filter(type == feature)
 
-  exon <- gtf %>%
-    dplyr::filter(type == feature)
+  # check chromosome prefix
+  if(inherits(genome_file,"BSgenome") & !startsWith(as.character(exon$seqnames[1]),"chr")){
+    exon$seqnames <- paste("chr",exon$seqnames,sep = "")
+  }
 
   # check type
   if(feature != "exon"){
@@ -235,13 +216,12 @@ get_transcript_sequence <- function(genome_file = NULL,
     exon.final <- exon %>%
       # add exon index for each transcript
       dplyr::mutate(idx = dplyr::if_else(strand == "+",1:dplyr::n(),dplyr::n():1),
-                    idx.mx = dplyr::n(),
-                    .by = transcript_id) %>%
+                    idx.mx = dplyr::n(),.by = transcript_id) %>%
       # extend upstream and downstream
       dplyr::mutate(start = dplyr::if_else(idx == 1 ,start - extend_upstream,start),
                     end = dplyr::if_else(idx == idx.mx, end + extend_downstream, end)) %>%
       # merge with chromosome length info
-      dplyr::left_join(y = chr_len,by = "seqnames") %>%
+      fastplyr::f_inner_join(y = chr_len,by = "seqnames") %>%
       # check start and end boundary
       dplyr::mutate(start = dplyr::if_else(start <= 0,1,start),
                     end = dplyr::if_else(end > len,len,end)) %>%
@@ -256,6 +236,27 @@ get_transcript_sequence <- function(genome_file = NULL,
     exon.final <- exon.final %>% dplyr::select(-idnew)
     return(exon.final)
   }else{
+    # filter regions in genome
+    exon.final <- exon.final %>%
+      fastplyr::f_filter(seqnames %in% chr_len$seqnames) %>%
+      fastplyr::f_inner_join(chr_len, by = "seqnames") %>%
+      fastplyr::f_filter(end <= len)
+
+    # include stop codon
+    if(feature == "CDS"){
+      exon.final <- exon.final %>%
+        # add exon index for each transcript
+        dplyr::mutate(idx = dplyr::if_else(strand == "+",1:dplyr::n(),dplyr::n():1),
+                      idx.mx = dplyr::n(),.by = transcript_id) %>%
+        # extend upstream and downstream
+        dplyr::mutate(start = dplyr::if_else(strand == "-" & idx == 1 ,start - 3,start),
+                      end = dplyr::if_else(strand == "+" & idx == idx.mx, end + 3, end)) %>%
+        # merge with chromosome length info
+        fastplyr::f_inner_join(y = chr_len,by = "seqnames") %>%
+        # redefine region width
+        dplyr::mutate(width = abs(end - start) + 1)
+    }
+
     # to txdb format
     if (requireNamespace("txdbmaker", quietly = TRUE)) {
       exon.final <- exon.final %>% dplyr::mutate(transcript_id = idnew)
@@ -276,8 +277,7 @@ get_transcript_sequence <- function(genome_file = NULL,
 
 
     # extract sequence
-    totaltrans.seq <- GenomicFeatures::extractTranscriptSeqs(x = fa_file,
-                                                             transcripts = txdb.fl)
+    totaltrans.seq <- GenomicFeatures::extractTranscriptSeqs(x = fa_file,transcripts = txdb.fl)
 
     # assign names
     names(totaltrans.seq) <- tx2gene$TXNAME

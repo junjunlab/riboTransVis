@@ -47,6 +47,7 @@ Suggests:
     tibble,
     zoo,
     binom,
+    GenomeInfoDb,
     pkgconfig
 VignetteBuilder: knitr
 Depends: 

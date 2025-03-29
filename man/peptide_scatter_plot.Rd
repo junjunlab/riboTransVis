@@ -10,6 +10,8 @@ peptide_scatter_plot(
   y = NULL,
   color = "#003366",
   label_size = 3,
+  hjust = 1.2,
+  vjust = 1.2,
   top_motif = 20
 )
 }
@@ -25,6 +27,10 @@ in different sample conditions.}
 
 \item{label_size}{A numeric value controlling the labeled peptide text size
 (default: \code{3}).}
+
+\item{hjust}{A numeric value specifying horizontal justification for the labels. The default is \code{1.2}.}
+
+\item{vjust}{A numeric value specifying vertical justification for the labels. The default is \code{1.2}.}
 
 \item{top_motif}{An integer specifying the number of top peptides to highlight based
 on \strong{highest fold-change (\code{y / x})} (default: \code{20}).}

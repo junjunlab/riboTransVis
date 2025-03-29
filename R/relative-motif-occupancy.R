@@ -66,7 +66,6 @@
 #' @importFrom Biostrings readDNAStringSet translate vmatchPattern
 #' @importFrom dplyr filter mutate select group_by summarise left_join
 #' @importFrom fastplyr f_filter f_select f_group_by f_summarise
-#' @importFrom purrr map_df
 #' @export
 setGeneric("relative_motif_occupancy",function(object,...) standardGeneric("relative_motif_occupancy"))
 
@@ -95,9 +94,14 @@ setMethod("relative_motif_occupancy",
 
             cds <- Biostrings::readDNAStringSet(cds_fa)
 
+            # remove transcript contains Ns in sequence
+            valid_cds <- cds[!grepl("[^ACGTacgt]", as.character(cds))]
+
             # translate codon to amino acid
-            aa <- Biostrings::translate(x = cds,genetic.code = Biostrings::GENETIC_CODE)
-            aa <- aa[features$idnew]
+            aa <- Biostrings::translate(x = valid_cds,genetic.code = Biostrings::GENETIC_CODE)
+
+            ids_retain <- intersect(features$idnew,names(aa))
+            aa <- aa[ids_retain]
 
             # ==================================================================
             # find specfic motif on each transcript

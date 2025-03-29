@@ -2,7 +2,7 @@
 % Please edit documentation in R/implementation.R
 \name{get_transcript_sequence}
 \alias{get_transcript_sequence}
-\title{Extract transcript sequences from genome and GTF files}
+\title{Extract Transcript Sequences from Genome and GTF Annotation}
 \usage{
 get_transcript_sequence(
   genome_file = NULL,
@@ -16,82 +16,48 @@ get_transcript_sequence(
 )
 }
 \arguments{
-\item{genome_file}{Character. Path to the genome FASTA file.}
+\item{genome_file}{Either a \code{BSgenome} object or the path to an uncompressed genome FASTA file (with accompanying \code{.fai} index or it will be generated).}
 
-\item{gtf_file}{Character. Path to the GTF annotation file.}
+\item{gtf_file}{Path to a GTF annotation file containing gene models (required).}
 
-\item{feature}{Character. Feature type in gtf file to extract (e.g., \code{"exon"}, \code{"CDS"}). (Default: \code{"exon"}).}
+\item{feature}{Feature type to extract sequences for (Default: "exon"). Could be "exon", "CDS", etc.}
 
-\item{extend}{Logical. Whether to extend sequences upstream and downstream of transcripts.
-Default is FALSE.}
+\item{extend}{Logical; whether to extend the first and last exons per transcript (Default: \code{FALSE}).}
 
-\item{extend_upstream}{Numeric. Number of bases to extend upstream of transcript start.
-Only used when extend = TRUE. Default is 0.}
+\item{extend_upstream}{Integer; number of bases to extend upstream of the first exon (Default: \code{0}).}
 
-\item{extend_downstream}{Numeric. Number of bases to extend downstream of transcript end.
-Only used when extend = TRUE. Default is 0.}
+\item{extend_downstream}{Integer; number of bases to extend downstream of the last exon (Default: \code{0}).}
 
-\item{return_extend_region}{Logical. If TRUE, returns the extended regions information
-instead of sequences. Default is FALSE.}
+\item{return_extend_region}{Logical; if \code{TRUE}, returns the genomic coordinates (as a \code{data.frame}) of the extracted (possibly extended) regions instead of sequences (Default: \code{FALSE}).}
 
-\item{output_file}{Character. Path to save the output FASTA file. Required when
-return_extend_region = FALSE.}
+\item{output_file}{Output file path to write the transcript sequences in FASTA format. Required if \code{return_extend_region = FALSE}.}
 }
 \value{
-If return_extend_region = TRUE, returns a data frame containing extended regions
-information. Otherwise, writes sequences to the specified output file.
+If \code{return_extend_region = TRUE}, returns a \code{data.frame} containing the extended coordinates of the selected feature (e.g., exon). Otherwise, writes transcript sequences to \code{output_file} and returns nothing.
 }
 \description{
-This function extracts transcript sequences based on genome and GTF annotation files.
-It supports extending sequences upstream and downstream of transcripts, and can
-return either the extended regions or the extracted sequences.
+This function extracts transcript (or other genomic feature) sequences based on genome FASTA and GTF annotations.
+It also supports optional region extension upstream/downstream, and can output extended coordinates or the final transcript FASTA.
 }
 \details{
-The function performs the following steps:
-\enumerate{
-\item Reads genome and GTF files
-\item Processes exon information
-\item Extends sequences if requested
-\item Extracts transcript sequences or returns extended regions
-}
-
-For transcript names, it combines transcript_id and gene_name with "|" as separator.
-If gene_name is not available, transcript_id is used instead.
-}
-\note{
 \itemize{
-\item Ensure input files exist and have correct formats
-\item Genome file must have corresponding .fai index file or will be created
-\item Extended regions are automatically adjusted to chromosome boundaries
+\item The function supports both UCSC-style and Ensembl-style chromosome names, and will automatically adjust "chr" prefix if needed.
+\item Transcript sequences are reconstructed by collapsing all exons (or chosen \code{feature}) for each transcript.
+\item For \code{feature = "CDS"}, stop codons (+3bp) can optionally be included at the 3' end (or 5' end for minus strand).
+\item Requires the following Bioconductor packages: \code{rtracklayer}, \code{Rsamtools}, \code{Biostrings}, \code{txdbmaker}, \code{GenomicFeatures}, \code{AnnotationDbi}
 }
 }
 \examples{
 \dontrun{
-# Basic usage
 get_transcript_sequence(
-  genome_file = "genome.fa",
-  gtf_file = "annotation.gtf",
+  genome_file = "Homo_sapiens.GRCh38.dna.primary_assembly.fa",
+  gtf_file = "Homo_sapiens.GRCh38.110.gtf",
+  feature = "exon",
+  extend = TRUE,
+  extend_upstream = 50,
+  extend_downstream = 100,
+  return_extend_region = FALSE,
   output_file = "transcripts.fa"
-)
-
-# With extension
-get_transcript_sequence(
-  genome_file = "genome.fa",
-  gtf_file = "annotation.gtf",
-  extend = TRUE,
-  extend_upstream = 100,
-  extend_downstream = 100,
-  output_file = "transcripts_extended.fa"
-)
-
-# Return extended regions
-regions <- get_transcript_sequence(
-  genome_file = "genome.fa",
-  gtf_file = "annotation.gtf",
-  extend = TRUE,
-  extend_upstream = 100,
-  extend_downstream = 100,
-  return_extend_region = TRUE
 )
 }
 

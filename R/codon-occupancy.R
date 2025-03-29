@@ -48,7 +48,6 @@
 #' @importFrom fastplyr f_filter f_group_by f_summarise f_left_join
 #' @import ggplot2
 #' @import dplyr
-#' @import purrr
 #' @export
 setGeneric("codon_occupancy_plot",function(object,...) standardGeneric("codon_occupancy_plot"))
 
@@ -95,29 +94,34 @@ setMethod("codon_occupancy_plot",
               fastplyr::f_group_by(sample,rname,rel) %>%
               fastplyr::f_summarise(value = mean(normsm))
 
+            # ==================================================================
+            # filter cds sequence
+
             # load cds fasta
             cds <- Biostrings::readDNAStringSet(cds_fa)
 
+            # remove transcript contains Ns in sequence
+            valid_cds <- cds[!grepl("[^ACGTacgt]", as.character(cds))]
+
+            ids_retain <- intersect(unique(sry$rname),names(valid_cds))
+            valid_cds <- valid_cds[ids_retain]
+
+            # Filter sequences whose length is a multiple of 3
+            valid_cds <- valid_cds[Biostrings::width(valid_cds) %% 3 == 0]
+
             # loop to extract codon seqeunce
-            purrr::map_df(seq_along(cds),function(x){
-              tmp <- cds[x]
+            lapply(seq_along(valid_cds),function(x){
+              tmp <- valid_cds[x]
               cdslen <- Biostrings::width(tmp)
+              interval <- seq(1, cdslen, by = 3)
 
-              # check length
-              if(cdslen %% 3 == 0){
-                interval <- seq(1, cdslen, by = 3)
+              seqs <- stringr::str_sub_all(tmp,start = interval, end = interval + 2)[[1]]
 
-                # to txdb format
-                if (requireNamespace("stringr", quietly = TRUE)) {
-                  seqs <- stringr::str_sub(as.character(tmp),start = interval, end = interval + 2)
-                } else {
-                  warning("Package 'stringr' is needed for this function to work.")
-                }
+              data.frame(rname = names(tmp),rel = 1:(cdslen/3),codon_seq = seqs)
+            }) %>% do.call("rbind",.) %>% data.frame() -> codon_info
 
-                df <- data.frame(rname = names(tmp),rel = 1:(cdslen/3),codon_seq = seqs)
-              }
 
-            }) -> codon_info
+            # ==================================================================
 
 
             # merge with occupancy
@@ -171,6 +175,8 @@ setMethod("codon_occupancy_plot",
                     panel.grid = element_blank(),
                     strip.text = element_text(face = "bold"),
                     axis.text = element_text(colour = "black")) +
+              xlab("Codons (Amino acids)") +
+              ylab("Codon occupancy") +
               facetlyr
 
             # return
