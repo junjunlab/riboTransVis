@@ -1,4 +1,110 @@
 # ==============================================================================
+# function for periodicity plot
+# ==============================================================================
+
+#' Plot 3-nt Periodicity by Ribosome Frame
+#'
+#' This function generates a plot showing 3-nt periodicity based on ribosome profiling data
+#' from a \code{ribotrans} object. Read counts are aggregated by translation frame across samples.
+#'
+#' @param object A \code{ribotrans} object containing summary read positional information.
+#' @param read_length A numeric vector of length two specifying the minimum and maximum read length
+#'   used in analysis (default: \code{c(20, 35)}).
+#' @param text_size Numeric, size of the text labels showing periodicity percentages (default: 3).
+#' @param add_periodicity_label Logical, whether to annotate each frame with periodicity
+#'   (percentage of total reads per sample) (default: \code{TRUE}).
+#' @param return_data Logical, if \code{TRUE}, return data frame used to build the plot instead of a plot (default: \code{FALSE}).
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A \code{ggplot} object displaying frame distribution per sample (default), or a
+#'   \code{data.frame} with periodicity calculations if \code{return_data = TRUE}.
+#'
+#' @details
+#' This function filters reads based on valid start/codon positions (\code{mstart != 0} or \code{mstop != 0}),
+#' restricts analysis to selected read lengths, calculates the frame based on \code{(pos - mstart) %% 3},
+#' and summarizes read distribution per frame.
+#' A high frame 0 periodicity typically indicates strong ribosome signal.
+#'
+#' @examples
+#' \dontrun{
+#' frame_plot(ribo_obj)
+#' frame_plot(ribo_obj, read_length = c(25, 32), add_periodicity_label = FALSE)
+#' df <- frame_plot(ribo_obj, return_data = TRUE)
+#' }
+#'
+#' @importFrom ggplot2 ggplot geom_col geom_label facet_wrap theme_bw theme element_text
+#' @importFrom ggplot2 scale_y_continuous aes scale_fill_brewer
+#' @importFrom dplyr filter mutate group_by summarise left_join
+#' @importFrom fastplyr f_group_by f_summarise f_filter
+#' @importFrom scales label_log
+#' @export
+#' @rdname frame_plot
+setGeneric("frame_plot",function(object,...) standardGeneric("frame_plot"))
+
+
+
+
+#' @rdname frame_plot
+#' @export
+setMethod("frame_plot",
+          signature(object = "ribotrans"),
+          function(object,
+                   read_length = c(20,35),
+                   text_size = 3,
+                   add_periodicity_label = TRUE,
+                   return_data = FALSE){
+            pltdf <- object@summary_info %>%
+              fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
+              dplyr::filter(qwidth >= read_length[1] & qwidth <= read_length[2]) %>%
+              dplyr::mutate(frame = (pos - mstart)%%3) %>%
+              fastplyr::f_group_by(sample, frame) %>%
+              fastplyr::f_summarise(counts = sum(count))
+
+            # all counts
+            read.length.all <- pltdf %>%
+              fastplyr::f_group_by(sample) %>%
+              fastplyr::f_summarise(all_counts = sum(counts))
+
+            # add all counts
+            pltdf <- pltdf %>%
+              dplyr::left_join(y = read.length.all,by = c("sample")) %>%
+              dplyr::mutate(periodicity = round((counts/all_counts)*100,digits = 1))
+
+
+            if(add_periodicity_label == TRUE){
+              label.lyr <- geom_label(data = pltdf,
+                                      aes(x = factor(frame),y = 1,label = periodicity),
+                                      vjust = 0,size = text_size)
+            }else{
+              label.lyr <- NULL
+            }
+
+
+            # plot
+            p <-
+              ggplot(pltdf) +
+              geom_col(aes(x = factor(frame),y = counts,fill = factor(frame)),width = 0.6) +
+              # periodicity.layer +
+              label.lyr +
+              theme_bw() +
+              theme(panel.grid = element_blank(),
+                    strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
+                    axis.text = element_text(colour = "black")) +
+              facet_wrap(~sample,scales = "free") +
+              scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
+              xlab("Read length (nt)") + ylab("Number of reads") +
+              scale_fill_brewer(direction = -1,name = "Frame")
+
+            # return
+            if(return_data == FALSE){
+              return(p)
+            }else{
+              return(pltdf)
+            }
+          }
+)
+
+# ==============================================================================
 # function for length plot
 # ==============================================================================
 
@@ -26,6 +132,8 @@ setGeneric("length_plot",function(object,...) standardGeneric("length_plot"))
 #' @param read_length A numeric vector of length 2 (default: `c(20, 35)`). Defines the range of read lengths to visualize.
 #' @param text_size Numeric (default: `2.5`). Specifies the font size for periodicity labels, applicable when `type = "frame_length"`.
 #' @param add_periodicity_label Logical (default: `TRUE`). If `TRUE`, adds periodicity percentage labels to the plot (only for `type = "frame_length"`).
+#' @param labely_extend A numeric proportion to extend the y-position of periodicity labels above bars
+#'   (default: 0.05).
 #' @param return_data Logical (default: `FALSE`). If `TRUE`, returns the processed data frame instead of a plot.
 #' @param type Character string, either `"length"` (default) or `"frame_length"`.
 #'   - `"length"`: Displays a bar plot showing the distribution of read lengths.
@@ -70,6 +178,7 @@ setMethod("length_plot",
                    read_length = c(20,35),
                    text_size = 2.5,
                    add_periodicity_label = TRUE,
+                   labely_extend = 0.05,
                    return_data = FALSE,
                    type = c("length","frame_length")){
             type <- match.arg(type, choices = c("length","frame_length"))
@@ -105,10 +214,12 @@ setMethod("length_plot",
               ptlayer <- geom_col(aes(x = qwidth, y = counts, fill = factor(frame)),
                                   width = 0.9, position = position_dodge2())
 
+              # whether add periodicity info
               if(add_periodicity_label == TRUE){
                 periodicity.layer <- geom_text(data = pltdf %>% dplyr::filter(frame == 0),
-                                               aes(x = qwidth,y = max(counts),label = periodicity),
-                                               size = text_size)
+                                               aes(x = qwidth,y = counts + counts*labely_extend,label = periodicity),
+                                               size = text_size,vjust = 0)
+
               }else{
                 periodicity.layer <- NULL
               }

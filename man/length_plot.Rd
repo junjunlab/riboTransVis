@@ -12,6 +12,7 @@ length_plot(object, ...)
   read_length = c(20, 35),
   text_size = 2.5,
   add_periodicity_label = TRUE,
+  labely_extend = 0.05,
   return_data = FALSE,
   type = c("length", "frame_length")
 )
@@ -26,6 +27,9 @@ length_plot(object, ...)
 \item{text_size}{Numeric (default: \code{2.5}). Specifies the font size for periodicity labels, applicable when \code{type = "frame_length"}.}
 
 \item{add_periodicity_label}{Logical (default: \code{TRUE}). If \code{TRUE}, adds periodicity percentage labels to the plot (only for \code{type = "frame_length"}).}
+
+\item{labely_extend}{A numeric proportion to extend the y-position of periodicity labels above bars
+(default: 0.05).}
 
 \item{return_data}{Logical (default: \code{FALSE}). If \code{TRUE}, returns the processed data frame instead of a plot.}
 
