@@ -9,6 +9,7 @@ relative_motif_occupancy(object, ...)
 
 \S4method{relative_motif_occupancy}{ribotrans}(
   object,
+  merge_rep = FALSE,
   cds_fa = NULL,
   do_offset_correct = FALSE,
   position_shift = 0,
@@ -25,6 +26,8 @@ relative_motif_occupancy(object, ...)
 ribosome profiling information.}
 
 \item{...}{Additional arguments (currently unused).}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{cds_fa}{A character string specifying the file path to a FASTA file containing
 the nucleotide sequences of coding regions (CDS).}

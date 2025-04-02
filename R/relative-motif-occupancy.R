@@ -9,6 +9,7 @@
 #'
 #' @param object An object of class `ribotrans` that contains experimental data, including
 #' ribosome profiling information.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param cds_fa A character string specifying the file path to a FASTA file containing
 #' the nucleotide sequences of coding regions (CDS).
 #' @param do_offset_correct Logical. If `TRUE`, performs **offset correction**
@@ -78,6 +79,7 @@ setGeneric("relative_motif_occupancy",function(object,...) standardGeneric("rela
 setMethod("relative_motif_occupancy",
           signature(object = "ribotrans"),
           function(object,
+                   merge_rep = FALSE,
                    cds_fa = NULL,
                    do_offset_correct = FALSE,
                    position_shift = 0,
@@ -175,12 +177,20 @@ setMethod("relative_motif_occupancy",
               # filter low counts
               fastplyr::f_filter(counts > min_counts) %>%
               dplyr::mutate(norm = count/avg_ct) %>%
-              fastplyr::f_group_by(sample,rname,relst) %>%
+              fastplyr::f_group_by(sample,sample_group,rname,relst) %>%
               fastplyr::f_summarise(normsm = sum(norm))
 
             # filter transcript in motifs found
             density.tt <- density.tt %>%
               fastplyr::f_filter(rname %in% unique(motif.pos$rname))
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              density.tt <- density.tt %>%
+                dplyr::group_by(sample_group,rname,relst) %>%
+                dplyr::summarise(normsm = mean(normsm)) %>%
+                dplyr::rename(sample = sample_group)
+            }
 
             # ==================================================================
             # calculate relative occupancy

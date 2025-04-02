@@ -9,6 +9,7 @@ polarity_plot(object, ...)
 
 \S4method{polarity_plot}{ribotrans}(
   object,
+  merge_rep = FALSE,
   do_offset_correct = FALSE,
   position_shift = 0,
   exclude_length = c(15, 15),
@@ -23,6 +24,8 @@ polarity_plot(object, ...)
 \item{object}{A \code{ribotrans} object containing sequencing and ribosome profiling data.}
 
 \item{...}{Additional arguments (currently unused).}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{do_offset_correct}{Logical. If \code{TRUE}, performs \strong{offset correction}
 using \code{do_offset_correction()}. \strong{Default}: \code{FALSE}.}

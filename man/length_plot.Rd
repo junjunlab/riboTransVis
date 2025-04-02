@@ -10,6 +10,7 @@ length_plot(object, ...)
 \S4method{length_plot}{ribotrans}(
   object,
   read_length = c(20, 35),
+  merge_rep = FALSE,
   text_size = 2.5,
   add_periodicity_label = TRUE,
   labely_extend = 0.05,
@@ -23,6 +24,8 @@ length_plot(object, ...)
 \item{...}{Additional arguments passed to class-specific methods.}
 
 \item{read_length}{A numeric vector of length 2 (default: \code{c(20, 35)}). Defines the range of read lengths to visualize.}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{text_size}{Numeric (default: \code{2.5}). Specifies the font size for periodicity labels, applicable when \code{type = "frame_length"}.}
 

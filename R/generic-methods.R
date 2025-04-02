@@ -80,7 +80,8 @@ setMethod("generate_summary",
 
             bams <- subset(object@library, type == exp_type)
             bfn <- bams$bam
-            gp <- bams$sample
+            sp <- bams$sample
+            gp <- bams$sample_group
 
             features <- object@features
 
@@ -154,7 +155,9 @@ setMethod("generate_summary",
 
               }
 
-              tinfo$sample <- gp[x]
+              # add sample and group info
+              tinfo$sample <- sp[x]
+              tinfo$sample_group <- gp[x]
 
               return(tinfo)
             }) -> all.tinfo

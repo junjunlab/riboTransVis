@@ -9,6 +9,7 @@ relative_heatmap_plot(object, ...)
 
 \S4method{relative_heatmap_plot}{ribotrans}(
   object,
+  merge_rep = FALSE,
   type = c("rel2start", "rel2stop"),
   read_length = c(20, 35),
   rel_dist = c(-100, 100),
@@ -20,6 +21,8 @@ relative_heatmap_plot(object, ...)
 \item{object}{An object of class \code{ribotrans}, containing summary information from ribosome profiling data.}
 
 \item{...}{Additional arguments passed to specific methods.}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{type}{A character string indicating the type of plot. Options are:
 \code{"rel2start"} to plot relative to start codon or

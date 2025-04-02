@@ -14,8 +14,10 @@ construct_ribotrans(
   extend_downstream = 0,
   RNA_bam_file = NULL,
   RNA_sample_name = NULL,
+  RNA_sample_group = NULL,
   Ribo_bam_file = NULL,
   Ribo_sample_name = NULL,
+  Ribo_sample_group = NULL,
   choose_longest_trans = FALSE
 )
 }
@@ -129,9 +131,13 @@ Only used when extend = TRUE. Default is 0.}
 
 \item{RNA_sample_name}{A \code{character} vector representing RNA-seq sample names.}
 
+\item{RNA_sample_group}{Character vector. Group labels or conditions for RNA-seq samples.}
+
 \item{Ribo_bam_file}{A \code{character} vector containing paths to ribosome profiling BAM files.}
 
 \item{Ribo_sample_name}{A \code{character} vector representing ribosome profiling sample names.}
+
+\item{Ribo_sample_group}{Character vector. Group labels or conditions for Ribo-seq samples.}
 
 \item{choose_longest_trans}{Logical value indicating whether to select the longest transcript
 for each gene. If TRUE, only the longest transcript (based on CDS and transcript length)

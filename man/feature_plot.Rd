@@ -7,12 +7,14 @@
 \usage{
 feature_plot(object, ...)
 
-\S4method{feature_plot}{ribotrans}(object, return_data = FALSE)
+\S4method{feature_plot}{ribotrans}(object, merge_rep = FALSE, return_data = FALSE)
 }
 \arguments{
 \item{object}{A \code{ribotrans} object that contains summary read information.}
 
 \item{...}{Additional arguments (currently unused).}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{return_data}{A logical value indicating whether to return the processed
 summary data instead of the plot. Default is \code{FALSE} (returns a \code{ggplot} object).}

@@ -9,6 +9,7 @@ metagene_plot(object, ...)
 
 \S4method{metagene_plot}{ribotrans}(
   object,
+  merge_rep = FALSE,
   do_offset_correct = FALSE,
   position_shift = 0,
   norm_method = c("average", "tpm"),
@@ -25,35 +26,37 @@ metagene_plot(object, ...)
 )
 }
 \arguments{
-\item{object}{A \code{ribotrans} object containing ribosome profiling data}
+\item{object}{A \code{ribotrans} object containing ribosome profiling data.}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{do_offset_correct}{Logical, whether to perform read position offset correction (default: FALSE)}
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
-\item{position_shift}{Numeric, shift value for offset correction (default: 0)}
+\item{do_offset_correct}{Logical, whether to perform read position offset correction (default: FALSE).}
 
-\item{norm_method}{Normalization method, either "average" or "tpm" (default: "average")}
+\item{position_shift}{Numeric, shift value for offset correction (default: 0).}
 
-\item{min_cds_length}{Minimum CDS length to include in analysis (default: 600)}
+\item{norm_method}{Normalization method, either "average" or "tpm" (default: "average").}
 
-\item{min_counts}{Minimum read counts for a transcript to be included (default: 64)}
+\item{min_cds_length}{Minimum CDS length to include in analysis (default: 600).}
 
-\item{exclude_length}{A vector of two values specifying excluded regions near start and stop codons (default: c(90,90))}
+\item{min_counts}{Minimum read counts for a transcript to be included (default: 64).}
 
-\item{type}{Plot relative to "rel2start" or "rel2stop" (default: "rel2start")}
+\item{exclude_length}{A vector of two values specifying excluded regions near start and stop codons (default: c(90,90)).}
 
-\item{return_data}{Logical, whether to return processed data instead of plot (default: FALSE)}
+\item{type}{Plot relative to "rel2start" or "rel2stop" (default: "rel2start").}
 
-\item{mode}{Visualization mode, either "nt" or "codon" (default: "nt")}
+\item{return_data}{Logical, whether to return processed data instead of plot (default: FALSE).}
 
-\item{read_length}{Range of read lengths to include (default: c(25,31))}
+\item{mode}{Visualization mode, either "nt" or "codon" (default: "nt").}
 
-\item{rel2st_dist}{Distance range for plotting relative to start codon (default: c(-50,100))}
+\item{read_length}{Range of read lengths to include (default: c(25,31)).}
 
-\item{rel2sp_dist}{Distance range for plotting relative to stop codon (default: c(-100,50))}
+\item{rel2st_dist}{Distance range for plotting relative to start codon (default: c(-50,100)).}
 
-\item{facet_wrap}{ggplot2 facet_wrap function for sample visualization (default: facet_wrap(~sample))}
+\item{rel2sp_dist}{Distance range for plotting relative to stop codon (default: c(-100,50)).}
+
+\item{facet_wrap}{ggplot2 facet_wrap function for sample visualization (default: facet_wrap(~sample)).}
 }
 \value{
 A ggplot object showing ribosome occupancy, or a data frame if \code{return_data = TRUE}

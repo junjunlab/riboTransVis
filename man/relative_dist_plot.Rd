@@ -9,6 +9,7 @@ relative_dist_plot(object, ...)
 
 \S4method{relative_dist_plot}{ribotrans}(
   object,
+  merge_rep = FALSE,
   return_data = FALSE,
   type = c("rel2start", "rel2stop"),
   read_length = c(20, 35),
@@ -23,6 +24,8 @@ relative_dist_plot(object, ...)
 \item{object}{A \code{ribotrans} object containing summary information.}
 
 \item{...}{Additional arguments passed to class-specific methods.}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{return_data}{Whether return the data for plot, default \code{FALSE}.}
 

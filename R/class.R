@@ -7,7 +7,8 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
                   "avg", "avg_ct", "cdslen", "norm_avg", "normsm","count.tt", "density", "label", "relsp",
                   "relst", "rpm.tt", "sp", "wi", "x", "y", "yend","reloccup", "value","avg_val",  "dist","rpks",
                   "Abbreviation1", "Abbreviation3", "AminoAcid", "abbrev", "codon_seq", "freq", "occup","rpk",
-                  "occurrence", "pause_score", "pep_seq", "ratio", "rel_pause", "tripep_val","motif","nt_pos"))
+                  "occurrence", "pause_score", "pep_seq", "ratio", "rel_pause", "tripep_val","motif","nt_pos",
+                  "sample_group","sum_pi"))
 
 
 #' ribotrans Class
@@ -172,8 +173,10 @@ ribotrans <- setClass("ribotrans",
 #'                         Only used when extend = TRUE. Default is 0.
 #' @param RNA_bam_file A `character` vector containing paths to RNA-seq BAM files.
 #' @param RNA_sample_name A `character` vector representing RNA-seq sample names.
+#' @param RNA_sample_group Character vector. Group labels or conditions for RNA-seq samples.
 #' @param Ribo_bam_file A `character` vector containing paths to ribosome profiling BAM files.
 #' @param Ribo_sample_name A `character` vector representing ribosome profiling sample names.
+#' @param Ribo_sample_group Character vector. Group labels or conditions for Ribo-seq samples.
 #' @param choose_longest_trans Logical value indicating whether to select the longest transcript
 #' for each gene. If TRUE, only the longest transcript (based on CDS and transcript length)
 #' will be kept for each gene. This is useful to reduce redundancy when multiple transcript
@@ -218,8 +221,10 @@ construct_ribotrans <- function(genome_file = NULL,
                                 extend_downstream = 0,
                                 RNA_bam_file = NULL,
                                 RNA_sample_name = NULL,
+                                RNA_sample_group = NULL,
                                 Ribo_bam_file = NULL,
                                 Ribo_sample_name = NULL,
+                                Ribo_sample_group = NULL,
                                 choose_longest_trans = FALSE){
   mapping_type <- match.arg(mapping_type, choices = c("transcriptome", "genome"))
   assignment_mode <- match.arg(assignment_mode, choices = c("end5", "end3"))
@@ -284,6 +289,11 @@ construct_ribotrans <- function(genome_file = NULL,
   # total mapped reads
   bams <- c(RNA_bam_file, Ribo_bam_file)
   sp <- c(RNA_sample_name, Ribo_sample_name)
+
+  RNA_sample_group <- ifelse(is.null(RNA_sample_group),RNA_sample_name,RNA_sample_group)
+  Ribo_sample_group <- ifelse(is.null(Ribo_sample_group),Ribo_sample_name,Ribo_sample_group)
+  gp <- c(RNA_sample_group, Ribo_sample_group)
+
   tp <- rep(c("rna", "ribo"), c(length(RNA_bam_file),length(Ribo_bam_file)))
 
   lapply(seq_along(bams),function(x){
@@ -297,7 +307,8 @@ construct_ribotrans <- function(genome_file = NULL,
     data.frame(bam = bams[x],
                mappped_reads = total_reads,
                type = tp[x],
-               sample = sp[x])
+               sample = sp[x],
+               sample_group = gp[x])
   }) %>% do.call("rbind", .) %>% data.frame() -> library
 
 
@@ -307,7 +318,8 @@ construct_ribotrans <- function(genome_file = NULL,
   bam_file <- data.frame(bam = bams,
                          type = rep(c("rna", "ribo"),
                                     c(length(RNA_bam_file),length(Ribo_bam_file))),
-                         sample = c(RNA_sample_name, Ribo_sample_name)
+                         sample = c(RNA_sample_name, Ribo_sample_name),
+                         sample_group = gp
   )
 
   res <- methods::new("ribotrans",

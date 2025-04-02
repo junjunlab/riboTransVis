@@ -8,6 +8,7 @@
 #' The plot visualizes the distribution of calculated polarity scores across different samples.
 #'
 #' @param object A `ribotrans` object containing sequencing and ribosome profiling data.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param do_offset_correct Logical. If `TRUE`, performs **offset correction**
 #' using `do_offset_correction()`. **Default**: `FALSE`.
 #' @param position_shift Integer defining how much to adjust **ribosome footprint positions**
@@ -58,6 +59,7 @@ setGeneric("polarity_plot",function(object,...) standardGeneric("polarity_plot")
 setMethod("polarity_plot",
           signature(object = "ribotrans"),
           function(object,
+                   merge_rep = FALSE,
                    do_offset_correct = FALSE,
                    position_shift = 0,
                    exclude_length = c(15,15),
@@ -93,7 +95,7 @@ setMethod("polarity_plot",
 
             # filter low counts
             density.tt <- sry %>%
-              fastplyr::f_group_by(sample,rname) %>%
+              fastplyr::f_group_by(sample,sample_group,rname) %>%
               fastplyr::f_summarise(count.tt = sum(count),
                                     rpm.tt = sum(rpm)) %>%
               fastplyr::f_filter(count.tt > min_counts)
@@ -103,9 +105,16 @@ setMethod("polarity_plot",
               fastplyr::f_left_join(y = sry,by = c("sample","rname")) |>
               dplyr::mutate(wi = (2*relst - (mstop - mstart + 1))/(mstop - mstart - 1),
                             pi = rpm*wi/rpm.tt) |>
-              fastplyr::f_group_by(sample,rname) |>
+              fastplyr::f_group_by(sample,sample_group,rname) |>
               fastplyr::f_summarise(sum_pi = sum(pi))
 
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              pl_df <- pl_df %>%
+                dplyr::group_by(sample_group,rname) %>%
+                dplyr::summarise(sum_pi = mean(sum_pi)) %>%
+                dplyr::rename(sample = sample_group)
+            }
 
             # calculate density
             # x = 1
@@ -115,8 +124,8 @@ setMethod("polarity_plot",
               density_data <- stats::density(tmp$sum_pi, na.rm = TRUE, adjust = 1)
 
               # bw <- density_data$bw
-              df <- density_df <- data.frame(x = density_data$x,
-                                             y = density_data$y * nrow(tmp))
+              df <- data.frame(x = density_data$x,
+                               y = density_data$y * nrow(tmp))
               df$sample <- sp[x]
 
               return(df)

@@ -9,6 +9,7 @@ multi_peptide_occupancy(object, ...)
 
 \S4method{multi_peptide_occupancy}{ribotrans}(
   object,
+  merge_rep = FALSE,
   cds_fa = NULL,
   do_offset_correct = FALSE,
   position_shift = 0,
@@ -22,6 +23,8 @@ multi_peptide_occupancy(object, ...)
 \item{object}{A \code{ribotrans} object containing \strong{Ribo-seq} data.}
 
 \item{...}{Additional arguments (currently unused).}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{cds_fa}{A \strong{FASTA file path} containing CDS sequences for translation.}
 

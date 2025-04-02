@@ -116,12 +116,14 @@ prepare_transcipt_file <- function(transcript_fa = NULL,output_path = "./"){
   tmp <- sapply(strsplit(names(fa),split = "gene_symbol:"),"[",2)
   gname <- sapply(strsplit(tmp,split = " "),"[",1)
 
-  newid <- paste(tid,gname,sep = "|")
+  df <- data.frame(tid = tid,gname = gname) %>%
+    dplyr::mutate(gname = dplyr::if_else(is.na(gname),tid,gname),
+                  newid = paste(tid,gname,sep = "|"))
 
-  names(fa) <- newid
+
+  names(fa) <- df$newid
 
   # output
-  Biostrings::writeXStringSet(fa,filepath = paste(output_path, "transcript.fa",sep = ""),
-                              format = "fasta")
+  Biostrings::writeXStringSet(fa,filepath = output_path,format = "fasta")
 
 }

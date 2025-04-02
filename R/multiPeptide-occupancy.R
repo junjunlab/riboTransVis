@@ -15,6 +15,7 @@
 #' based on their occurrence.
 #'
 #' @param object A `ribotrans` object containing **Ribo-seq** data.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param cds_fa A **FASTA file path** containing CDS sequences for translation.
 #' @param do_offset_correct Logical. If `TRUE`, performs **offset correction**
 #' using `do_offset_correction()`. **Default**: `FALSE`.
@@ -68,6 +69,7 @@ setGeneric("multi_peptide_occupancy",function(object,...) standardGeneric("multi
 setMethod("multi_peptide_occupancy",
           signature(object = "ribotrans"),
           function(object,
+                   merge_rep = FALSE,
                    cds_fa = NULL,
                    do_offset_correct = FALSE,
                    position_shift = 0,
@@ -124,14 +126,21 @@ setMethod("multi_peptide_occupancy",
               # filter low counts
               fastplyr::f_filter(counts > min_counts) %>%
               dplyr::mutate(norm = count/avg_ct) %>%
-              fastplyr::f_group_by(sample,rname,relst) %>%
+              fastplyr::f_group_by(sample,sample_group,rname,relst) %>%
               fastplyr::f_summarise(normsm = sum(norm)) %>%
               # codon position
               dplyr::mutate(rel = (relst %/% 3) + 1) %>%
-              fastplyr::f_group_by(sample,rname,rel) %>%
+              fastplyr::f_group_by(sample,sample_group,rname,rel) %>%
               fastplyr::f_summarise(value = mean(normsm)) %>%
               fastplyr::f_filter(rname %in% features$idnew)
 
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              density.tt <- density.tt %>%
+                dplyr::group_by(sample_group,rname,rel) %>%
+                dplyr::summarise(value = mean(value)) %>%
+                dplyr::rename(sample = sample_group)
+            }
             # ==================================================================
             # fill each codon position
             sp <- unique(density.tt$sample)

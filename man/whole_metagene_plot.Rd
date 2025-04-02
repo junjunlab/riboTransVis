@@ -10,6 +10,7 @@ whole_metagene_plot(object, ...)
 \S4method{whole_metagene_plot}{ribotrans}(
   object,
   auto_scale = FALSE,
+  merge_rep = FALSE,
   custom_scale = c(0.3, 0.3),
   geom_density_bw = 5e-04,
   geom_density_n = 512,
@@ -24,6 +25,8 @@ whole_metagene_plot(object, ...)
 \item{auto_scale}{Logical. If \code{TRUE}, the function automatically scales UTR lengths
 relative to the CDS region using the median UTR/CDS lengths across all transcripts.
 Default is \code{FALSE}, meaning manual scaling is used (via \code{custom_scale}).}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{custom_scale}{A numeric vector of length \strong{2} specifying the relative scaling
 factors for \strong{5' UTR and 3' UTR} (relative to CDS length).

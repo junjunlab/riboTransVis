@@ -10,6 +10,7 @@ frame_plot(object, ...)
 \S4method{frame_plot}{ribotrans}(
   object,
   read_length = c(20, 35),
+  merge_rep = FALSE,
   text_size = 3,
   add_periodicity_label = TRUE,
   return_data = FALSE
@@ -22,6 +23,8 @@ frame_plot(object, ...)
 
 \item{read_length}{A numeric vector of length two specifying the minimum and maximum read length
 used in analysis (default: \code{c(20, 35)}).}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{text_size}{Numeric, size of the text labels showing periodicity percentages (default: 3).}
 

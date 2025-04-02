@@ -3,6 +3,7 @@
 #' This function calculates the codon occupancy for ribosome profiling data and generates a bar plot.
 #'
 #' @param object An object of class \code{ribotrans}, containing ribosome profiling data.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param cds_fa Character. The path to a FASTA file containing CDS sequences.
 #' @param do_offset_correct Logical. If `TRUE`, performs **offset correction**
 #' using `do_offset_correction()`. **Default**: `FALSE`.
@@ -57,6 +58,7 @@ setGeneric("codon_occupancy_plot",function(object,...) standardGeneric("codon_oc
 setMethod("codon_occupancy_plot",
           signature(object = "ribotrans"),
           function(object,
+                   merge_rep = FALSE,
                    cds_fa = NULL,
                    do_offset_correct = FALSE,
                    position_shift = 0,
@@ -87,11 +89,11 @@ setMethod("codon_occupancy_plot",
               dplyr::inner_join(y = avg.ct,by = c("sample", "rname")) %>%
               dplyr::mutate(rel = pos - mstart, norm = count/avg_ct) %>%
               fastplyr::f_filter(rel >= 0 & rel <= (mstop - mstart + 1)) %>%
-              fastplyr::f_group_by(sample,rname,rel) %>%
+              fastplyr::f_group_by(sample,sample_group,rname,rel) %>%
               fastplyr::f_summarise(normsm = sum(norm)) %>%
               # codon position
               dplyr::mutate(rel = (rel %/% 3) + 1) %>%
-              fastplyr::f_group_by(sample,rname,rel) %>%
+              fastplyr::f_group_by(sample,sample_group,rname,rel) %>%
               fastplyr::f_summarise(value = mean(normsm))
 
             # ==================================================================
@@ -127,10 +129,18 @@ setMethod("codon_occupancy_plot",
             # merge with occupancy
             pltdf2 <- pltdf %>%
               fastplyr::f_inner_join(y = codon_info,by = c("rname", "rel")) %>%
-              fastplyr::f_group_by(sample,codon_seq) %>%
+              fastplyr::f_group_by(sample,sample_group,codon_seq) %>%
               fastplyr::f_summarise(occup = sum(value),freq = dplyr::n()) %>%
               dplyr::mutate(reloccup = occup/freq) %>% na.omit()
 
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              pltdf2 <- pltdf2 %>%
+                dplyr::group_by(sample_group,codon_seq) %>%
+                dplyr::summarise(reloccup = mean(reloccup)) %>%
+                dplyr::rename(sample = sample_group)
+            }
 
             # amino acid annotation
             aa_info <- get_aa_table()

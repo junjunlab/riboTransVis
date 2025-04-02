@@ -9,6 +9,7 @@ codon_occupancy_plot(object, ...)
 
 \S4method{codon_occupancy_plot}{ribotrans}(
   object,
+  merge_rep = FALSE,
   cds_fa = NULL,
   do_offset_correct = FALSE,
   position_shift = 0,
@@ -21,6 +22,8 @@ codon_occupancy_plot(object, ...)
 \item{object}{An object of class \code{ribotrans}, containing ribosome profiling data.}
 
 \item{...}{Additional arguments (currently unused).}
+
+\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{cds_fa}{Character. The path to a FASTA file containing CDS sequences.}
 

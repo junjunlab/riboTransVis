@@ -10,6 +10,7 @@
 #' @param object A \code{ribotrans} object containing summary read positional information.
 #' @param read_length A numeric vector of length two specifying the minimum and maximum read length
 #'   used in analysis (default: \code{c(20, 35)}).
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param text_size Numeric, size of the text labels showing periodicity percentages (default: 3).
 #' @param add_periodicity_label Logical, whether to annotate each frame with periodicity
 #'   (percentage of total reads per sample) (default: \code{TRUE}).
@@ -50,6 +51,7 @@ setMethod("frame_plot",
           signature(object = "ribotrans"),
           function(object,
                    read_length = c(20,35),
+                   merge_rep = FALSE,
                    text_size = 3,
                    add_periodicity_label = TRUE,
                    return_data = FALSE){
@@ -57,7 +59,7 @@ setMethod("frame_plot",
               fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
               dplyr::filter(qwidth >= read_length[1] & qwidth <= read_length[2]) %>%
               dplyr::mutate(frame = (pos - mstart)%%3) %>%
-              fastplyr::f_group_by(sample, frame) %>%
+              fastplyr::f_group_by(sample, sample_group, frame) %>%
               fastplyr::f_summarise(counts = sum(count))
 
             # all counts
@@ -70,7 +72,17 @@ setMethod("frame_plot",
               dplyr::left_join(y = read.length.all,by = c("sample")) %>%
               dplyr::mutate(periodicity = round((counts/all_counts)*100,digits = 1))
 
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              pltdf <- pltdf %>%
+                dplyr::group_by(sample_group,frame) %>%
+                dplyr::summarise(counts = mean(counts),
+                                 all_counts = mean(all_counts),
+                                 periodicity = mean(periodicity)) %>%
+                dplyr::rename(sample = sample_group)
+            }
 
+            # add periodicity label
             if(add_periodicity_label == TRUE){
               label.lyr <- geom_label(data = pltdf,
                                       aes(x = factor(frame),y = 1,label = periodicity),
@@ -130,6 +142,7 @@ setGeneric("length_plot",function(object,...) standardGeneric("length_plot"))
 #'
 #' @param object A `ribotrans` object that contains summary read count information.
 #' @param read_length A numeric vector of length 2 (default: `c(20, 35)`). Defines the range of read lengths to visualize.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param text_size Numeric (default: `2.5`). Specifies the font size for periodicity labels, applicable when `type = "frame_length"`.
 #' @param add_periodicity_label Logical (default: `TRUE`). If `TRUE`, adds periodicity percentage labels to the plot (only for `type = "frame_length"`).
 #' @param labely_extend A numeric proportion to extend the y-position of periodicity labels above bars
@@ -176,6 +189,7 @@ setMethod("length_plot",
           signature(object = "ribotrans"),
           function(object,
                    read_length = c(20,35),
+                   merge_rep = FALSE,
                    text_size = 2.5,
                    add_periodicity_label = TRUE,
                    labely_extend = 0.05,
@@ -186,9 +200,17 @@ setMethod("length_plot",
             # check plot type
             if(type == "length"){
               pltdf <- object@summary_info %>%
-                fastplyr::f_group_by(sample, qwidth) %>%
+                fastplyr::f_group_by(sample, sample_group, qwidth) %>%
                 fastplyr::f_summarise(counts = sum(count)) %>%
                 dplyr::filter(qwidth >= read_length[1] & qwidth <= read_length[2])
+
+              # whether aggregate replicates
+              if(merge_rep == TRUE){
+                pltdf <- pltdf %>%
+                  dplyr::group_by(sample_group,qwidth) %>%
+                  dplyr::summarise(counts = mean(counts)) %>%
+                  dplyr::rename(sample = sample_group)
+              }
 
               ptlayer <- geom_col(aes(x = qwidth, y = counts),width = 0.9,fill = "grey30")
               periodicity.layer <- NULL
@@ -197,8 +219,7 @@ setMethod("length_plot",
               pltdf <- object@summary_info %>%
                 fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
                 dplyr::mutate(frame = (pos - mstart)%%3) %>%
-                fastplyr::f_select(sample,qwidth,frame,count) %>%
-                fastplyr::f_group_by(sample, qwidth, frame) %>%
+                fastplyr::f_group_by(sample,sample_group, qwidth, frame) %>%
                 fastplyr::f_summarise(counts = sum(count)) %>%
                 dplyr::filter(qwidth >= read_length[1] & qwidth <= read_length[2])
 
@@ -210,6 +231,16 @@ setMethod("length_plot",
               pltdf <- pltdf %>%
                 dplyr::left_join(y = read.length.all,by = c("sample", "qwidth")) %>%
                 dplyr::mutate(periodicity = round((counts/all_counts)*100,digits = 1))
+
+              # whether aggregate replicates
+              if(merge_rep == TRUE){
+                pltdf <- pltdf %>%
+                  dplyr::group_by(sample_group,qwidth,frame) %>%
+                  dplyr::summarise(counts = mean(counts),
+                                   all_counts = mean(all_counts),
+                                   periodicity = mean(periodicity)) %>%
+                  dplyr::rename(sample = sample_group)
+              }
 
               ptlayer <- geom_col(aes(x = qwidth, y = counts, fill = factor(frame)),
                                   width = 0.9, position = position_dodge2())
@@ -261,6 +292,7 @@ setMethod("length_plot",
 #' across different RNA features (5' UTR, CDS, 3' UTR).
 #'
 #' @param object A `ribotrans` object that contains summary read information.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param return_data A logical value indicating whether to return the processed
 #' summary data instead of the plot. Default is `FALSE` (returns a `ggplot` object).
 #' @param ... Additional arguments (currently unused).
@@ -293,15 +325,24 @@ setGeneric("feature_plot",function(object,...) standardGeneric("feature_plot"))
 #' @export
 setMethod("feature_plot",
           signature(object = "ribotrans"),
-          function(object,return_data = FALSE){
+          function(object,merge_rep = FALSE,return_data = FALSE){
             # assign features
             sry <- object@summary_info %>%
               fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
               dplyr::mutate(type = dplyr::case_when(pos + qwidth/2 < mstart ~ "5'UTR",
                                                     pos + qwidth/2 >= mstart & pos + qwidth/2 < mstop ~ "CDS",
                                                     pos + qwidth/2 >= mstop ~ "3'UTR")) %>%
-              fastplyr::f_group_by(sample, type) %>%
+              fastplyr::f_group_by(sample,sample_group, type) %>%
               fastplyr::f_summarise(counts = sum(count))
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              sry <- sry %>%
+                dplyr::group_by(sample_group,type) %>%
+                dplyr::summarise(counts = mean(counts)) %>%
+                dplyr::rename(sample = sample_group)
+            }
+
 
             # plot
             # order
@@ -341,6 +382,7 @@ setMethod("feature_plot",
 #' @param auto_scale Logical. If `TRUE`, the function automatically scales UTR lengths
 #' relative to the CDS region using the median UTR/CDS lengths across all transcripts.
 #' Default is `FALSE`, meaning manual scaling is used (via `custom_scale`).
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param custom_scale A numeric vector of length **2** specifying the relative scaling
 #' factors for **5' UTR and 3' UTR** (relative to CDS length).
 #' **Default**: `c(0.3, 0.3)`, where both UTRs are **30% the size of the CDS region**.
@@ -392,6 +434,7 @@ setMethod("whole_metagene_plot",
           signature(object = "ribotrans"),
           function(object,
                    auto_scale = FALSE,
+                   merge_rep = FALSE,
                    custom_scale = c(0.3,0.3),
                    geom_density_bw = 0.0005,
                    geom_density_n = 512,
@@ -403,8 +446,18 @@ setMethod("whole_metagene_plot",
               dplyr::mutate(pos = pos + qwidth/2) %>%
               dplyr::mutate(rel = dplyr::case_when(pos < mstart ~ pos/mstart,
                                                    pos >= mstart & pos < mstop ~ (pos - mstart)/(mstop - mstart) + 1,
-                                                   pos >= mstop ~ (pos - mstop)/(translen - mstop) + 2)) %>%
-              fastplyr::f_select(sample, rel)
+                                                   pos >= mstop ~ (pos - mstop)/(translen - mstop) + 2))
+
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              sry <- sry %>%
+                fastplyr::f_select(sample_group, rel) %>%
+                dplyr::rename(sample = sample_group)
+            }else{
+              sry <- sry %>%
+                fastplyr::f_select(sample, rel)
+            }
 
             # ==================================================================
             # scale to cds region
@@ -484,6 +537,7 @@ setGeneric("relative_dist_plot",function(object,...) standardGeneric("relative_d
 #' the start codon or stop codon, grouped by frame.
 #'
 #' @param object A `ribotrans` object containing summary information.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param return_data Whether return the data for plot, default `FALSE`.
 #' @param type Character string specifying the plot type. Must be one of:
 #' \itemize{
@@ -525,6 +579,7 @@ setGeneric("relative_dist_plot",function(object,...) standardGeneric("relative_d
 setMethod("relative_dist_plot",
           signature(object = "ribotrans"),
           function(object,
+                   merge_rep = FALSE,
                    return_data = FALSE,
                    type = c("rel2start","rel2stop"),
                    read_length = c(20,35),
@@ -542,13 +597,13 @@ setMethod("relative_dist_plot",
                 fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
                 dplyr::mutate(frame = (pos - mstart)%%3,
                               rel = pos - mstart) %>%
-                fastplyr::f_select(sample,qwidth,frame,rel,count)
+                fastplyr::f_select(sample,sample_group,qwidth,frame,rel,count)
             }else{
               pltdf <- object@summary_info %>%
                 fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
                 dplyr::mutate(frame = (pos - mstart)%%3,
                               rel = pos - mstop) %>%
-                fastplyr::f_select(sample,qwidth,frame,rel,count)
+                fastplyr::f_select(sample,sample_group,qwidth,frame,rel,count)
             }
 
             # filter length and distance
@@ -565,16 +620,25 @@ setMethod("relative_dist_plot",
             # check whether plot for each read length
             if(collapse_readlength == TRUE){
               pltdf <- pltdf %>%
-                fastplyr::f_group_by(sample, rel, frame) %>%
+                fastplyr::f_group_by(sample,sample_group, rel, frame) %>%
                 fastplyr::f_summarise(counts = sum(count))
 
               facetlayer <- facet_wrap
             }else{
               pltdf <- pltdf %>%
-                fastplyr::f_group_by(sample,qwidth, rel, frame) %>%
+                fastplyr::f_group_by(sample,sample_group,qwidth, rel, frame) %>%
                 fastplyr::f_summarise(counts = sum(count))
 
               facetlayer <- facet_grid
+            }
+
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              pltdf <- pltdf %>%
+                dplyr::group_by(sample_group,qwidth, rel, frame) %>%
+                dplyr::summarise(counts = mean(counts)) %>%
+                dplyr::rename(sample = sample_group)
             }
 
 
@@ -631,6 +695,7 @@ setGeneric("relative_heatmap_plot",function(object,...) standardGeneric("relativ
 #'
 #'
 #' @param object An object of class \code{ribotrans}, containing summary information from ribosome profiling data.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param type A character string indicating the type of plot. Options are:
 #'  \code{"rel2start"} to plot relative to start codon or
 #'  \code{"rel2stop"} to plot relative to stop codon. Default is \code{"rel2start"}.
@@ -657,6 +722,7 @@ setGeneric("relative_heatmap_plot",function(object,...) standardGeneric("relativ
 setMethod("relative_heatmap_plot",
           signature(object = "ribotrans"),
           function(object,
+                   merge_rep = FALSE,
                    type = c("rel2start","rel2stop"),
                    read_length = c(20,35),
                    rel_dist = c(-100,100),
@@ -689,8 +755,16 @@ setMethod("relative_heatmap_plot",
             summary.info <- summary.info %>%
               fastplyr::f_filter(rel_pos >= rel_dist[1] & rel_pos <= rel_dist[2]) %>%
               fastplyr::f_filter(qwidth >= read_length[1] & qwidth <= read_length[2]) %>%
-              fastplyr::f_group_by(sample, rel_pos, qwidth) %>%
+              fastplyr::f_group_by(sample,sample_group, rel_pos, qwidth) %>%
               fastplyr::f_summarise(counts = sum(count))
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              summary.info <- summary.info %>%
+                dplyr::group_by(sample_group,qwidth,rel_pos, qwidth) %>%
+                dplyr::summarise(counts = mean(counts)) %>%
+                dplyr::rename(sample = sample_group)
+            }
 
             # check log_scale
             if(log_scale == TRUE){
@@ -897,20 +971,21 @@ setMethod("relative_offset_plot",
 #' The plot can be generated relative to the start or stop codon, with various
 #' normalization and visualization options.
 #'
-#' @param object A \code{ribotrans} object containing ribosome profiling data
-#' @param do_offset_correct Logical, whether to perform read position offset correction (default: FALSE)
-#' @param position_shift Numeric, shift value for offset correction (default: 0)
-#' @param norm_method Normalization method, either "average" or "tpm" (default: "average")
-#' @param min_cds_length Minimum CDS length to include in analysis (default: 600)
-#' @param min_counts Minimum read counts for a transcript to be included (default: 64)
-#' @param exclude_length A vector of two values specifying excluded regions near start and stop codons (default: c(90,90))
-#' @param type Plot relative to "rel2start" or "rel2stop" (default: "rel2start")
-#' @param return_data Logical, whether to return processed data instead of plot (default: FALSE)
-#' @param mode Visualization mode, either "nt" or "codon" (default: "nt")
-#' @param read_length Range of read lengths to include (default: c(25,31))
-#' @param rel2st_dist Distance range for plotting relative to start codon (default: c(-50,100))
-#' @param rel2sp_dist Distance range for plotting relative to stop codon (default: c(-100,50))
-#' @param facet_wrap ggplot2 facet_wrap function for sample visualization (default: facet_wrap(~sample))
+#' @param object A \code{ribotrans} object containing ribosome profiling data.
+#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
+#' @param do_offset_correct Logical, whether to perform read position offset correction (default: FALSE).
+#' @param position_shift Numeric, shift value for offset correction (default: 0).
+#' @param norm_method Normalization method, either "average" or "tpm" (default: "average").
+#' @param min_cds_length Minimum CDS length to include in analysis (default: 600).
+#' @param min_counts Minimum read counts for a transcript to be included (default: 64).
+#' @param exclude_length A vector of two values specifying excluded regions near start and stop codons (default: c(90,90)).
+#' @param type Plot relative to "rel2start" or "rel2stop" (default: "rel2start").
+#' @param return_data Logical, whether to return processed data instead of plot (default: FALSE).
+#' @param mode Visualization mode, either "nt" or "codon" (default: "nt").
+#' @param read_length Range of read lengths to include (default: c(25,31)).
+#' @param rel2st_dist Distance range for plotting relative to start codon (default: c(-50,100)).
+#' @param rel2sp_dist Distance range for plotting relative to stop codon (default: c(-100,50)).
+#' @param facet_wrap ggplot2 facet_wrap function for sample visualization (default: facet_wrap(~sample)).
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return
@@ -961,6 +1036,7 @@ setGeneric("metagene_plot",function(object,...) standardGeneric("metagene_plot")
 setMethod("metagene_plot",
           signature(object = "ribotrans"),
           function(object,
+                   merge_rep = FALSE,
                    do_offset_correct = FALSE,
                    position_shift = 0,
                    norm_method = c("average", "tpm"),
@@ -1016,7 +1092,7 @@ setMethod("metagene_plot",
                 dplyr::inner_join(y = avg.ct,by = c("sample", "rname")) %>%
                 dplyr::filter(mstop - mstart >= min_cds_length) %>%
                 dplyr::mutate(rel = pos - get(var), norm = count/avg_ct) %>%
-                fastplyr::f_group_by(sample,rel) %>%
+                fastplyr::f_group_by(sample,sample_group,rel) %>%
                 fastplyr::f_summarise(normsm = sum(norm)) %>%
                 dplyr::filter(rel >= dist[1] & rel <= dist[2])
             }else{
@@ -1025,7 +1101,7 @@ setMethod("metagene_plot",
                 dplyr::filter(mstop - mstart >= min_cds_length) %>%
                 dplyr::mutate(rel = pos - get(var),rpk = count/(cdslen/1000)) %>%
                 dplyr::filter(rel >= dist[1] & rel <= dist[2]) %>%
-                fastplyr::f_group_by(sample, rel) %>%
+                fastplyr::f_group_by(sample,sample_group, rel) %>%
                 fastplyr::f_summarise(rpks = sum(rpk))
 
               # get total mapped reads
@@ -1041,6 +1117,13 @@ setMethod("metagene_plot",
 
             }
 
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              pltdf <- pltdf %>%
+                dplyr::group_by(sample_group,rel) %>%
+                dplyr::summarise(normsm = mean(normsm)) %>%
+                dplyr::rename(sample = sample_group)
+            }
 
             # average occupancy
             sm <- pltdf %>%
