@@ -117,7 +117,9 @@ setMethod("polarity_plot",
             }
 
             # calculate density
-            # x = 1
+
+            sp <- unique(pl_df$sample)
+
             purrr::map_df(seq_along(sp),function(x){
               tmp <- subset(pl_df, sample == sp[x])
 
