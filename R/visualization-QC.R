@@ -247,7 +247,10 @@ setMethod("length_plot",
 
               # whether add periodicity info
               if(add_periodicity_label == TRUE){
-                periodicity.layer <- geom_text(data = pltdf %>% dplyr::filter(frame == 0),
+                periodicity.layer <- geom_text(data = pltdf %>%
+                                                 dplyr::group_by(sample,frame) %>%
+                                                 dplyr::slice_max(order_by = counts, n = 1) %>%
+                                                 dplyr::ungroup(),
                                                aes(x = qwidth,y = counts + counts*labely_extend,label = periodicity),
                                                size = text_size,vjust = 0)
 
