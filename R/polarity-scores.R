@@ -95,7 +95,7 @@ setMethod("polarity_plot",
 
             # filter low counts
             density.tt <- sry %>%
-              fastplyr::f_group_by(sample,sample_group,rname) %>%
+              fastplyr::f_group_by(sample,rname) %>%
               fastplyr::f_summarise(count.tt = sum(count),
                                     rpm.tt = sum(rpm)) %>%
               fastplyr::f_filter(count.tt > min_counts)

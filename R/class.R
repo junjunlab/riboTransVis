@@ -8,7 +8,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
                   "relst", "rpm.tt", "sp", "wi", "x", "y", "yend","reloccup", "value","avg_val",  "dist","rpks",
                   "Abbreviation1", "Abbreviation3", "AminoAcid", "abbrev", "codon_seq", "freq", "occup","rpk",
                   "occurrence", "pause_score", "pep_seq", "ratio", "rel_pause", "tripep_val","motif","nt_pos",
-                  "sample_group","sum_pi"))
+                  "sample_group","sum_pi","counts.y", "periodicity.x"))
 
 
 #' ribotrans Class
