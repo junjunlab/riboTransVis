@@ -11,7 +11,7 @@ length_plot(object, ...)
   object,
   read_length = c(20, 35),
   merge_rep = FALSE,
-  text_size = 2.5,
+  text_size = 4,
   add_periodicity_label = TRUE,
   labely_extend = 0.05,
   return_data = FALSE,
@@ -27,7 +27,7 @@ length_plot(object, ...)
 
 \item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
-\item{text_size}{Numeric (default: \code{2.5}). Specifies the font size for periodicity labels, applicable when \code{type = "frame_length"}.}
+\item{text_size}{Numeric (default: \code{4}). Specifies the font size for periodicity labels, applicable when \code{type = "frame_length"}.}
 
 \item{add_periodicity_label}{Logical (default: \code{TRUE}). If \code{TRUE}, adds periodicity percentage labels to the plot (only for \code{type = "frame_length"}).}
 

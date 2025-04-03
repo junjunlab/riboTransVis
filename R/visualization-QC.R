@@ -143,7 +143,7 @@ setGeneric("length_plot",function(object,...) standardGeneric("length_plot"))
 #' @param object A `ribotrans` object that contains summary read count information.
 #' @param read_length A numeric vector of length 2 (default: `c(20, 35)`). Defines the range of read lengths to visualize.
 #' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
-#' @param text_size Numeric (default: `2.5`). Specifies the font size for periodicity labels, applicable when `type = "frame_length"`.
+#' @param text_size Numeric (default: `4`). Specifies the font size for periodicity labels, applicable when `type = "frame_length"`.
 #' @param add_periodicity_label Logical (default: `TRUE`). If `TRUE`, adds periodicity percentage labels to the plot (only for `type = "frame_length"`).
 #' @param labely_extend A numeric proportion to extend the y-position of periodicity labels above bars
 #'   (default: 0.05).
@@ -190,7 +190,7 @@ setMethod("length_plot",
           function(object,
                    read_length = c(20,35),
                    merge_rep = FALSE,
-                   text_size = 2.5,
+                   text_size = 4,
                    add_periodicity_label = TRUE,
                    labely_extend = 0.05,
                    return_data = FALSE,
@@ -247,11 +247,16 @@ setMethod("length_plot",
 
               # whether add periodicity info
               if(add_periodicity_label == TRUE){
-                periodicity.layer <- geom_text(data = pltdf %>%
-                                                 dplyr::group_by(sample,qwidth) %>%
-                                                 dplyr::slice_max(order_by = counts, n = 1, with_ties = FALSE) %>%
-                                                 dplyr::ungroup(),
-                                               aes(x = qwidth,y = counts + counts*labely_extend,label = periodicity),
+                lb <- pltdf %>%
+                  dplyr::group_by(sample,qwidth) %>%
+                  dplyr::slice_max(order_by = counts, n = 1, with_ties = FALSE) %>%
+                  dplyr::ungroup()
+
+                lbdf <- pltdf %>% dplyr::filter(frame == 0) %>%
+                  dplyr::left_join(y = lb,by = c("sample","qwidth"))
+
+                periodicity.layer <- geom_text(data = lbdf,
+                                               aes(x = qwidth,y = counts.y + counts.y*labely_extend,label = periodicity.x),
                                                size = text_size,vjust = 0)
 
               }else{
