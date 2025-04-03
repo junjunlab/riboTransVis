@@ -290,8 +290,8 @@ construct_ribotrans <- function(genome_file = NULL,
   bams <- c(RNA_bam_file, Ribo_bam_file)
   sp <- c(RNA_sample_name, Ribo_sample_name)
 
-  RNA_sample_group <- ifelse(is.null(RNA_sample_group),RNA_sample_name,RNA_sample_group)
-  Ribo_sample_group <- ifelse(is.null(Ribo_sample_group),Ribo_sample_name,Ribo_sample_group)
+  RNA_sample_group <- if (is.null(RNA_sample_group)) RNA_sample_name else RNA_sample_group
+  Ribo_sample_group <- if (is.null(Ribo_sample_group)) Ribo_sample_name else Ribo_sample_group
   gp <- c(RNA_sample_group, Ribo_sample_group)
 
   tp <- rep(c("rna", "ribo"), c(length(RNA_bam_file),length(Ribo_bam_file)))
