@@ -142,19 +142,18 @@ setMethod("multi_peptide_occupancy",
                 dplyr::rename(sample = sample_group)
             }
             # ==================================================================
-            # fill each codon position
+            # count codon numbers
+            anno <- dplyr::filter(features, idnew %in% names(aa)) %>%
+              dplyr::mutate(codons = cds / 3 + 1)
+
+            # make codon index
+            idfull <- tidyr::uncount(anno, weights = codons) %>%
+              dplyr::group_by(idnew) %>%
+              dplyr::mutate(rel = dplyr::row_number()) %>%
+              dplyr::ungroup() %>%
+              dplyr::select(rname = idnew, rel)
+
             sp <- unique(density.tt$sample)
-
-            tid <- unique(density.tt$rname)
-            anno <- subset(features, idnew %in% tid)
-
-            # loop for each transcript
-            purrr::map_df(seq_along(tid),function(x){
-              tmp <- subset(anno, idnew == tid[x])
-              codons <- tmp$cds/3 + 1
-              df <- data.frame(rname = tid[x], rel = 1:codons)
-              return(df)
-            }) -> idfull
 
             # add samples
             purrr::map_df(seq_along(sp),function(x){
@@ -164,7 +163,9 @@ setMethod("multi_peptide_occupancy",
 
             # merge with density
             fullanno <- idfull %>%
-              fastplyr::f_inner_join(y = density.tt,by = c("sample","rname","rel"))
+              fastplyr::f_left_join(y = density.tt,by = c("sample","rname","rel")) %>%
+              dplyr::mutate(sample_group = dplyr::if_else(is.na(sample_group),
+                                                          sample,sample_group))
             fullanno[is.na(fullanno)] <- 0
 
             # ==================================================================
@@ -193,13 +194,18 @@ setMethod("multi_peptide_occupancy",
                 dplyr::mutate(tripep_val = zoo::rollsum(value, k = peptide_length, fill = NA),
                               .by = c(sample,rname)) %>%
                 na.omit() %>%
+                fastplyr::f_group_by(sample,sample_group,rname) %>%
+                # re-assign positions
+                dplyr::mutate(rel = 1:dplyr::n()) %>%
+                # merge with multi-peptide info
                 fastplyr::f_inner_join(y = peptide_info,by = c("rname","rel")) %>%
                 fastplyr::f_group_by(sample,pep_seq) %>%
                 fastplyr::f_summarise(pause_score = sum(tripep_val),
-                                      occurrence = n()) %>%
+                                      occurrence = dplyr::n()) %>%
                 fastplyr::f_filter(occurrence > peptide_occurrence) %>%
                 # calculate relative density
                 dplyr::mutate(rel_pause = pause_score/occurrence)
+
             } else {
               warning("Package 'zoo' is needed for this function to work.")
             }
