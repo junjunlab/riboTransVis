@@ -508,7 +508,7 @@ setMethod("whole_metagene_plot",
                                  limits = c(1 - sutr5,2 + sutr3),
                                  labels = c("start","CDS","stop")) +
               geom_vline(xintercept = c(1,2),lty = "dashed", color = "grey30") +
-              xlab("Ribosome density (AU)")
+              ylab("Ribosome density (AU)")
 
             # return
             if(return_data == FALSE){
