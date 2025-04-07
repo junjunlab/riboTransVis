@@ -111,8 +111,8 @@ setMethod("polarity_plot",
             # whether aggregate replicates
             if(merge_rep == TRUE){
               pl_df <- pl_df %>%
-                dplyr::group_by(sample_group,rname) %>%
-                dplyr::summarise(sum_pi = mean(sum_pi)) %>%
+                fastplyr::f_group_by(sample_group,rname) %>%
+                fastplyr::f_summarise(sum_pi = mean(sum_pi)) %>%
                 dplyr::rename(sample = sample_group)
             }
 

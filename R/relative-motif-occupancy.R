@@ -187,8 +187,8 @@ setMethod("relative_motif_occupancy",
             # whether aggregate replicates
             if(merge_rep == TRUE){
               density.tt <- density.tt %>%
-                dplyr::group_by(sample_group,rname,relst) %>%
-                dplyr::summarise(normsm = mean(normsm)) %>%
+                fastplyr::f_group_by(sample_group,rname,relst) %>%
+                fastplyr::f_summarise(normsm = mean(normsm)) %>%
                 dplyr::rename(sample = sample_group)
             }
 

@@ -137,9 +137,10 @@ setMethod("multi_peptide_occupancy",
             # whether aggregate replicates
             if(merge_rep == TRUE){
               density.tt <- density.tt %>%
-                dplyr::group_by(sample_group,rname,rel) %>%
-                dplyr::summarise(value = mean(value)) %>%
-                dplyr::rename(sample = sample_group)
+                fastplyr::f_group_by(sample_group,rname,rel) %>%
+                fastplyr::f_summarise(value = mean(value)) %>%
+                dplyr::rename(sample = sample_group) %>%
+                dplyr::mutate(sample_group = sample)
             }
             # ==================================================================
             # count codon numbers
@@ -163,9 +164,9 @@ setMethod("multi_peptide_occupancy",
 
             # merge with density
             fullanno <- idfull %>%
-              fastplyr::f_left_join(y = density.tt,by = c("sample","rname","rel"))
-              # dplyr::mutate(sample_group = dplyr::if_else(is.na(sample_group),
-              #                                             sample,sample_group))
+              fastplyr::f_left_join(y = density.tt,by = c("sample","rname","rel")) %>%
+              dplyr::mutate(sample_group = dplyr::if_else(is.na(sample_group),
+                                                          sample,sample_group))
             fullanno[is.na(fullanno)] <- 0
 
             # ==================================================================

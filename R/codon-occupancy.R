@@ -137,8 +137,8 @@ setMethod("codon_occupancy_plot",
             # whether aggregate replicates
             if(merge_rep == TRUE){
               pltdf2 <- pltdf2 %>%
-                dplyr::group_by(sample_group,codon_seq) %>%
-                dplyr::summarise(reloccup = mean(reloccup)) %>%
+                fastplyr::f_group_by(sample_group,codon_seq) %>%
+                fastplyr::f_summarise(reloccup = mean(reloccup)) %>%
                 dplyr::rename(sample = sample_group)
             }
 
