@@ -8,7 +8,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
                   "relst", "rpm.tt", "sp", "wi", "x", "y", "yend","reloccup", "value","avg_val",  "dist","rpks",
                   "Abbreviation1", "Abbreviation3", "AminoAcid", "abbrev", "codon_seq", "freq", "occup","rpk",
                   "occurrence", "pause_score", "pep_seq", "ratio", "rel_pause", "tripep_val","motif","nt_pos",
-                  "sample_group","sum_pi","counts.y", "periodicity.x","codons"))
+                  "sample_group","sum_pi","counts.y", "periodicity.x","codons","log2FoldChange"))
 
 
 #' ribotrans Class
@@ -18,6 +18,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
 #' @slot bam_file A `data.frame` containing BAM file data.
 #' @slot library A `data.frame` representing the sequencing library information.
 #' @slot gtf_data A `GRanges` representing the gtf data for gene annotations.
+#' @slot gtf_path A `character` string specifying the gtf file path.
 #' @slot assignment_mode A `character` string indicating the methodology used for read assignment.
 #' @slot mapping_type A `character` string specifying the mapping type (`"transcriptome"` or `"genome"`).
 #' @slot features A `data.frame` describing transcript features (e.g., exons, genes).
@@ -30,6 +31,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
 #' @slot RNA_coverage A `data.frame` containing RNA coverage data from sequencing.
 #' @slot RNA.smoothed A `character` representing smoothed RNA profiles.
 #' @slot scaled_occupancy A `data.frame` with normalized ribosome occupancy data.
+#' @slot counts A list for saving RPF and mRNA counts data.
 #'
 #' @details
 #' The `ribotrans` class is designed to facilitate the analysis of ribosome profiling data
@@ -49,6 +51,7 @@ ribotrans <- setClass("ribotrans",
                       slots = list("bam_file" = "data.frame",
                                    "library" = "data.frame",
                                    "gtf_data" = "GRanges",
+                                   "gtf_path" = "character",
                                    "mapping_type" = "character",
                                    "assignment_mode" = "character",
                                    "features" = "data.frame",
@@ -60,7 +63,8 @@ ribotrans <- setClass("ribotrans",
                                    "ribo.smoothed" = "character",
                                    "RNA_coverage" = "data.frame",
                                    "RNA.smoothed" = "character",
-                                   "scaled_occupancy" = "data.frame")
+                                   "scaled_occupancy" = "data.frame",
+                                   "counts" = "list")
 )
 
 
@@ -325,6 +329,7 @@ construct_ribotrans <- function(genome_file = NULL,
   res <- methods::new("ribotrans",
                       "bam_file" = bam_file,
                       "gtf_data" = gtf,
+                      "gtf_path" = gtf_file,
                       "library" = library,
                       "features" = features,
                       "mapping_type" = mapping_type,

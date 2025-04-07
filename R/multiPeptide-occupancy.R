@@ -163,9 +163,9 @@ setMethod("multi_peptide_occupancy",
 
             # merge with density
             fullanno <- idfull %>%
-              fastplyr::f_left_join(y = density.tt,by = c("sample","rname","rel")) %>%
-              dplyr::mutate(sample_group = dplyr::if_else(is.na(sample_group),
-                                                          sample,sample_group))
+              fastplyr::f_left_join(y = density.tt,by = c("sample","rname","rel"))
+              # dplyr::mutate(sample_group = dplyr::if_else(is.na(sample_group),
+              #                                             sample,sample_group))
             fullanno[is.na(fullanno)] <- 0
 
             # ==================================================================
@@ -194,7 +194,7 @@ setMethod("multi_peptide_occupancy",
                 dplyr::mutate(tripep_val = zoo::rollsum(value, k = peptide_length, fill = NA),
                               .by = c(sample,rname)) %>%
                 na.omit() %>%
-                fastplyr::f_group_by(sample,sample_group,rname) %>%
+                fastplyr::f_group_by(sample,rname) %>%
                 # re-assign positions
                 dplyr::mutate(rel = 1:dplyr::n()) %>%
                 # merge with multi-peptide info

@@ -1,0 +1,525 @@
+# ==============================================================================
+# counts reads for rna and rpf
+# ==============================================================================
+
+#' Get Read Counts for RNA and Ribo-seq Libraries
+#'
+#' This function calculates gene-level read counts from BAM files for both RNA-seq and ribosome profiling (Ribo-seq) experiments
+#' using the \code{featureCounts} function from the \pkg{Rsubread} package. It annotates counts using the supplied GTF file.
+#'
+#' @param object A \code{ribotrans} object. Must contain RNA and/or Ribo-seq information in the \code{@library} slot and
+#' a valid GTF file path in the \code{@gtf_path} slot.
+#' @param GTF_attrType.extra A character vector specifying extra attributes from the GTF annotation to include
+#' (e.g., \code{c("gene_name", "gene_biotype")}). Default is \code{c("gene_name", "gene_biotype")}.
+#' @param nThreads Integer, number of threads to be used for \code{featureCounts}. Default is \code{1}.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return The original \code{ribotrans} object with read counts for RNA and/or ribosome profiling libraries stored inside
+#' the \code{@counts} slot. The result is a named list with components:
+#' \describe{
+#'   \item{\code{rna}}{A featureCounts output list for RNA-seq samples (exon-level counting)}
+#'   \item{\code{rpf}}{A featureCounts output list for Ribo-seq samples (CDS-level counting)}
+#' }
+#'
+#'
+#' @export
+#' @examples
+#' \dontrun{
+#' # Assuming `obj` is a ribotrans object with all required slots configured:
+#' # obj <- get_counts(obj)
+#'
+#' # You can specify extra GTF attributes and set number of threads:
+#' # obj <- get_counts(obj, GTF_attrType.extra = c("gene_name"), nThreads = 4)
+#' }
+#'
+#' @seealso \code{\link[Rsubread]{featureCounts}}
+setGeneric("get_counts",function(object,...) standardGeneric("get_counts"))
+
+
+
+
+#' @rdname get_counts
+#' @export
+setMethod("get_counts",
+          signature(object = "ribotrans"),
+          function(object,
+                   GTF_attrType.extra = c("gene_name","gene_biotype"),
+                   nThreads = 1){
+            lib <- object@library
+
+            # ==================================================================
+            # count rna reads
+            rnainfo <- subset(lib, type == "rna")
+
+            if(nrow(rnainfo) > 0){
+
+              if (requireNamespace("Rsubread", quietly = TRUE)) {
+                rna <- Rsubread::featureCounts(files = rnainfo$bam,
+                                               isGTFAnnotationFile = TRUE,
+                                               GTF.featureType = "exon",
+                                               annot.ext = object@gtf_path,
+                                               GTF.attrType = "gene_id",
+                                               GTF.attrType.extra = GTF_attrType.extra,
+                                               nthreads = nThreads)
+
+                colnames(rna$counts) <- rnainfo$sample
+              } else {
+                warning("Package 'Rsubread' is needed for this function to work.")
+              }
+            }
+
+            # ==================================================================
+            # count ribo reads
+            riboinfo <- subset(lib, type == "ribo")
+
+            if(nrow(riboinfo) > 0){
+
+              if (requireNamespace("Rsubread", quietly = TRUE)) {
+                rpf <- Rsubread::featureCounts(files = riboinfo$bam,
+                                               isGTFAnnotationFile = TRUE,
+                                               GTF.featureType = "CDS",
+                                               annot.ext = object@gtf_path,
+                                               GTF.attrType = "gene_id",
+                                               GTF.attrType.extra = GTF_attrType.extra,
+                                               nthreads = nThreads)
+
+                colnames(rpf$counts) <- riboinfo$sample
+              } else {
+                warning("Package 'Rsubread' is needed for this function to work.")
+              }
+            }
+
+            # return
+            counts_info <- list(rpf = rpf,rna = rna)
+
+            object@counts <- counts_info
+
+            return(object)
+          }
+)
+
+
+
+# ==============================================================================
+# differential analysis for rna and rpf
+# ==============================================================================
+
+#' Gene Differential Expression Analysis
+#'
+#' Performs differential expression analysis on gene-level count data for either RNA-seq or Ribo-seq
+#' experiments stored in a \code{ribotrans} object. The DESeq2 pipeline is used to identify differentially
+#' expressed genes between control and treatment sample groups. Results include fold changes, p-values,
+#' and gene annotations with significance classification.
+#'
+#' @param object A \code{ribotrans} object, which should already include count data generated by \code{get_counts()}.
+#' @param type Character string specifying the library type to analyze. Either \code{"rna"} or \code{"ribo"}.
+#' @param control_samples Character vector of sample names to serve as the control group.
+#' @param treat_samples Character vector of sample names to serve as the treatment group.
+#' @param lo2FC A numeric vector of length two specifying lower and upper thresholds for log2 fold change.
+#' Default is \code{c(-1, 1)}, meaning fold changes below -1 or above 1 are considered significant.
+#' @param pval Numeric. P-value threshold for statistical significance. Default is \code{0.05}.
+#' @param ... Additional arguments (currently unused).
+#'
+#'
+#' @return A \code{data.frame} containing differential expression results, including:
+#' \describe{
+#'   \item{\code{gene_id}}{Gene identifier}
+#'   \item{\code{log2FoldChange}}{Log2-transformed fold change between treatment and control}
+#'   \item{\code{pvalue, padj}}{Raw and adjusted p-values (if available)}
+#'   \item{\code{gene_name, gene_biotype}}{Gene annotation information}
+#'   \item{\code{type}}{Significance label: "sigUp", "sigDown", or "nonSig"}
+#' }
+#'
+#' @details This method uses the \pkg{DESeq2} package for differential gene expression analysis.
+#' Gene annotations are automatically extracted from the stored count metadata.
+#'
+#'
+#' @importFrom dplyr left_join mutate case_when filter
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Assume `obj` is a ribotrans object with valid count data already obtained using get_counts()
+#' # and has RNA samples: "ctrl1", "ctrl2", "treat1", "treat2"
+#'
+#' result <- gene_differential_analysis(
+#'   object = obj,
+#'   type = "rna",
+#'   control_samples = c("ctrl1", "ctrl2"),
+#'   treat_samples = c("treat1", "treat2"),
+#'   lo2FC = c(-1.5, 1.5),
+#'   pval = 0.01
+#' )
+#'
+#' head(result)
+#' table(result$type)
+#' }
+#'
+#' @seealso \code{\link{get_counts}}, \code{\link[DESeq2]{DESeq}}, \code{\link[DESeq2]{results}}
+setGeneric("gene_differential_analysis",function(object,...) standardGeneric("gene_differential_analysis"))
+
+
+
+#' @rdname gene_differential_analysis
+#' @export
+setMethod("gene_differential_analysis",
+          signature(object = "ribotrans"),
+          function(object,
+                   type = c("rna","ribo"),
+                   control_samples = NULL,
+                   treat_samples = NULL,
+                   lo2FC = c(-1,1),
+                   pval = 0.05){
+            type <- match.arg(type,choices = c("rna","ribo"))
+            # ==================================================================
+            # get counts info
+            if(type == "rna"){
+              counts_info <- object@counts$rna
+
+              count_mtx <- counts_info$counts[,c(control_samples,treat_samples)]
+            }else{
+              counts_info <- object@counts$rpf
+
+              count_mtx <- counts_info$counts[,c(control_samples,treat_samples)]
+            }
+
+            # ==================================================================
+            # diff analysis
+
+            # gene annotation
+            gene_anno <- counts_info$annotation[,c("GeneID","Length", "gene_name","gene_biotype")]
+            colnames(gene_anno)[1] <- "gene_id"
+
+            # meta data
+            coldata <- data.frame(condition = factor(c(rep('control',length(control_samples)),
+                                                       rep('treat', length(treat_samples))),
+                                                     levels = c('control', 'treat')))
+
+            if (requireNamespace("DESeq2", quietly = TRUE)) {
+              # DESeqDataSet
+              dds <- DESeq2::DESeqDataSetFromMatrix(countData = count_mtx, colData = coldata, design= ~condition)
+
+              # diff
+              dds <- DESeq2::DESeq(dds)
+
+              # get results
+              res <- DESeq2::results(dds, contrast = c('condition', 'treat', 'control'))
+            } else {
+              warning("Package 'DESeq2' is needed for this function to work.")
+            }
+
+
+
+            # filter NA
+            res_all <- as.data.frame(res) %>% dplyr::filter(log2FoldChange != 'NA')
+
+            # add annotation
+            res_all$gene_id <- rownames(res_all)
+            res_all_anno <- res_all %>%
+              dplyr::left_join(y = gene_anno,by = 'gene_id')
+
+            # add sig type
+            res_all_anno <- res_all_anno |>
+              dplyr::mutate(type = dplyr::case_when(log2FoldChange >= lo2FC[2] & pvalue < pval ~ "sigUp",
+                                                    log2FoldChange <= lo2FC[1] & pvalue < pval ~ "sigDown",
+                                                    .default = "nonSig"))
+
+            return(res_all_anno)
+          }
+)
+
+
+
+# ==============================================================================
+# calculation normalized matrix and translation efficiency
+# ==============================================================================
+
+#' Get Normalized Read Counts (TPM and Translation Efficiency)
+#'
+#' Computes normalized gene expression levels from RNA-seq and/or Ribo-seq count data
+#' stored in a \code{ribotrans} object. TPM (Transcripts Per Million) values are calculated
+#' for both RNA and Ribo libraries. Additionally, translation efficiency (TE) is computed
+#' as the ratio between Ribo-seq and RNA-seq TPM values.
+#'
+#' @param object A \code{ribotrans} object containing read counts and annotation metadata.
+#' The \code{@counts} slot must be filled beforehand using \code{get_counts()}.
+#' @param type Character vector specifying which metrics to calculate. Acceptable values are:
+#'
+#' \describe{
+#'   \item{\code{"rna"}}{Calculate RNA-seq TPM values}
+#'   \item{\code{"ribo"}}{Calculate Ribo-seq TPM values}
+#'   \item{\code{"te"}}{Calculate translation efficiency (TE = Ribo TPM / RNA TPM)}
+#' }
+#'
+#' @return A named list with three elements, depending on the selected \code{type}:
+#' \describe{
+#'   \item{\code{tpm.rna}}{Data frame of RNA TPM values and gene annotations (if \code{"rna"} is selected)}
+#'   \item{\code{tpm.ribo}}{Data frame of Ribo TPM values and gene annotations (if \code{"ribo"} is selected)}
+#'   \item{\code{te}}{Data frame of translation efficiency and gene annotations (if \code{"te"} is selected)}
+#' }
+#'
+#' @param ... Additional arguments (currently unused).
+#'
+#' @details TPM values are calculated using gene lengths (in kilobases) extracted from the \code{annotation}
+#' component of the counts. TE is only computed for genes that are shared between both RNA and Ribo counts.
+#' All outputs include gene annotations such as \code{gene_name} and \code{gene_biotype}.
+#'
+#' @importFrom dplyr left_join
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Assume `obj` is a ribotrans object with counts generated via get_counts()
+#'
+#' # Get both RNA and Ribo TPM
+#' normalized_list <- get_normalized_reads(obj, type = c("rna", "ribo"))
+#'
+#' head(normalized_list$tpm.rna)
+#' head(normalized_list$tpm.ribo)
+#'
+#' # Compute translation efficiency (requires both RNA and Ribo counts)
+#' te_list <- get_normalized_reads(obj, type = "te")
+#' head(te_list$te)
+#' }
+#'
+#' @seealso \code{\link{get_counts}}
+setGeneric("get_normalized_reads",function(object,...) standardGeneric("get_normalized_reads"))
+
+
+
+
+#' @rdname get_normalized_reads
+#' @export
+setMethod("get_normalized_reads",
+          signature(object = "ribotrans"),
+          function(object,
+                   type = c("rna","ribo","te")){
+            # ==================================================================
+            # get rna tpm
+            if("rna" %in% type){
+              rna_info <- object@counts$rna
+              count_rna <- rna_info$counts
+
+              kb <- rna_info$annotation$Length/1000
+              rpk <- count_rna/kb
+              tpm_rna <- t(t(rpk)/colSums(rpk)*10^6)
+
+              # add gene annotation
+              gene_anno <- rna_info$annotation[,c("GeneID", "gene_name","gene_biotype")]
+              colnames(gene_anno)[1] <- "gene_id"
+
+              tpm_rna.df <- data.frame(tpm_rna,check.names = F)
+              tpm_rna.df$gene_id <- rownames(tpm_rna.df)
+              tpm_rna.df <- tpm_rna.df %>%
+                dplyr::left_join(y = gene_anno,by = "gene_id")
+            }else{
+              tpm_rna.df <- NULL
+            }
+
+            # get ribo tpm
+            if("ribo" %in% type){
+              ribo_info <- object@counts$rpf
+              count_ribo <- ribo_info$counts
+
+              kb <- ribo_info$annotation$Length/1000
+              rpk <- count_ribo/kb
+              tpm_ribo <- t(t(rpk)/colSums(rpk)*10^6)
+
+              # add gene annotation
+              gene_anno <- ribo_info$annotation[,c("GeneID", "gene_name","gene_biotype")]
+              colnames(gene_anno)[1] <- "gene_id"
+
+              tpm_ribo.df <- data.frame(tpm_ribo,check.names = F)
+              tpm_ribo.df$gene_id <- rownames(tpm_ribo.df)
+              tpm_ribo.df <- tpm_ribo.df %>%
+                dplyr::left_join(y = gene_anno,by = "gene_id")
+            }else{
+              tpm_ribo.df <- NULL
+            }
+
+            # get te
+            if("te" %in% type){
+              gene_info <- rbind(rna_info$annotation,ribo_info$annotation)
+              gene_info <- gene_info[,c("GeneID","gene_name","gene_biotype")] %>% unique()
+
+              # calculation TE(translation efficiency)
+              ids <- intersect(rownames(tpm_rna),rownames(tpm_ribo))
+
+              tpm.rna <- tpm_rna[ids,]
+              tpm.ribo <- tpm_ribo[ids,]
+
+              # check colnames order to be same
+              if(identical(colnames(tpm.rna),colnames(tpm.ribo))){
+                te <- tpm.ribo/tpm.rna
+              }else{
+                tmp.tpm <- tpm.rna[,colnames(tpm.ribo)]
+                te <- tpm.ribo/tmp.tpm
+              }
+
+              # add gene annotation
+              te.df <- data.frame(te,check.names = F)
+              te.df$gene_id <- rownames(te.df)
+              te.df <- te.df %>%
+                dplyr::left_join(y = gene_anno,by = "gene_id")
+            }else{
+              te.df <- NULL
+            }
+
+            # return
+            res <- list(tpm.rna = tpm_rna.df,tpm.ribo = tpm_ribo.df,te = te.df)
+
+          }
+)
+
+
+
+
+
+# ==============================================================================
+# TE differential analysis
+# ==============================================================================
+
+#' Translation Efficiency Differential Expression Analysis
+#'
+#' Performs differential analysis of translation efficiency (TE) between treatment and control
+#' conditions using RNA-seq and Ribo-seq paired count data from a \code{ribotrans} object. Internally
+#' uses the \pkg{riborex} package to model TE changes across experimental groups using selected statistical engines.
+#'
+#' @param object A \code{ribotrans} object. The count data must be generated beforehand using \code{get_counts()}.
+#' @param method Character string indicating which testing engine to use. Options are:
+#' \describe{
+#'   \item{\code{"DESeq2"}}{DESeq2 framework}
+#'   \item{\code{"edgeR"}}{edgeR framework (default)}
+#'   \item{\code{"edgeRD"}}{edgeR with dispersion smoothing (DEG with replicates)}
+#'   \item{\code{"Voom"}}{Limma-Voom approach}
+#' }
+#' @param control_samples Character vector of sample names corresponding to control group.
+#' @param treat_samples Character vector of sample names corresponding to treatment group.
+#' @param min_count Minimum mean count threshold (default is 1) to filter low-expression genes.
+#' @param lo2FC Numeric vector of length 2 indicating the lower and upper threshold for log2 fold change.
+#' Default is \code{c(-1, 1)}.
+#' @param pval Numeric scalar. The significance threshold for p-value cutoff (default = 0.05).
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A named list with two elements:
+#' \describe{
+#'   \item{\code{deg_raw}}{Raw result table returned by \pkg{riborex}, including log-fold changes and p-values.}
+#'   \item{\code{deg_anno}}{Annotated result data frame with gene symbols, biotypes, and significance label (\code{type}): \code{"sigUp"}, \code{"sigDown"}, \code{"nonSig"}.}
+#' }
+#'
+#' @details The function first extracts count matrices from RNA and Ribo fractions, aligns their gene rows,
+#' and then runs differential analysis using \code{riborex()} with the selected statistical engine.
+#' Genes are classified as significantly up- or down-regulated based on \code{lo2FC} and \code{pval} thresholds.
+#'
+#' @importFrom dplyr inner_join mutate case_when
+#'
+#' @export
+#'
+#' @examples
+#' \dontrun{
+#' # Assume `obj` is a ribotrans object with RNA and Ribo counts.
+#' # Samples "ctrl1", "ctrl2" as control; "trt1", "trt2" as treatment.
+#' res <- TE_differential_analysis(
+#'   object = obj,
+#'   method = "edgeR",
+#'   control_samples = c("ctrl1", "ctrl2"),
+#'   treat_samples = c("trt1", "trt2"),
+#'   min_count = 5,
+#'   lo2FC = c(-1.5, 1.5),
+#'   pval = 0.01
+#' )
+#'
+#' # View annotated differential TE results
+#' head(res$deg_anno)
+#' table(res$deg_anno$type)
+#' }
+#'
+#' @seealso \code{\link[riborex]{riborex}}, \code{\link{get_counts}}
+setGeneric("TE_differential_analysis",function(object,...) standardGeneric("TE_differential_analysis"))
+
+
+
+
+#' @rdname TE_differential_analysis
+#' @export
+setMethod("TE_differential_analysis",
+          signature(object = "ribotrans"),
+          function(object,
+                   method = c("DESeq2","edgeR","edgeRD","Voom"),
+                   control_samples = NULL,
+                   treat_samples = NULL,
+                   min_count = 1,
+                   lo2FC = c(-1,1),
+                   pval = 0.05){
+            method <- match.arg(method,choices = c("DESeq2","edgeR","edgeRD","Voom"))
+            # ==================================================================
+            # get counts info
+            rna_info <- object@counts$rna
+            rna_mtx <- rna_info$counts[,c(control_samples,treat_samples)]
+
+            ribo_info <- object@counts$rpf
+            ribo_mtx <- ribo_info$counts[,c(control_samples,treat_samples)]
+
+            gene_info <- rbind(rna_info$annotation,ribo_info$annotation)
+            gene_info <- gene_info[,c("GeneID","gene_name","gene_biotype")] %>% unique()
+            colnames(gene_info)[1] <- "gene_id"
+
+            # make row order to be same
+            ids <- intersect(rownames(rna_mtx),rownames(ribo_mtx))
+
+            rna_mtx <- rna_mtx[ids,]
+            ribo_mtx <- ribo_mtx[ids,]
+            # ==================================================================
+            # diff analysis
+            # make groups
+            rnaCond <- c("control", "control", "treated", "treated")
+            riboCond <- c("control", "control", "treated", "treated")
+
+
+            # deg
+            if (requireNamespace("riborex", quietly = TRUE)) {
+              deg.res <- riborex::riborex(rnaCntTable = rna_mtx,
+                                          riboCntTable = ribo_mtx,
+                                          rnaCond = rnaCond,
+                                          riboCond = riboCond,
+                                          engine = method,
+                                          minMeanCount = min_count)
+            } else {
+              warning("Package 'riborex' is needed for this function to work.")
+            }
+
+            # add annotation
+            diff_df <- data.frame(deg.res)
+
+            diff_df$gene_id <- rownames(diff_df)
+
+            # add gene_name
+            diff_df_anno <- diff_df %>% dplyr::inner_join(gene_info,by = 'gene_id')
+
+            # add sig type
+            if(method == "DESeq2"){
+              res_all_anno <- diff_df_anno |>
+                dplyr::mutate(type = dplyr::case_when(log2FoldChange >= lo2FC[2] & pvalue < pval ~ "sigUp",
+                                                      log2FoldChange <= lo2FC[1] & pvalue < pval ~ "sigDown",
+                                                      .default = "nonSig"))
+            }else if(method %in% c("edgeR","edgeRD")){
+              res_all_anno <- diff_df_anno |>
+                dplyr::mutate(type = dplyr::case_when(logFC >= lo2FC[2] & PValue < pval ~ "sigUp",
+                                                      logFC <= lo2FC[1] & PValue < pval ~ "sigDown",
+                                                      .default = "nonSig"))
+            }else if(method == "Voom"){
+              res_all_anno <- diff_df_anno |>
+                dplyr::mutate(type = dplyr::case_when(logFC >= lo2FC[2] & P.Value < pval ~ "sigUp",
+                                                      logFC <= lo2FC[1] & P.Value < pval ~ "sigDown",
+                                                      .default = "nonSig"))
+            }
+
+
+            # return
+            diff.res <- list(deg_raw = deg.res, deg_anno = res_all_anno)
+            return(diff.res)
+          }
+)
+
+
+

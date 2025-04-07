@@ -33,6 +33,8 @@ Key functionalities include:
 
 \item{\code{gtf_data}}{A \code{GRanges} representing the gtf data for gene annotations.}
 
+\item{\code{gtf_path}}{A \code{character} string specifying the gtf file path.}
+
 \item{\code{assignment_mode}}{A \code{character} string indicating the methodology used for read assignment.}
 
 \item{\code{mapping_type}}{A \code{character} string specifying the mapping type (\code{"transcriptome"} or \code{"genome"}).}
@@ -56,5 +58,7 @@ Key functionalities include:
 \item{\code{RNA.smoothed}}{A \code{character} representing smoothed RNA profiles.}
 
 \item{\code{scaled_occupancy}}{A \code{data.frame} with normalized ribosome occupancy data.}
+
+\item{\code{counts}}{A list for saving RPF and mRNA counts data.}
 }}
 
