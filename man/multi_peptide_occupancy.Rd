@@ -16,8 +16,7 @@ multi_peptide_occupancy(object, ...)
   exclude_length = c(100, 100),
   min_counts = 64,
   peptide_length = 3,
-  peptide_occurrence = 100,
-  peptide_score = c("sum", "mean")
+  peptide_occurrence = 100
 )
 }
 \arguments{
@@ -46,9 +45,6 @@ peptide fragment (e.g., \strong{tri-peptides}).}
 
 \item{peptide_occurrence}{An integer (default: \code{100}), the minimum occurrence
 threshold for tri-peptide inclusion in the final dataset.}
-
-\item{peptide_score}{Character. Scoring method to summarize ribosome signal across the peptide:
-\code{"sum"} (default) for total signal, or \code{"mean"} for average intensity per codon.}
 }
 \value{
 A named \code{list} containing two data frames:

@@ -29,8 +29,6 @@
 #'   peptide fragment (e.g., **tri-peptides**).
 #' @param peptide_occurrence An integer (default: `100`), the minimum occurrence
 #'   threshold for tri-peptide inclusion in the final dataset.
-#' @param peptide_score Character. Scoring method to summarize ribosome signal across the peptide:
-#' \code{"sum"} (default) for total signal, or \code{"mean"} for average intensity per codon.
 #' @param ... Additional arguments (currently unused).
 #'
 #' @return A named `list` containing two data frames:
@@ -78,8 +76,7 @@ setMethod("multi_peptide_occupancy",
                    exclude_length = c(100,100),
                    min_counts = 64,
                    peptide_length = 3,
-                   peptide_occurrence = 100,
-                   peptide_score = c("sum","mean")){
+                   peptide_occurrence = 100){
             peptide_score <- match.arg(peptide_score,choices = c("sum","mean"))
             # ==================================================================
             # filter coding gene and get peptide seqs
@@ -195,17 +192,10 @@ setMethod("multi_peptide_occupancy",
             # ==================================================================
             # calculate total density for peptide
             if (requireNamespace("zoo", quietly = TRUE)) {
-              if(peptide_score == "sum"){
-                tripep_pause_score <- fullanno %>%
-                  dplyr::mutate(tripep_val = zoo::rollsum(value, k = peptide_length, fill = NA),
-                                .by = c(sample,rname))
-              }else{
-                tripep_pause_score <- fullanno %>%
-                  dplyr::mutate(tripep_val = zoo::rollmean(value, k = peptide_length, fill = NA),
-                                .by = c(sample,rname))
-              }
 
-              tripep_pause_score <- tripep_pause_score %>%
+              tripep_pause_score <- fullanno %>%
+                dplyr::mutate(tripep_val = zoo::rollsum(value, k = peptide_length, fill = NA),
+                              .by = c(sample,rname)) %>%
                 na.omit() %>%
                 fastplyr::f_group_by(sample,rname) %>%
                 # re-assign positions
