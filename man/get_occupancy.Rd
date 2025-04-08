@@ -5,7 +5,7 @@
 \alias{get_occupancy}
 \alias{get_occupancy,ribotrans-method}
 \alias{get_occupancy,serp-method}
-\title{Get Ribosome Occupancy from \code{ribotrans} Object}
+\title{Extract Ribosome Occupancy for a Specific Gene}
 \usage{
 get_occupancy(object, ...)
 
@@ -15,6 +15,7 @@ get_occupancy(object, ...)
   smooth = FALSE,
   coordinate_to_trans = FALSE,
   do_reads_offset = FALSE,
+  merge_rep = FALSE,
   slide_window = 30
 )
 
@@ -31,7 +32,7 @@ get_occupancy(object, ...)
 \arguments{
 \item{object}{An object of class 'serp'.}
 
-\item{...}{Additional arguments passed to specific methods.}
+\item{...}{Additional arguments (currently unused).}
 
 \item{gene_name}{Character vector. Names of genes to extract data for. If NULL (default),
 data for all genes will be extracted.}
@@ -43,50 +44,40 @@ when using genome mapping. Default: FALSE.}
 
 \item{do_reads_offset}{Logical. Whether to apply read offset correction. Default: FALSE.}
 
+\item{merge_rep}{Logical. If \code{TRUE}, average replicate samples within the same sample_group. Default: \code{FALSE}.}
+
 \item{slide_window}{Numeric. Size of the sliding window for smoothing. Default: 30.}
 
 \item{serp_exp}{Character. Experiment type to process, either "total" or "ip". Default: "total".}
 }
 \value{
-A modified \code{ribotrans} object with ribosome occupancy information.
-
-A modified \code{ribotrans} object that now contains:
+The original \code{ribotrans} object with added/updated slots:
 \itemize{
-\item \strong{\code{object@ribo_occupancy}}: A \code{data.frame} with ribosome occupancy values.
-\item \strong{\code{object@ribo.smoothed}}: \code{"TRUE"} or \code{"FALSE"}, indicating whether occupancy data was smoothed.
+\item \code{ribo_occupancy}: A \code{data.frame} containing gene-specific ribosome profiles (position, count, rpm).
+\item \code{ribo.smoothed}: A character indicating whether smoothing was applied ("TRUE"/"FALSE").
+\item \code{gene_name}: The gene symbol analyzed.
 }
 
 An updated 'serp' object with the occupancy data stored in the corresponding slot
 (either 'total_occupancy' or 'ip_occupancy').
 }
 \description{
-This generic function retrieves ribosome occupancy from a \code{ribotrans} object.
-
-This method extracts ribosome occupancy information from a \code{ribotrans} object,
-optionally applying a smoothing transformation.
+Retrieves position-wise ribosome footprint occupancy and RPM values from a ribotrans object for a specified gene. Supports optional offset correction, replicate merging, coordinate transformations, and sliding window smoothing.
 
 Extract and process occupancy data from ribosome profiling BAM files for an object of class 'serp'.
 This method can process both total and IP (immunoprecipitation) samples.
 }
 \details{
-Ribosome occupancy describes the density of ribosomes along a transcript.
-This function processes \code{ribotrans} BAM files to compute read coverage, supporting both \strong{genome-aligned}
-and \strong{transcriptome-aligned} data.
-
-\strong{Analysis Steps:}
-\enumerate{
-\item Extracts mapped ribosome profiling BAM files from \code{object@bam_file} (filtered by \code{"ribo"} type).
-\item Retrieves mapped read counts from \code{object@library} to normalize the occupancy.
-\item Calls:
+This function is intended to extract transcript- or genome-level ribosome occupancy profiles for a single gene across multiple samples.
+It supports:
 \itemize{
-\item \code{getOccupancyGenome()} for \strong{genome-based BAM files}.
-\item \code{getOccupancy()} for \strong{transcript-based BAM files}.
-}
-\item Merges all samples into a single \code{data.frame}.
-\item \strong{If \code{smooth = "TRUE"}}, applies a \strong{sliding window smoothing} (\code{smoothEachPosition()}).
+\item Extracting counts/RPM mapped to either genome or transcript coordinates.
+\item P-site offset correction per sample/read length.
+\item Merging replicates based on sample group.
+\item Optional smoothing of RPM signal using a sliding window.
 }
 
-The processed data is stored in \code{object@ribo_occupancy}, and the smoothing status is recorded in \code{object@ribo.smoothed}.
+If offset correction is enabled (\code{do_reads_offset = TRUE}), the method uses the offset table in \code{object@reads_offset_info} to adjust footprint positions.
 
 This method extracts ribosome occupancy data from BAM files and processes it according
 to the specified parameters. The method can handle both transcriptome and genome mappings,
@@ -103,9 +94,15 @@ The processing workflow includes:
 }
 \examples{
 \dontrun{
-# Assume ribo_obj is a ribotrans object with ribosome BAM files
-result <- get_occupancy(ribo_obj, gene_name = "TP53", smooth = "TRUE", slide_window = 50)
-print(result@ribo_occupancy)
+  # Extract ribosome density for gene "CDC4" across samples
+  ribo_obj <- get_occupancy(object = ribo_obj,
+                            gene_name = "CDC4",
+                            smooth = TRUE,
+                            do_reads_offset = TRUE,
+                            merge_rep = FALSE)
+
+  head(ribo_obj@ribo_occupancy)
+
 }
 
 \dontrun{
@@ -137,11 +134,5 @@ serp_obj <- get_occupancy(serp_obj,
 
 }
 \seealso{
-\code{\link{get_occupancy,ribotrans-method}} for the specific method.
-
-\itemize{
-\item \code{\link{getOccupancyGenome}}: Extract occupancy from genome-mapped data.
-\item \code{\link{getOccupancy}}: Extract occupancy from transcript-aligned data.
-\item \code{\link{ribotrans}}: The S4 object storing this data.
-}
+\code{\link{getOccupancy}}, \code{\link{getOccupancyGenome}}, \code{\link{smoothEachPosition}}
 }

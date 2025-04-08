@@ -3,7 +3,7 @@
 \name{get_coverage}
 \alias{get_coverage}
 \alias{get_coverage,ribotrans-method}
-\title{Get RNA-seq Coverage from a \code{ribotrans} Object}
+\title{Extract RNA-seq Coverage for a Specific Gene}
 \usage{
 get_coverage(object, ...)
 
@@ -12,73 +12,59 @@ get_coverage(object, ...)
   gene_name = NULL,
   smooth = FALSE,
   coordinate_to_trans = FALSE,
+  merge_rep = FALSE,
   slide_window = 30
 )
 }
 \arguments{
-\item{object}{A \code{ribotrans} object containing RNA-seq BAM files and library metadata.}
+\item{object}{A \code{ribotrans} S4 object containing RNA-seq BAM file information, sample annotations, and transcript models.}
 
-\item{...}{Additional arguments passed to methods.}
+\item{...}{Additional arguments (currently unused).}
 
-\item{gene_name}{Character. Name of the gene from which to extract coverage.
-If \code{NULL} (default), retrieves coverage for all genes.}
+\item{gene_name}{Character. A gene symbol present in \code{object@features$gene}. Coverage will be extracted for this gene.}
 
-\item{smooth}{Character. Should the data be smoothed? Options: \code{FALSE} or \code{TRUE}. Default is \code{FALSE}.
-If coordinate_to_trans is FALSE and mapping_type is genome, data will not be smoothed.}
+\item{smooth}{Logical. Whether to smooth coverage values using a sliding window (especially useful for visualization). Default is \code{FALSE}.}
 
-\item{coordinate_to_trans}{Logical. Whether to convert genomic coordinates to transcript
-coordinates. Default is FALSE.}
+\item{coordinate_to_trans}{Logical. If \code{TRUE} and genome mapping is used, convert genomic coordinates to transcript coordinates. Default is \code{FALSE}.}
 
-\item{slide_window}{Integer. The window size for smoothing (only used if \code{smooth = "TRUE"}). Default: \code{30}.}
+\item{merge_rep}{Logical. If \code{TRUE}, biological replicates in the same \code{sample_group} are merged (mean coverage). Default is \code{FALSE}.}
+
+\item{slide_window}{Integer. Window size in nucleotides used for smoothing. Only applied when \code{smooth = TRUE}. Default is \code{30}.}
 }
 \value{
-A modified \code{ribotrans} object with RNA-seq coverage information.
-
-A modified \code{ribotrans} object that now contains:
-\itemize{
-\item \strong{\code{object@RNA_coverage}}: A \code{data.frame} with RNA-seq coverage values.
-\item \strong{\code{object@RNA.smoothed}}: \code{"TRUE"} or \code{"FALSE"}, indicating whether coverage data was smoothed.
+The original \code{ribotrans} object with updated slots:
+\describe{
+\item{\code{RNA_coverage}}{A \code{data.frame} with nucleotide-level RNA coverage (RPM and raw counts).}
+\item{\code{RNA.smoothed}}{A character string indicating whether signal smoothing was applied ("TRUE"/"FALSE").}
+\item{\code{gene_name}}{The target gene name used in extraction.}
 }
 }
 \description{
-This generic function extracts RNA-seq coverage from a \code{ribotrans} object.
-
-This method extracts RNA-seq coverage information from a \code{ribotrans} object,
-optionally applying a smoothing transformation.
+This function extracts transcript- or genome-level RNA-seq coverage (read count and RPM) for a given gene across samples from a \code{ribotrans} object.
+It supports optional replicates merging, coordinate system conversion, and smoothing using a sliding window.
 }
 \details{
-RNA-seq coverage describes read distribution along transcripts, providing insights into gene expression levels.
-This function processes \code{ribotrans} BAM files and computes RNA read coverage for each transcript.
+This function is used to extract and optionally smooth RNA-seq coverage information at single-nucleotide resolution for a user-specified gene.
 
-\strong{Analysis Steps:}
-\enumerate{
-\item Extracts RNA-seq BAM files from \code{object@bam_file}, filtering by \code{"rna"} type.
-\item Retrieves mapped read counts from \code{object@library} to normalize coverage.
-\item Calls:
-\itemize{
-\item \code{getCoverageGenome()} for \strong{genome-mapped BAM files}.
-\item \code{getCoverage()} for \strong{transcript-mapped BAM files}.
-}
-\item Merges all samples into a single \code{data.frame}.
-\item \strong{If \code{smooth = "TRUE"}}, applies a \strong{sliding window smoothing} (\code{smoothEachPosition()}).
-}
+For each RNA-seq BAM file linked to the \code{ribotrans} object, read coverage is extracted using either transcript or genome coordinates depending on \code{mapping_type}.
+If replicate merging is specified, then values are averaged per position and per sample group.
 
-The processed data is stored in \code{object@RNA_coverage}, and the smoothing status is recorded in \code{object@RNA.smoothed}.
+The final RNA coverage information is stored in the \code{RNA_coverage} slot of the object and optionally smoothed.
 }
 \examples{
 \dontrun{
-# Assume ribo_obj is a ribotrans object with RNA BAM files
-result <- get_coverage(ribo_obj, gene_name = "TP53", smooth = "TRUE", slide_window = 50)
-print(result@RNA_coverage)
+  # Extract raw and smoothed RNA-seq coverage for gene "CDC28"
+  ribo_obj <- get_coverage(object = ribo_obj,
+                           gene_name = "CDC28",
+                           smooth = TRUE,
+                           merge_rep = TRUE)
+
+  # View smoothed signal
+  head(ribo_obj@RNA_coverage)
+
 }
 
 }
 \seealso{
-\code{\link{get_coverage,ribotrans-method}} for the specific implementation.
-
-\itemize{
-\item \code{\link{getCoverageGenome}}: Extract RNA coverage from genome-mapped data.
-\item \code{\link{getCoverage}}: Extract RNA coverage from transcript-aligned data.
-\item \code{\link{ribotrans}}: The S4 object storing this data.
-}
+\code{\link{getCoverage}}, \code{\link{getCoverageGenome}}, \code{\link{smoothEachPosition}}, \code{\link{get_occupancy}}
 }

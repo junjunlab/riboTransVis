@@ -181,71 +181,66 @@ setMethod("generate_summary",
 # function to calculate coverage
 # ==============================================================================
 
-#' @title Get RNA-seq Coverage from a `ribotrans` Object
-#' @description This generic function extracts RNA-seq coverage from a `ribotrans` object.
-#' @param object A `ribotrans` object containing RNA-seq data.
-#' @param ... Additional arguments passed to methods.
-#' @return A modified `ribotrans` object with RNA-seq coverage information.
-#' @seealso \code{\link{get_coverage,ribotrans-method}} for the specific implementation.
+#' Extract RNA-seq Coverage for a Specific Gene
+#'
+#' This function extracts transcript- or genome-level RNA-seq coverage (read count and RPM) for a given gene across samples from a \code{ribotrans} object.
+#' It supports optional replicates merging, coordinate system conversion, and smoothing using a sliding window.
+#'
+#' @param object A \code{ribotrans} S4 object containing RNA-seq BAM file information, sample annotations, and transcript models.
+#' @param gene_name Character. A gene symbol present in \code{object@features$gene}. Coverage will be extracted for this gene.
+#' @param smooth Logical. Whether to smooth coverage values using a sliding window (especially useful for visualization). Default is \code{FALSE}.
+#' @param coordinate_to_trans Logical. If \code{TRUE} and genome mapping is used, convert genomic coordinates to transcript coordinates. Default is \code{FALSE}.
+#' @param merge_rep Logical. If \code{TRUE}, biological replicates in the same \code{sample_group} are merged (mean coverage). Default is \code{FALSE}.
+#' @param slide_window Integer. Window size in nucleotides used for smoothing. Only applied when \code{smooth = TRUE}. Default is \code{30}.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @details
+#' This function is used to extract and optionally smooth RNA-seq coverage information at single-nucleotide resolution for a user-specified gene.
+#'
+#' For each RNA-seq BAM file linked to the \code{ribotrans} object, read coverage is extracted using either transcript or genome coordinates depending on \code{mapping_type}.
+#' If replicate merging is specified, then values are averaged per position and per sample group.
+#'
+#' The final RNA coverage information is stored in the \code{RNA_coverage} slot of the object and optionally smoothed.
+#'
+#' @return The original \code{ribotrans} object with updated slots:
+#' \describe{
+#'   \item{\code{RNA_coverage}}{A \code{data.frame} with nucleotide-level RNA coverage (RPM and raw counts).}
+#'   \item{\code{RNA.smoothed}}{A character string indicating whether signal smoothing was applied ("TRUE"/"FALSE").}
+#'   \item{\code{gene_name}}{The target gene name used in extraction.}
+#' }
+#'
+#' @importFrom dplyr %>% filter mutate select rename group_by summarise left_join
+#' @importFrom fastplyr f_group_by f_summarise
+#' @importFrom purrr map_df
+#'
+#' @seealso \code{\link{getCoverage}}, \code{\link{getCoverageGenome}}, \code{\link{smoothEachPosition}}, \code{\link{get_occupancy}}
+#'
+#' @examples
+#' \dontrun{
+#'   # Extract raw and smoothed RNA-seq coverage for gene "CDC28"
+#'   ribo_obj <- get_coverage(object = ribo_obj,
+#'                            gene_name = "CDC28",
+#'                            smooth = TRUE,
+#'                            merge_rep = TRUE)
+#'
+#'   # View smoothed signal
+#'   head(ribo_obj@RNA_coverage)
+#'
+#' }
+#'
 #' @export
-#' @rdname get_coverage
 setGeneric("get_coverage",function(object,...) standardGeneric("get_coverage"))
 
 
 
-#' @title Extract RNA Coverage for a `ribotrans` Object
-#' @description This method extracts RNA-seq coverage information from a `ribotrans` object,
-#'     optionally applying a smoothing transformation.
-#'
-#' @param object A `ribotrans` object containing RNA-seq BAM files and library metadata.
-#' @param gene_name Character. Name of the gene from which to extract coverage.
-#'    If `NULL` (default), retrieves coverage for all genes.
-#' @param smooth Character. Should the data be smoothed? Options: `FALSE` or `TRUE`. Default is `FALSE`.
-#' If coordinate_to_trans is FALSE and mapping_type is genome, data will not be smoothed.
-#' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
-#'        coordinates. Default is FALSE.
-#' @param slide_window Integer. The window size for smoothing (only used if `smooth = "TRUE"`). Default: `30`.
-#'
-#' @details
-#' RNA-seq coverage describes read distribution along transcripts, providing insights into gene expression levels.
-#' This function processes `ribotrans` BAM files and computes RNA read coverage for each transcript.
-#'
-#' **Analysis Steps:**
-#' 1. Extracts RNA-seq BAM files from `object@bam_file`, filtering by `"rna"` type.
-#' 2. Retrieves mapped read counts from `object@library` to normalize coverage.
-#' 3. Calls:
-#'    - `getCoverageGenome()` for **genome-mapped BAM files**.
-#'    - `getCoverage()` for **transcript-mapped BAM files**.
-#' 4. Merges all samples into a single `data.frame`.
-#' 5. **If `smooth = "TRUE"`**, applies a **sliding window smoothing** (`smoothEachPosition()`).
-#'
-#' The processed data is stored in `object@RNA_coverage`, and the smoothing status is recorded in `object@RNA.smoothed`.
-#'
-#' @return A modified `ribotrans` object that now contains:
-#' - **`object@RNA_coverage`**: A `data.frame` with RNA-seq coverage values.
-#' - **`object@RNA.smoothed`**: `"TRUE"` or `"FALSE"`, indicating whether coverage data was smoothed.
-#'
-#' @seealso
-#' - \code{\link{getCoverageGenome}}: Extract RNA coverage from genome-mapped data.
-#' - \code{\link{getCoverage}}: Extract RNA coverage from transcript-aligned data.
-#' - \code{\link{ribotrans}}: The S4 object storing this data.
-#'
-#' @examples
-#' \dontrun{
-#' # Assume ribo_obj is a ribotrans object with RNA BAM files
-#' result <- get_coverage(ribo_obj, gene_name = "TP53", smooth = "TRUE", slide_window = 50)
-#' print(result@RNA_coverage)
-#' }
-#'
-#' @importFrom purrr map_df
-#' @importFrom dplyr select filter mutate
-#' @export
 #' @rdname get_coverage
+#' @export
 setMethod("get_coverage",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
                    smooth = FALSE,
                    coordinate_to_trans = FALSE,
+                   merge_rep = FALSE,
                    slide_window = 30){
             # check gene name
             if(!(gene_name %in% object@features$gene)){
@@ -256,7 +251,8 @@ setMethod("get_coverage",
 
             bf <- subset(object@bam_file, type == "rna")
             rnabams <- bf$bam
-            gp <- bf$sample
+            sp <- bf$sample
+            gp <- bf$sample_group
 
             lib <- subset(object@library, type == "rna")
             lib <- lib[match(rnabams, lib$bam),]
@@ -279,10 +275,20 @@ setMethod("get_coverage",
               }
 
               # add sample name
-              tmp$sample <- gp[x]
+              tmp$sample <- sp[x]
+              tmp$sample_group <- gp[x]
 
               return(tmp)
             }) -> rna.df
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              rna.df <- rna.df %>%
+                fastplyr::f_group_by(sample_group,rname,pos) %>%
+                fastplyr::f_summarise(count = mean(count),rpm = mean(rpm)) %>%
+                dplyr::rename(sample = sample_group)
+            }
+
 
             # smooth for each position
             cond <- object@mapping_type == "genome" & coordinate_to_trans == TRUE | object@mapping_type == "transcriptome"
@@ -319,75 +325,72 @@ setMethod("get_coverage",
 # function to calculate ribosome occupancy
 # ==============================================================================
 
-#' @title Get Ribosome Occupancy from `ribotrans` Object
-#' @description This generic function retrieves ribosome occupancy from a `ribotrans` object.
-#' @param object A `ribotrans` object containing ribosome profiling data.
-#' @param ... Additional arguments passed to specific methods.
-#' @return A modified `ribotrans` object with ribosome occupancy information.
-#' @seealso \code{\link{get_occupancy,ribotrans-method}} for the specific method.
-#' @export
-#' @rdname get_occupancy
-setGeneric("get_occupancy",function(object,...) standardGeneric("get_occupancy"))
-
-
-#' @title Extract Ribosome Occupancy for a `ribotrans` Object
-#' @description This method extracts ribosome occupancy information from a `ribotrans` object,
-#'     optionally applying a smoothing transformation.
+#' Extract Ribosome Occupancy for a Specific Gene
 #'
-#' @param object A `ribotrans` object containing ribosome profiling BAM files and library metadata.
-#' @param gene_name Character. Name of the gene from which to extract coverage.
-#'    If `NULL` (default), retrieves coverage for all genes.
-#' @param smooth Character. Should the data be smoothed? Options: `FALSE` or `TRUE`. Default is `FALSE`.
-#' If coordinate_to_trans is FALSE and mapping_type is genome, data will not be smoothed.
-#' @param coordinate_to_trans Logical. Whether to convert genomic coordinates to transcript
-#'        coordinates. Default is FALSE.
-#' @param do_reads_offset Logical; if set to \code{TRUE}, adjusts read positions based on
-#' precomputed offset information stored in the \code{reads_offset_info} slot (default: \code{FALSE}).
-#' @param slide_window Integer. The number of nucleotides for smoothing (used only if `smooth = "TRUE"`). Default is `30`.
+#' Retrieves position-wise ribosome footprint occupancy and RPM values from a ribotrans object for a specified gene. Supports optional offset correction, replicate merging, coordinate transformations, and sliding window smoothing.
+#'
+#' @param object A \code{ribotrans} S4 object containing processed ribo-seq alignment data and metadata.
+#' @param gene_name Character. The gene symbol (as in \code{features$gene}) for which occupancy should be extracted.
+#' @param smooth Logical. Whether to smooth ribosome density (RPM) using a sliding window across positions. Default: \code{FALSE}.
+#' @param coordinate_to_trans Logical. If \code{TRUE} and mapping is from genome, will convert coordinates to the transcript coordinate space. Default: \code{FALSE}.
+#' @param do_reads_offset Logical. Whether to apply P-site offset correction based on pre-learned offsets stored in \code{object@reads_offset_info}. Default: \code{FALSE}.
+#' @param merge_rep Logical. If \code{TRUE}, average replicate samples within the same sample_group. Default: \code{FALSE}.
+#' @param slide_window Integer. The window size to use in smoothing. Only relevant if \code{smooth = TRUE}. Default: \code{30}.
+#' @param ... Additional arguments (currently unused).
 #'
 #' @details
-#' Ribosome occupancy describes the density of ribosomes along a transcript.
-#' This function processes `ribotrans` BAM files to compute read coverage, supporting both **genome-aligned**
-#' and **transcriptome-aligned** data.
+#' This function is intended to extract transcript- or genome-level ribosome occupancy profiles for a single gene across multiple samples.
+#' It supports:
+#' \itemize{
+#'   \item Extracting counts/RPM mapped to either genome or transcript coordinates.
+#'   \item P-site offset correction per sample/read length.
+#'   \item Merging replicates based on sample group.
+#'   \item Optional smoothing of RPM signal using a sliding window.
+#' }
 #'
-#' **Analysis Steps:**
-#' 1. Extracts mapped ribosome profiling BAM files from `object@bam_file` (filtered by `"ribo"` type).
-#' 2. Retrieves mapped read counts from `object@library` to normalize the occupancy.
-#' 3. Calls:
-#'    - `getOccupancyGenome()` for **genome-based BAM files**.
-#'    - `getOccupancy()` for **transcript-based BAM files**.
-#' 4. Merges all samples into a single `data.frame`.
-#' 5. **If `smooth = "TRUE"`**, applies a **sliding window smoothing** (`smoothEachPosition()`).
+#' If offset correction is enabled (\code{do_reads_offset = TRUE}), the method uses the offset table in \code{object@reads_offset_info} to adjust footprint positions.
 #'
+#' @return The original \code{ribotrans} object with added/updated slots:
+#' \itemize{
+#'   \item \code{ribo_occupancy}: A \code{data.frame} containing gene-specific ribosome profiles (position, count, rpm).
+#'   \item \code{ribo.smoothed}: A character indicating whether smoothing was applied ("TRUE"/"FALSE").
+#'   \item \code{gene_name}: The gene symbol analyzed.
+#' }
 #'
-#' The processed data is stored in `object@ribo_occupancy`, and the smoothing status is recorded in `object@ribo.smoothed`.
+#' @importFrom dplyr %>% filter mutate select rename group_by summarise left_join
+#' @importFrom fastplyr f_group_by f_summarise
+#' @importFrom purrr map_df
+#' @importFrom stats na.omit
 #'
-#' @return A modified `ribotrans` object that now contains:
-#' - **`object@ribo_occupancy`**: A `data.frame` with ribosome occupancy values.
-#' - **`object@ribo.smoothed`**: `"TRUE"` or `"FALSE"`, indicating whether occupancy data was smoothed.
-#'
-#' @seealso
-#' - \code{\link{getOccupancyGenome}}: Extract occupancy from genome-mapped data.
-#' - \code{\link{getOccupancy}}: Extract occupancy from transcript-aligned data.
-#' - \code{\link{ribotrans}}: The S4 object storing this data.
+#' @seealso \code{\link{getOccupancy}}, \code{\link{getOccupancyGenome}}, \code{\link{smoothEachPosition}}
 #'
 #' @examples
 #' \dontrun{
-#' # Assume ribo_obj is a ribotrans object with ribosome BAM files
-#' result <- get_occupancy(ribo_obj, gene_name = "TP53", smooth = "TRUE", slide_window = 50)
-#' print(result@ribo_occupancy)
+#'   # Extract ribosome density for gene "CDC4" across samples
+#'   ribo_obj <- get_occupancy(object = ribo_obj,
+#'                             gene_name = "CDC4",
+#'                             smooth = TRUE,
+#'                             do_reads_offset = TRUE,
+#'                             merge_rep = FALSE)
+#'
+#'   head(ribo_obj@ribo_occupancy)
+#'
 #' }
 #'
-#' @importFrom purrr map_df
-#' @importFrom dplyr select filter mutate
 #' @export
+setGeneric("get_occupancy",function(object,...) standardGeneric("get_occupancy"))
+
+
+
 #' @rdname get_occupancy
+#' @export
 setMethod("get_occupancy",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
                    smooth = FALSE,
                    coordinate_to_trans = FALSE,
                    do_reads_offset = FALSE,
+                   merge_rep = FALSE,
                    slide_window = 30){
             # check gene name
             if(!(gene_name %in% object@features$gene)){
@@ -399,7 +402,8 @@ setMethod("get_occupancy",
 
             bf <- subset(object@bam_file, type == "ribo")
             ribobams <- bf$bam
-            gp <- bf$sample
+            sp <- bf$sample
+            gp <- bf$sample_group
 
             lib <- subset(object@library, type == "ribo")
             lib <- lib[match(ribobams, lib$bam),]
@@ -423,7 +427,8 @@ setMethod("get_occupancy",
               }
 
               # add sample name
-              tmp$sample <- gp[x]
+              tmp$sample <- sp[x]
+              tmp$sample_group <- gp[x]
 
               # ================================================================
               # whether do read offset
@@ -455,11 +460,19 @@ setMethod("get_occupancy",
               }
 
               adjusted <- adjusted %>%
-                dplyr::group_by(sample,rname,pos) %>%
+                dplyr::group_by(sample_group,sample,rname,pos) %>%
                 dplyr::summarise(count = sum(count),rpm = sum(rpm), .groups = "drop")
 
               return(adjusted)
             }) -> ribo.df
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              ribo.df <- ribo.df %>%
+                fastplyr::f_group_by(sample_group,rname,pos) %>%
+                fastplyr::f_summarise(count = mean(count),rpm = mean(rpm)) %>%
+                dplyr::rename(sample = sample_group)
+            }
 
             # smooth for each position
             cond <- object@mapping_type == "genome" & coordinate_to_trans == TRUE | object@mapping_type == "transcriptome"
