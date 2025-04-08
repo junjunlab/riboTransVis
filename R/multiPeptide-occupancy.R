@@ -139,8 +139,9 @@ setMethod("multi_peptide_occupancy",
               density.tt <- density.tt %>%
                 fastplyr::f_group_by(sample_group,rname,rel) %>%
                 fastplyr::f_summarise(value = mean(value)) %>%
-                dplyr::rename(sample = sample_group) %>%
-                dplyr::mutate(sample_group = sample)
+                dplyr::rename(sample = sample_group)
+            }else{
+              density.tt <- density.tt %>% dplyr::select(-sample_group)
             }
             # ==================================================================
             # count codon numbers
@@ -164,10 +165,9 @@ setMethod("multi_peptide_occupancy",
 
             # merge with density
             fullanno <- idfull %>%
-              fastplyr::f_left_join(y = density.tt,by = c("sample","rname","rel")) %>%
-              dplyr::mutate(sample_group = dplyr::if_else(is.na(sample_group),
-                                                          sample,sample_group))
-            fullanno[is.na(fullanno)] <- 0
+              fastplyr::f_left_join(y = density.tt,by = c("sample","rname","rel"))
+
+            fullanno$value[is.na(fullanno$value)] <- 0
 
             # ==================================================================
             # prepare tri-peptide info for all transcripts
@@ -203,6 +203,7 @@ setMethod("multi_peptide_occupancy",
                 fastplyr::f_group_by(sample,pep_seq) %>%
                 fastplyr::f_summarise(pause_score = sum(tripep_val),
                                       occurrence = dplyr::n()) %>%
+                dplyr::mutate(pause_score = ifelse(pause_score < 1e-10, 0, pause_score)) %>%
                 fastplyr::f_filter(occurrence > peptide_occurrence) %>%
                 # calculate relative density
                 dplyr::mutate(rel_pause = pause_score/occurrence)
