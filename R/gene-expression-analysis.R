@@ -11,6 +11,10 @@
 #' a valid GTF file path in the \code{@gtf_path} slot.
 #' @param GTF_attrType.extra A character vector specifying extra attributes from the GTF annotation to include
 #' (e.g., \code{c("gene_name", "gene_biotype")}). Default is \code{c("gene_name", "gene_biotype")}.
+#' @param rna_feature A character string specifying the RNA feature type in the GTF file to use for counting
+#' (default: \code{"exon"}).
+#' @param ribo_feature A character string specifying the Ribo-seq feature type in the GTF file to use for counting
+#' (default: \code{"CDS"}).
 #' @param nThreads Integer, number of threads to be used for \code{featureCounts}. Default is \code{1}.
 #' @param ... Additional arguments (currently unused).
 #'
@@ -44,6 +48,8 @@ setMethod("get_counts",
           signature(object = "ribotrans"),
           function(object,
                    GTF_attrType.extra = c("gene_name","gene_biotype"),
+                   rna_feature = "exon",
+                   ribo_feature = "CDS",
                    nThreads = 1){
             lib <- object@library
 
@@ -56,7 +62,7 @@ setMethod("get_counts",
               if (requireNamespace("Rsubread", quietly = TRUE)) {
                 rna <- Rsubread::featureCounts(files = rnainfo$bam,
                                                isGTFAnnotationFile = TRUE,
-                                               GTF.featureType = "exon",
+                                               GTF.featureType = rna_feature,
                                                annot.ext = object@gtf_path,
                                                GTF.attrType = "gene_id",
                                                GTF.attrType.extra = GTF_attrType.extra,
@@ -77,7 +83,7 @@ setMethod("get_counts",
               if (requireNamespace("Rsubread", quietly = TRUE)) {
                 rpf <- Rsubread::featureCounts(files = riboinfo$bam,
                                                isGTFAnnotationFile = TRUE,
-                                               GTF.featureType = "CDS",
+                                               GTF.featureType = ribo_feature,
                                                annot.ext = object@gtf_path,
                                                GTF.attrType = "gene_id",
                                                GTF.attrType.extra = GTF_attrType.extra,

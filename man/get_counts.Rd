@@ -10,6 +10,8 @@ get_counts(object, ...)
 \S4method{get_counts}{ribotrans}(
   object,
   GTF_attrType.extra = c("gene_name", "gene_biotype"),
+  rna_feature = "exon",
+  ribo_feature = "CDS",
   nThreads = 1
 )
 }
@@ -21,6 +23,12 @@ a valid GTF file path in the \code{@gtf_path} slot.}
 
 \item{GTF_attrType.extra}{A character vector specifying extra attributes from the GTF annotation to include
 (e.g., \code{c("gene_name", "gene_biotype")}). Default is \code{c("gene_name", "gene_biotype")}.}
+
+\item{rna_feature}{A character string specifying the RNA feature type in the GTF file to use for counting
+(default: \code{"exon"}).}
+
+\item{ribo_feature}{A character string specifying the Ribo-seq feature type in the GTF file to use for counting
+(default: \code{"CDS"}).}
 
 \item{nThreads}{Integer, number of threads to be used for \code{featureCounts}. Default is \code{1}.}
 }

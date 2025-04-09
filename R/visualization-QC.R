@@ -117,6 +117,182 @@ setMethod("frame_plot",
 )
 
 # ==============================================================================
+# function for periodicity plot of period plot
+# ==============================================================================
+
+#' Plot Periodicity Analysis for Ribosome Profiling Data
+#'
+#' @description
+#' Performs Fourier transform analysis on ribosome profiling data to identify periodic patterns
+#' in read distributions around start codons. This is particularly useful for detecting the
+#' 3-nucleotide periodicity characteristic of actively translating ribosomes.
+#'
+#' @param object A 'ribotrans' class object containing ribosome profiling data
+#' @param merge_rep Logical; if TRUE, replicates of the same sample group will be merged (default: FALSE)
+#' @param return_data Logical; if TRUE, returns the calculated Fourier transform data instead of a plot (default: FALSE)
+#' @param read_length Numeric vector of length 2 specifying the minimum and maximum read lengths to include (default: c(20,35))
+#' @param group_by_readlength Logical; if TRUE, analyses are performed and plotted separately for each read length (default: TRUE)
+#' @param period_max Numeric; maximum period value to include in the output (default: 10)
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return If return_data is FALSE, returns a ggplot object visualizing the periodicity analysis.
+#' If return_data is TRUE, returns a data frame containing the Fourier transform results.
+#'
+#' @details
+#' The function filters reads by length, calculates relative positions to start codons,
+#' performs Discrete Fourier Transform analysis, and visualizes the power spectrum.
+#' When group_by_readlength is TRUE, the analysis is performed separately for each read length,
+#' which is useful for comparing periodicity patterns across different read lengths.
+#'
+#' @examples
+#' \dontrun{
+#' # Create test data
+#' test_data <- create_ribotrans_object(ribo_bam_files, sample_info)
+#'
+#' # Basic usage
+#' period_plot(test_data)
+#'
+#' # Group by read length and merge replicates
+#' period_plot(test_data, merge_rep = TRUE, group_by_readlength = TRUE)
+#'
+#' # Return data instead of plot for custom visualization
+#' fourier_data <- period_plot(test_data, return_data = TRUE)
+#' }
+#'
+#' @importFrom dplyr filter mutate rename
+#' @importFrom fastplyr f_group_by f_summarise
+#' @importFrom purrr map_df
+#' @importFrom stats fft
+#' @importFrom ggplot2 ggplot geom_line theme_bw theme element_text scale_y_continuous xlab
+#' @importFrom ggh4x facet_grid2
+#' @importFrom scales label_log
+#'
+#' @export
+setGeneric("period_plot",function(object,...) standardGeneric("period_plot"))
+
+
+
+
+#' @rdname period_plot
+#' @export
+setMethod("period_plot",
+          signature(object = "ribotrans"),
+          function(object,
+                   merge_rep = FALSE,
+                   return_data = FALSE,
+                   read_length = c(20,35),
+                   group_by_readlength = TRUE,
+                   period_max = 10){
+            # ==================================================================
+            # process data
+            pltdf <- object@summary_info %>%
+              dplyr::filter(qwidth >= read_length[1] & qwidth <= read_length[2]) %>%
+              dplyr::mutate(rel = pos - mstart)
+
+            # whether by each readlength
+            if(group_by_readlength == TRUE){
+              group_var <- c("sample", "sample_group", "rel", "qwidth")
+              facet <- ggh4x::facet_grid2(sample~qwidth,scales = "free",axes = "all",independent = "all")
+            }else{
+              group_var <- c("sample", "sample_group", "rel")
+              facet <- facet_wrap(~sample,scales = "free")
+            }
+
+            pltdf <- pltdf %>%
+              fastplyr::f_group_by(!!!rlang::syms(group_var)) %>%
+              fastplyr::f_summarise(counts = sum(count))
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              if(group_by_readlength == TRUE){
+                group_var2 <- c("sample_group", "rel", "qwidth")
+              }else{
+                group_var2 <- c("sample_group", "rel")
+              }
+
+              pltdf <- pltdf %>%
+                fastplyr::f_group_by(!!!rlang::syms(group_var2)) %>%
+                fastplyr::f_summarise(counts = mean(counts)) %>%
+                dplyr::rename(sample = sample_group)
+            }
+
+            # ==================================================================
+            # calculation period
+            sp <- unique(pltdf$sample)
+
+            # loop for samples
+            # x = 1
+            purrr::map_df(seq_along(sp),function(x){
+              tmp <- subset(pltdf,sample == sp[x])
+
+              if(group_by_readlength == TRUE){
+                # loop for read lengths
+                rd <- unique(tmp$qwidth)
+
+                purrr::map_df(seq_along(rd),function(j){
+                  tmp2 <- subset(tmp,qwidth == rd[j])
+
+                  # Discrete Fourier transform of reads
+                  freq_domain_data <- fft(tmp2$counts)
+                  power_spectrum <- Mod(freq_domain_data)^2
+                  N <- length(freq_domain_data)
+
+                  periods <- N / seq(1, N/2)
+
+                  # to data frame
+                  df <- data.frame(Period = periods,
+                                   Amplitude = power_spectrum[2:(N/2 + 1)],
+                                   qwidth = rd[j],
+                                   sample = sp[x]) %>%
+                    dplyr::filter(Period <= period_max)
+
+                  return(df)
+                }) -> res
+              }else{
+                # Discrete Fourier transform of reads
+                freq_domain_data <- fft(tmp$counts)
+                power_spectrum <- Mod(freq_domain_data)^2
+                N <- length(freq_domain_data)
+
+                periods <- N / seq(1, N/2)
+
+                # to data frame
+                res <- data.frame(Period = periods,
+                                  Amplitude = power_spectrum[2:(N/2 + 1)],
+                                  sample = sp[x]) %>%
+                  dplyr::filter(Period <= period_max)
+              }
+
+              return(res)
+            }) -> fourier.df
+
+
+            # ==================================================================
+            # plot
+            p <-
+              ggplot(fourier.df) +
+              geom_line(aes(x = Period,y = Amplitude,color = sample),
+                        linewidth = 0.5,show.legend = F) +
+              theme_bw() +
+              facet +
+              theme(axis.text = element_text(colour = "black"),
+                    panel.grid = element_blank(),
+                    strip.text = element_text(face = "bold",size = rel(1)),
+                    strip.text.x = element_text(face = "bold",size = rel(1)),
+                    strip.text.y.right = element_text(angle = 0,hjust = 0),
+                    strip.background = element_blank()) +
+              scale_y_continuous(labels = scales::label_log(digits = 1)) +
+              xlab("Period | around start codon (nt)")
+
+            # return
+            if(return_data == FALSE){
+              return(p)
+            }else{
+              return(fourier.df)
+            }
+          }
+)
+# ==============================================================================
 # function for length plot
 # ==============================================================================
 
