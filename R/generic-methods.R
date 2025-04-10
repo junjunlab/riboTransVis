@@ -602,6 +602,8 @@ setMethod("get_scaled_occupancy",
                 tmp3 <- tmp2 %>%
                   dplyr::filter(sample == sp[x])
 
+                pos.df <- data.frame(rname = tmp$idnew, pos = 1:tmp$translen)
+
                 # merge with value
                 pos.df <- pos.df %>%
                   dplyr::left_join(y = tmp3,by = c("rname", "pos"))
