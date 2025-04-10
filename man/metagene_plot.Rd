@@ -19,7 +19,7 @@ metagene_plot(object, ...)
   type = c("rel2start", "rel2stop"),
   return_data = FALSE,
   mode = c("nt", "codon"),
-  read_length = c(25, 31),
+  read_length = c(25, 35),
   rel2st_dist = c(-50, 100),
   rel2sp_dist = c(-100, 50),
   facet_wrap = ggplot2::facet_wrap(~sample)
