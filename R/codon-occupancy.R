@@ -9,6 +9,10 @@
 #' using `do_offset_correction()`. **Default**: `FALSE`.
 #' @param position_shift Integer defining how much to adjust **ribosome footprint positions**
 #' during offset correction. **Default**: `0`.
+#' @param exclude_length A numeric vector of length two specifying the number of nucleotides
+#' to exclude from the start and end of the CDS to avoid boundary effects. Default is `c(90, 90)`.
+#' @param min_counts A numeric value indicating the minimum read counts required for a transcript
+#' to be included in the analysis. Default is `32`.
 #' @param plot_abbreviation Logical. If \code{TRUE}, uses amino acid abbreviations instead of codons as x-axis labels. Default is \code{FALSE}.
 #' @param facet Logical. If \code{TRUE}, the plot is faceted by amino acid groups. Default is \code{TRUE}.
 #' @param return_data Logical. If \code{TRUE}, returns a data frame with codon occupancy data instead of generating a plot. Default is \code{FALSE}.
@@ -62,6 +66,8 @@ setMethod("codon_occupancy_plot",
                    cds_fa = NULL,
                    do_offset_correct = FALSE,
                    position_shift = 0,
+                   exclude_length = c(90,90),
+                   min_counts = 32,
                    plot_abbreviation = FALSE,
                    facet = TRUE,
                    return_data = FALSE){
@@ -78,15 +84,19 @@ setMethod("codon_occupancy_plot",
 
             # expect reads per position
             avg.ct <- sry %>%
+              dplyr::mutate(relst = pos - mstart, relsp = pos - mstop) %>%
+              fastplyr::f_filter(relst > exclude_length[1] & relsp < -exclude_length[2]) %>%
               dplyr::mutate(cdslen = mstop - mstart + 1) %>%
               dplyr::group_by(sample,rname,cdslen) %>%
               dplyr::summarise(counts = sum(count)) %>%
               dplyr::mutate(avg_ct = counts/cdslen) %>%
-              dplyr::select(sample,rname,avg_ct)
+              dplyr::select(sample,rname,counts,avg_ct)
 
             # average reads
             pltdf <- sry %>%
               dplyr::inner_join(y = avg.ct,by = c("sample", "rname")) %>%
+              # filter low counts
+              fastplyr::f_filter(counts > min_counts) %>%
               dplyr::mutate(rel = pos - mstart, norm = count/avg_ct) %>%
               fastplyr::f_filter(rel >= 0 & rel <= (mstop - mstart + 1)) %>%
               fastplyr::f_group_by(sample,sample_group,rname,rel) %>%

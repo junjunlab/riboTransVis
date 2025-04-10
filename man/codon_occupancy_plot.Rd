@@ -13,6 +13,8 @@ codon_occupancy_plot(object, ...)
   cds_fa = NULL,
   do_offset_correct = FALSE,
   position_shift = 0,
+  exclude_length = c(90, 90),
+  min_counts = 32,
   plot_abbreviation = FALSE,
   facet = TRUE,
   return_data = FALSE
@@ -32,6 +34,12 @@ using \code{do_offset_correction()}. \strong{Default}: \code{FALSE}.}
 
 \item{position_shift}{Integer defining how much to adjust \strong{ribosome footprint positions}
 during offset correction. \strong{Default}: \code{0}.}
+
+\item{exclude_length}{A numeric vector of length two specifying the number of nucleotides
+to exclude from the start and end of the CDS to avoid boundary effects. Default is \code{c(90, 90)}.}
+
+\item{min_counts}{A numeric value indicating the minimum read counts required for a transcript
+to be included in the analysis. Default is \code{32}.}
 
 \item{plot_abbreviation}{Logical. If \code{TRUE}, uses amino acid abbreviations instead of codons as x-axis labels. Default is \code{FALSE}.}
 

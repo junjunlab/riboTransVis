@@ -165,10 +165,10 @@ setMethod("trans_plot",
               pldf$exp <- factor(pldf$exp,levels = c("rna","ribo"))
 
               if(layer == "line"){
-                player <- geom_path(aes(x = pos,y = smooth,color = exp))
+                player <- geom_path(aes(x = pos,y = smooth,color = sample))
                 col <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey"))
               }else{
-                player <- geom_col(aes(x = pos,y = smooth,fill = exp),width = 1)
+                player <- geom_col(aes(x = pos,y = smooth,fill = sample),width = 1)
                 col <- scale_fill_manual(values = c("ribo" = "red", "rna" = "grey"))
               }
 
