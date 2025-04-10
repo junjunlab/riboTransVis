@@ -3,12 +3,13 @@
 \name{TE_differential_analysis}
 \alias{TE_differential_analysis}
 \alias{TE_differential_analysis,ribotrans-method}
-\title{Translation Efficiency Differential Expression Analysis}
+\title{Differential Translation Efficiency (TE) Analysis}
 \usage{
 TE_differential_analysis(object, ...)
 
 \S4method{TE_differential_analysis}{ribotrans}(
   object,
+  pkg = c("riborex", "xtail"),
   method = c("DESeq2", "edgeR", "edgeRD", "Voom"),
   control_samples = NULL,
   treat_samples = NULL,
@@ -18,66 +19,87 @@ TE_differential_analysis(object, ...)
 )
 }
 \arguments{
-\item{object}{A \code{ribotrans} object. The count data must be generated beforehand using \code{get_counts()}.}
+\item{object}{A \code{ribotrans} object containing count matrices for RNA-seq and RPF,
+plus relevant annotation. Must have \code{object@mapping_type} set to
+"genome" or "transcriptome".}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{method}{Character string indicating which testing engine to use. Options are:
-\describe{
-\item{\code{"DESeq2"}}{DESeq2 framework}
-\item{\code{"edgeR"}}{edgeR framework (default)}
-\item{\code{"edgeRD"}}{edgeR with dispersion smoothing (DEG with replicates)}
-\item{\code{"Voom"}}{Limma-Voom approach}
-}}
+\item{pkg}{A character string, either "riborex" or "xtail", indicating which package
+to use for differential TE analysis.}
 
-\item{control_samples}{Character vector of sample names corresponding to control group.}
+\item{method}{Character string specifying the statistical engine to use when
+\code{pkg = "riborex"}. Possible values are "DESeq2", "edgeR", "edgeRD", or "Voom".}
 
-\item{treat_samples}{Character vector of sample names corresponding to treatment group.}
+\item{control_samples}{A character vector of sample names that are considered controls
+(must be column names in \code{rna_mtx} and \code{ribo_mtx}).}
 
-\item{min_count}{Minimum mean count threshold (default is 1) to filter low-expression genes.}
+\item{treat_samples}{A character vector of sample names that are considered treated
+(must be column names in \code{rna_mtx} and \code{ribo_mtx}).}
 
-\item{lo2FC}{Numeric vector of length 2 indicating the lower and upper threshold for log2 fold change.
-Default is \code{c(-1, 1)}.}
+\item{min_count}{A numeric threshold indicating the minimum mean count required
+for a gene to be included in the analysis (default is 1).}
 
-\item{pval}{Numeric scalar. The significance threshold for p-value cutoff (default = 0.05).}
+\item{lo2FC}{A numeric vector of length 2 specifying the log2 fold change thresholds
+for calling significant up/down (default is c(-1, 1)).}
+
+\item{pval}{A numeric value specifying the p-value cutoff for significance (default is 0.05).}
 }
 \value{
-A named list with two elements:
-\describe{
-\item{\code{deg_raw}}{Raw result table returned by \pkg{riborex}, including log-fold changes and p-values.}
-\item{\code{deg_anno}}{Annotated result data frame with gene symbols, biotypes, and significance label (\code{type}): \code{"sigUp"}, \code{"sigDown"}, \code{"nonSig"}.}
-}
+A list with two components:
+\item{deg_raw}{Raw differential expression results returned by riborex or xtail.}
+\item{deg_anno}{Results data frame with columns for gene annotation (if genome-mapped)
+and a "type" column indicating significance status: "sigUp", "sigDown", or "nonSig".}
 }
 \description{
-Performs differential analysis of translation efficiency (TE) between treatment and control
-conditions using RNA-seq and Ribo-seq paired count data from a \code{ribotrans} object. Internally
-uses the \pkg{riborex} package to model TE changes across experimental groups using selected statistical engines.
+This function performs differential translation efficiency analysis using either
+the riborex or xtail package. It compares two conditions (control vs. treated) at
+both RNA-seq and Ribo-seq levels, determining changes in translational efficiency
+and identifying significantly up- or down-regulated genes.
 }
 \details{
-The function first extracts count matrices from RNA and Ribo fractions, aligns their gene rows,
-and then runs differential analysis using \code{riborex()} with the selected statistical engine.
-Genes are classified as significantly up- or down-regulated based on \code{lo2FC} and \code{pval} thresholds.
+\enumerate{
+\item If \code{pkg = "riborex"}, the function uses \code{\link[riborex]{riborex}}
+to assess differential expression on the matched RNA and RPF (ribosome-protected
+fragment) counts. This approach can use multiple back-ends such as DESeq2, edgeR,
+or voom-limma (as specified in \code{method}) to detect significantly changed transcripts.
+\item If \code{pkg = "xtail"}, the function uses \code{\link[xtail]{xtail}} to directly compute
+changes in translational efficiency (log2FC_TE_final) and associated p-values for each gene.
+Genes are then annotated with a simple significance category (sigUp, sigDown, or nonSig)
+based on log fold-change thresholds (\code{lo2FC}) and p-value threshold (\code{pval}).
+\item The input requires that the \code{ribotrans} object contains:
+• RNA-seq and RPF count matrices (in \code{object@counts$rna} and \code{object@counts$rpf})
+• Metadata for genome-mapped counts (e.g. \code{object@counts$rna$annotation} and
+\code{object@counts$rpf$annotation}) if \code{object@mapping_type == "genome"}
+\item The function returns a list containing raw differential expression results as well as
+annotation-augmented results, marking significant up/down changes.
+}
 }
 \examples{
 \dontrun{
-# Assume `obj` is a ribotrans object with RNA and Ribo counts.
-# Samples "ctrl1", "ctrl2" as control; "trt1", "trt2" as treatment.
-res <- TE_differential_analysis(
-  object = obj,
-  method = "edgeR",
-  control_samples = c("ctrl1", "ctrl2"),
-  treat_samples = c("trt1", "trt2"),
-  min_count = 5,
-  lo2FC = c(-1.5, 1.5),
-  pval = 0.01
-)
+  # Suppose 'my_ribotrans_obj' has been populated with RNA-seq and RPF count data
+  # for several control and treated samples.
+  te_results <- TE_differential_analysis(
+    object = my_ribotrans_obj,
+    pkg = "riborex",
+    method = "DESeq2",
+    control_samples = c("ctrl_1","ctrl_2"),
+    treat_samples = c("trt_1","trt_2"),
+    min_count = 10,
+    lo2FC = c(-1, 1),
+    pval = 0.01
+  )
 
-# View annotated differential TE results
-head(res$deg_anno)
-table(res$deg_anno$type)
+  # Check significant upregulated genes
+  subset(te_results$deg_anno, type == "sigUp")
 }
 
 }
 \seealso{
-\code{\link[riborex]{riborex}}, \code{\link{get_counts}}
+\describe{
+\item{\code{\link[riborex]{riborex}}}{Used when \code{pkg = "riborex"} to
+perform mRNA + RPF differential analysis.}
+\item{\code{\link[xtail]{xtail}}}{Used when \code{pkg = "xtail"} to analyze changes
+in translational efficiency.}
+}
 }

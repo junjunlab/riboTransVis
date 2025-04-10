@@ -3,7 +3,7 @@
 \name{get_counts}
 \alias{get_counts}
 \alias{get_counts,ribotrans-method}
-\title{Get Read Counts for RNA and Ribo-seq Libraries}
+\title{Get Read Counts for RNA-seq and Ribo-seq}
 \usage{
 get_counts(object, ...)
 
@@ -16,44 +16,81 @@ get_counts(object, ...)
 )
 }
 \arguments{
-\item{object}{A \code{ribotrans} object. Must contain RNA and/or Ribo-seq information in the \code{@library} slot and
-a valid GTF file path in the \code{@gtf_path} slot.}
+\item{object}{A \code{\link{ribotrans}} object, which contains metadata and paths to BAM files.}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{GTF_attrType.extra}{A character vector specifying extra attributes from the GTF annotation to include
-(e.g., \code{c("gene_name", "gene_biotype")}). Default is \code{c("gene_name", "gene_biotype")}.}
+\item{GTF_attrType.extra}{A character vector specifying extra gene attributes (beyond the default \code{gene_id})
+to be included from the GTF file. Typically \code{c("gene_name","gene_biotype")}.}
 
-\item{rna_feature}{A character string specifying the RNA feature type in the GTF file to use for counting
-(default: \code{"exon"}).}
+\item{rna_feature}{The annotation feature type to use for counting RNA-seq reads
+(e.g. \code{"exon"}). Only used if \code{object@mapping_type} is \code{"genome"}.}
 
-\item{ribo_feature}{A character string specifying the Ribo-seq feature type in the GTF file to use for counting
-(default: \code{"CDS"}).}
+\item{ribo_feature}{The annotation feature type to use for counting Ribo-seq reads
+(e.g. \code{"CDS"}). Only used if \code{object@mapping_type} is \code{"genome"}.}
 
-\item{nThreads}{Integer, number of threads to be used for \code{featureCounts}. Default is \code{1}.}
+\item{nThreads}{Number of threads for parallel processing (default is 1).}
 }
 \value{
-The original \code{ribotrans} object with read counts for RNA and/or ribosome profiling libraries stored inside
-the \code{@counts} slot. The result is a named list with components:
+The input \code{object} (of class \code{\link{ribotrans}}) is returned,
+with a new slot \code{object@counts} containing count matrices for RNA-seq and
+Ribo-seq data. This slot is a list with elements:
 \describe{
-\item{\code{rna}}{A featureCounts output list for RNA-seq samples (exon-level counting)}
-\item{\code{rpf}}{A featureCounts output list for Ribo-seq samples (CDS-level counting)}
+\item{\code{rpf}}{Counts and summary info for Ribo-seq data.}
+\item{\code{rna}}{Counts and summary info for RNA-seq data.}
 }
 }
 \description{
-This function calculates gene-level read counts from BAM files for both RNA-seq and ribosome profiling (Ribo-seq) experiments
-using the \code{featureCounts} function from the \pkg{Rsubread} package. It annotates counts using the supplied GTF file.
+Uses Rsubread::featureCounts (for genome-mapped data) or Rsamtools::idxstatsBam / Rsamtools::scanBam
+(for transcriptome-mapped data) to quantify gene-level counts of RNA-seq and Ribo-seq reads.
+}
+\details{
+\enumerate{
+\item If \code{object@mapping_type} is "genome", the function calls
+\code{Rsubread::featureCounts()} to summarize alignments for:
+\itemize{
+\item RNA-seq: exons by default (\code{rna_feature = "exon"}).
+\item Ribo-seq: coding sequences (\code{ribo_feature = "CDS"}).
+}
+The GTF file path is taken from \code{object@gtf_path}, and extra gene attributes
+such as \code{gene_name} and \code{gene_biotype} are captured if present.
+\item If \code{object@mapping_type} is "transcriptome", the function performs:
+\itemize{
+\item \code{idxstatsBam()} to get rapid counts for RNA-seq aligned to transcript-level BAMs,
+then uses string parsing and grouping to merge counts by gene_name.
+\item \code{scanBam()} to extract read positions for Ribo-seq alignments,
+then intersects them with known mRNA regions (\code{object@features}),
+aggregating by \code{mstart} and \code{mstop}.
+}
+}
+
+After counting, the function stores two separate list entries in \code{object@counts}:
+\code{$rpf} for Ribo-seq data and \code{$rna} for RNA-seq data. Each contains
+\code{$counts}, \code{$annotation}, \code{$targets}, and \code{$stat}, when available.
 }
 \examples{
 \dontrun{
-# Assuming `obj` is a ribotrans object with all required slots configured:
-# obj <- get_counts(obj)
+  # Assuming 'my_ribotrans_obj' is a valid ribotrans object
+  # and its BAM files plus GTF path have already been specified:
+  my_ribotrans_obj <- get_counts(
+    my_ribotrans_obj,
+    GTF_attrType.extra = c("gene_name","gene_biotype"),
+    rna_feature = "exon",
+    ribo_feature = "CDS",
+    nThreads = 4
+  )
 
-# You can specify extra GTF attributes and set number of threads:
-# obj <- get_counts(obj, GTF_attrType.extra = c("gene_name"), nThreads = 4)
+  # Then, you can inspect the counts:
+  head(my_ribotrans_obj@counts$rna$counts)
+  head(my_ribotrans_obj@counts$rpf$counts)
 }
 
 }
 \seealso{
-\code{\link[Rsubread]{featureCounts}}
+\itemize{
+\item \code{\link{Rsubread::featureCounts}} for gene-level counting in genome-mapped BAM files.
+\item \code{\link{Rsamtools::idxstatsBam}} and \code{\link{Rsamtools::scanBam}} for quick counting or
+positional extraction of transcriptome-mapped reads.
+\item \code{\link{ribotrans}} for details on the ribotrans class.
+}
 }

@@ -3,61 +3,69 @@
 \name{get_normalized_reads}
 \alias{get_normalized_reads}
 \alias{get_normalized_reads,ribotrans-method}
-\title{Get Normalized Read Counts (TPM and Translation Efficiency)}
+\title{Get Normalized Read Counts (TPM) and Translation Efficiency}
 \usage{
 get_normalized_reads(object, ...)
 
 \S4method{get_normalized_reads}{ribotrans}(object, type = c("rna", "ribo", "te"))
 }
 \arguments{
-\item{object}{A \code{ribotrans} object containing read counts and annotation metadata.
-The \code{@counts} slot must be filled beforehand using \code{get_counts()}.}
+\item{object}{An S4 object of class \code{ribotrans}, which stores:
+• \code{object@counts}: a list containing read count matrices for RNA-seq (\code{object@counts$rna})
+and Ribo-seq (\code{object@counts$rpf}).
+• \code{object@features}: a data frame or tibble that holds transcript or gene length information
+for "transcriptome" mapping mode.
+• \code{object@mapping_type}: a character string, either \code{"genome"} or \code{"transcriptome"}.}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{type}{Character vector specifying which metrics to calculate. Acceptable values are:
-
-\describe{
-\item{\code{"rna"}}{Calculate RNA-seq TPM values}
-\item{\code{"ribo"}}{Calculate Ribo-seq TPM values}
-\item{\code{"te"}}{Calculate translation efficiency (TE = Ribo TPM / RNA TPM)}
-}}
+\item{type}{A character vector specifying which data to process. Can be any combination of
+\code{c("rna","ribo","te")}.
+• "rna": compute TPM for RNA-seq.
+• "ribo": compute TPM for Ribo-seq.
+• "te": compute translation efficiency = ribo_TPM / rna_TPM.}
 }
 \value{
-A named list with three elements, depending on the selected \code{type}:
-\describe{
-\item{\code{tpm.rna}}{Data frame of RNA TPM values and gene annotations (if \code{"rna"} is selected)}
-\item{\code{tpm.ribo}}{Data frame of Ribo TPM values and gene annotations (if \code{"ribo"} is selected)}
-\item{\code{te}}{Data frame of translation efficiency and gene annotations (if \code{"te"} is selected)}
-}
+A named list with up to three elements (depending on the \code{type} input):
+• \code{$tpm.rna}: A data frame of TPM values for RNA-seq genes (genome mapping) or transcripts (transcriptome mapping).
+• \code{$tpm.ribo}: A data frame of TPM values for Ribo-seq.
+• \code{$te}: A data frame of translation efficiency, computed only when both RNA and Ribo data are available and "te" is included in \code{type}.
 }
 \description{
-Computes normalized gene expression levels from RNA-seq and/or Ribo-seq count data
-stored in a \code{ribotrans} object. TPM (Transcripts Per Million) values are calculated
-for both RNA and Ribo libraries. Additionally, translation efficiency (TE) is computed
-as the ratio between Ribo-seq and RNA-seq TPM values.
+This function calculates TPM (Transcripts Per Million) values for RNA-seq and/or Ribo-seq data
+(depending on the chosen type), then computes translation efficiency (TE) when both are requested.
+It returns a list with elements tpm.rna, tpm.ribo, and te (depending on user input).
 }
 \details{
-TPM values are calculated using gene lengths (in kilobases) extracted from the \code{annotation}
-component of the counts. TE is only computed for genes that are shared between both RNA and Ribo counts.
-All outputs include gene annotations such as \code{gene_name} and \code{gene_biotype}.
+\enumerate{
+\item If "rna" is selected in the argument \code{type}, the function extracts the counts from
+\code{object@counts$rna} and calculates TPM for RNA-seq data.
+\item If "ribo" is selected in \code{type}, the function extracts counts from
+\code{object@counts$rpf} (ribosome-protected fragments) to calculate TPM for Ribo-seq data.
+\item If "te" (translation efficiency) is selected, the function will intersect the rownames
+of the RNA and Ribo TPM matrices to compute TE as tpm.ribo / tpm.rna for the matched genes.
+}
+
+The function handles two potential mapping types:
+• "genome": Genomic annotation is used (e.g., from \code{ribo_info$annotation}, \code{rna_info$annotation}).
+• "transcriptome": Transcript-based annotation, where \code{object@features} provides transcript lengths
+in \code{translen} and gene IDs/annotations.
 }
 \examples{
 \dontrun{
-# Assume `obj` is a ribotrans object with counts generated via get_counts()
+  # Suppose we have a 'ribotrans' object named 'ribo_obj'
+  # that contains counts for RNA-seq (ribo_obj@counts$rna)
+  # and Ribo-seq (ribo_obj@counts$rpf).
 
-# Get both RNA and Ribo TPM
-normalized_list <- get_normalized_reads(obj, type = c("rna", "ribo"))
+  # Calculate only RNA TPM:
+  res_rna <- get_normalized_reads(ribo_obj, type = "rna")
+  head(res_rna$tpm.rna)
 
-head(normalized_list$tpm.rna)
-head(normalized_list$tpm.ribo)
-
-# Compute translation efficiency (requires both RNA and Ribo counts)
-te_list <- get_normalized_reads(obj, type = "te")
-head(te_list$te)
+  # Calculate RNA and Ribo TPM plus TE:
+  res_te <- get_normalized_reads(ribo_obj, type = c("rna","ribo","te"))
+  head(res_te$tpm.rna)
+  head(res_te$tpm.ribo)
+  head(res_te$te)
 }
 
-}
-\seealso{
-\code{\link{get_counts}}
 }
