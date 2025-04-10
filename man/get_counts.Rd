@@ -86,11 +86,3 @@ After counting, the function stores two separate list entries in \code{object@co
 }
 
 }
-\seealso{
-\itemize{
-\item \code{\link{Rsubread::featureCounts}} for gene-level counting in genome-mapped BAM files.
-\item \code{\link{Rsamtools::idxstatsBam}} and \code{\link{Rsamtools::scanBam}} for quick counting or
-positional extraction of transcriptome-mapped reads.
-\item \code{\link{ribotrans}} for details on the ribotrans class.
-}
-}

@@ -66,14 +66,6 @@
 #'   head(my_ribotrans_obj@counts$rpf$counts)
 #' }
 #'
-#' @seealso
-#'   \itemize{
-#'     \item \code{\link{Rsubread::featureCounts}} for gene-level counting in genome-mapped BAM files.
-#'     \item \code{\link{Rsamtools::idxstatsBam}} and \code{\link{Rsamtools::scanBam}} for quick counting or
-#'       positional extraction of transcriptome-mapped reads.
-#'     \item \code{\link{ribotrans}} for details on the ribotrans class.
-#'   }
-#'
 #' @importFrom Rsamtools idxstatsBam scanBam ScanBamParam scanBamFlag
 #' @importFrom dplyr filter select full_join n
 #' @importFrom fastplyr f_group_by f_summarise f_left_join f_filter
@@ -604,7 +596,7 @@ setMethod("get_normalized_reads",
 #'    fragment) counts. This approach can use multiple back-ends such as DESeq2, edgeR,
 #'    or voom-limma (as specified in \code{method}) to detect significantly changed transcripts.
 #'
-#' 2. If \code{pkg = "xtail"}, the function uses \code{\link[xtail]{xtail}} to directly compute
+#' 2. If \code{pkg = "xtail"}, the function uses xtail to directly compute
 #'    changes in translational efficiency (log2FC_TE_final) and associated p-values for each gene.
 #'    Genes are then annotated with a simple significance category (sigUp, sigDown, or nonSig)
 #'    based on log fold-change thresholds (\code{lo2FC}) and p-value threshold (\code{pval}).
@@ -640,13 +632,7 @@ setMethod("get_normalized_reads",
 #'   \item{deg_anno}{Results data frame with columns for gene annotation (if genome-mapped)
 #'                   and a "type" column indicating significance status: "sigUp", "sigDown", or "nonSig".}
 #'
-#' @seealso
-#'   \describe{
-#'     \item{\code{\link[riborex]{riborex}}}{Used when \code{pkg = "riborex"} to
-#'       perform mRNA + RPF differential analysis.}
-#'     \item{\code{\link[xtail]{xtail}}}{Used when \code{pkg = "xtail"} to analyze changes
-#'       in translational efficiency.}
-#'   }
+#'
 #'
 #' @examples
 #' \dontrun{

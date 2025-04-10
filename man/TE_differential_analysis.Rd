@@ -63,7 +63,7 @@ and identifying significantly up- or down-regulated genes.
 to assess differential expression on the matched RNA and RPF (ribosome-protected
 fragment) counts. This approach can use multiple back-ends such as DESeq2, edgeR,
 or voom-limma (as specified in \code{method}) to detect significantly changed transcripts.
-\item If \code{pkg = "xtail"}, the function uses \code{\link[xtail]{xtail}} to directly compute
+\item If \code{pkg = "xtail"}, the function uses xtail to directly compute
 changes in translational efficiency (log2FC_TE_final) and associated p-values for each gene.
 Genes are then annotated with a simple significance category (sigUp, sigDown, or nonSig)
 based on log fold-change thresholds (\code{lo2FC}) and p-value threshold (\code{pval}).
@@ -94,12 +94,4 @@ annotation-augmented results, marking significant up/down changes.
   subset(te_results$deg_anno, type == "sigUp")
 }
 
-}
-\seealso{
-\describe{
-\item{\code{\link[riborex]{riborex}}}{Used when \code{pkg = "riborex"} to
-perform mRNA + RPF differential analysis.}
-\item{\code{\link[xtail]{xtail}}}{Used when \code{pkg = "xtail"} to analyze changes
-in translational efficiency.}
-}
 }
