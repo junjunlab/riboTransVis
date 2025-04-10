@@ -1343,8 +1343,8 @@ setMethod("metagene_plot",
             # ==================================================================
             # plot
             p <-
-              ggplot(pltdf) +
-              geom_path(aes(x = rel,y = avg)) +
+              ggplot(pltdf,aes(x = rel,y = avg)) +
+              geom_path() +
               theme(panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
