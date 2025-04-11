@@ -751,7 +751,7 @@ setMethod("TE_differential_analysis",
             }else{
               # ================================================================
               # xtail for diff TE analysis
-              ft <- apply(mrna,1,function(x){
+              ft <- apply(rna_mtx,1,function(x){
                 if(sum(x>0) >= min_count){
                   return(TRUE)
                 }else{
