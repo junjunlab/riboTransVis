@@ -785,8 +785,8 @@ setMethod("TE_differential_analysis",
                 # add gene_name
                 res_all_anno <- res %>% dplyr::inner_join(gene_info,by = 'gene_id')
               }else{
-                diff_df$gene_name <- rownames(diff_df)
-                res_all_anno <- diff_df
+                res$gene_name <- rownames(res)
+                res_all_anno <- res
               }
 
             }
