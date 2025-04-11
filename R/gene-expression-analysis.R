@@ -158,7 +158,7 @@ setMethod("get_counts",
                   tinfo$seqnames <- sapply(strsplit(as.character(tinfo$seqnames),split = "\\|"),"[",2)
 
                   tinfo <- tinfo %>%
-                    fastplyr::f_group_by(seqnames) %>% fastplyr::f_summarise(mapped = mean(mapped))
+                    fastplyr::f_group_by(seqnames) %>% fastplyr::f_summarise(mapped = round(mean(mapped)))
 
                   colnames(tinfo) <- c("gene_name",rnasps[x])
 
@@ -198,7 +198,7 @@ setMethod("get_counts",
                   tinfo.anno$rname <- sapply(strsplit(as.character(tinfo.anno$rname),split = "\\|"),"[",2)
 
                   tinfo.anno <- tinfo.anno %>%
-                    fastplyr::f_group_by(rname) %>% fastplyr::f_summarise(counts = mean(counts))
+                    fastplyr::f_group_by(rname) %>% fastplyr::f_summarise(counts = round(mean(counts)))
 
                   colnames(tinfo.anno) <- c("gene_name",ribosps[x])
 
