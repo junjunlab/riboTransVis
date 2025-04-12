@@ -48,6 +48,7 @@ setGeneric("export_genome_occupancy",function(object,...) standardGeneric("expor
 #' (default: `"./"`).
 #' @param do_reads_offset Logical; if `TRUE`, applies **E/P/A-site offset correction**
 #' using metadata in `object@reads_offset_info` (default: `FALSE`).
+#' @param shift Integer defining the **offset shift** applied to read positions. **Default**: `0`.
 #'
 #' @details
 #' This method reads Ribo-Seq data from BAM files, extracts **read occupancy**,
@@ -91,7 +92,8 @@ setMethod("export_genome_occupancy",
           function(object,
                    genome_file = NULL,
                    output_path = "./",
-                   do_reads_offset = FALSE){
+                   do_reads_offset = FALSE,
+                   shift = 0){
             assignment_mode <- object@assignment_mode
 
             bf <- subset(object@bam_file, type == "ribo")
@@ -132,7 +134,7 @@ setMethod("export_genome_occupancy",
                   dplyr::left_join(y = offset[,c("sample","rel_pos","qwidth")],by = c("sample","qwidth")) %>%
                   stats::na.omit() %>%
                   dplyr::mutate(pos = dplyr::if_else(strand == "+",
-                                                     pos - rel_pos,pos + rel_pos)) %>%
+                                                     pos - rel_pos + shift,pos + rel_pos - shift)) %>%
                   dplyr::select(-strand,-qwidth,-rel_pos)
 
               }else{

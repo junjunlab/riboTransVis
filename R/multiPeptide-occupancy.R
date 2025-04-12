@@ -77,7 +77,6 @@ setMethod("multi_peptide_occupancy",
                    min_counts = 64,
                    peptide_length = 3,
                    peptide_occurrence = 100){
-            peptide_score <- match.arg(peptide_score,choices = c("sum","mean"))
             # ==================================================================
             # filter coding gene and get peptide seqs
             features <- object@features %>%

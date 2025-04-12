@@ -48,7 +48,9 @@ Suggests:
     zoo,
     binom,
     GenomeInfoDb,
-    pkgconfig
+    pkgconfig,
+    clusterProfiler,
+    ggpubr
 VignetteBuilder: knitr
 Depends: 
     methods

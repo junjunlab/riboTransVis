@@ -8,7 +8,8 @@
   object,
   genome_file = NULL,
   output_path = "./",
-  do_reads_offset = FALSE
+  do_reads_offset = FALSE,
+  shift = 0
 )
 }
 \arguments{
@@ -22,6 +23,8 @@ containing reference genome sequences.}
 
 \item{do_reads_offset}{Logical; if \code{TRUE}, applies \strong{E/P/A-site offset correction}
 using metadata in \code{object@reads_offset_info} (default: \code{FALSE}).}
+
+\item{shift}{Integer defining the \strong{offset shift} applied to read positions. \strong{Default}: \code{0}.}
 }
 \value{
 \itemize{
