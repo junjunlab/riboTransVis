@@ -174,18 +174,30 @@ generate_kmers <- function(cds_fa = NULL,
   valid_idx <- which(Biostrings::width(proteome) >= kmer_length)
   filtered_proteome <- proteome[valid_idx]
 
+  # select longest cds for analysis
+  names(filtered_proteome) <- sapply(strsplit(names(filtered_proteome),split = " "),"[",4)
+
+  leninfo <- data.frame(id = names(filtered_proteome),
+                        len = Biostrings::width(filtered_proteome)) %>%
+    dplyr::slice_max(order_by = len,n = 1,by = id)
+
+  # ============================================================================
   # define func
   extract_nmers <- function(seq, n = 15) {
     len <- nchar(seq)
-    # sapply(1:(len - n), function(i) substr(seq, i, i + n - 1))
-    interval <- seq(1, len - n, by = 1)
-    # get peptide
-    if (requireNamespace("stringr", quietly = TRUE)) {
-      stringr::str_sub_all(seq,start = interval, end = interval + (n - 1))[[1]]
-    } else {
-      warning("Package 'stringr' is needed for this function to work.")
-    }
 
+    # check length
+    if(len == kmer_length){
+      return(as.character(seq))
+    }else{
+      interval <- seq(1, len - n, by = 1)
+      # get peptide
+      if (requireNamespace("stringr", quietly = TRUE)) {
+        stringr::str_sub_all(seq,start = interval, end = interval + (n - 1))[[1]]
+      } else {
+        warning("Package 'stringr' is needed for this function to work.")
+      }
+    }
   }
 
   # get all kmers

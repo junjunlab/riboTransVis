@@ -2,7 +2,7 @@
 % Please edit documentation in R/motif-logo.R
 \name{logo_plot}
 \alias{logo_plot}
-\title{Create a Sequence Logo from Foreground and Background Sequences}
+\title{Plot Sequence Logos with Multiple Visualization Methods}
 \usage{
 logo_plot(
   foreground_seqs = NULL,
@@ -14,49 +14,56 @@ logo_plot(
 )
 }
 \arguments{
-\item{foreground_seqs}{A character vector of aligned amino acid sequences (e.g., all 15-mers).}
+\item{foreground_seqs}{A character vector of foreground sequences (aligned peptide motifs) or a matrix. This input is used across all plotting modes.}
 
-\item{background_seqs}{An optional character vector of background amino acid sequences.
-Required if method = "enrich".}
+\item{background_seqs}{Optional character vector of background sequences. Only used when \code{method = "enrich"} to compute enrichment over a background model.}
 
-\item{rev_stack_order}{Logical; whether to reverse the stacking of residues in the logo.}
+\item{rev_stack_order}{Logical. Whether to reverse the stacking order of residues within each logo column. Default is \code{FALSE}.}
 
-\item{type}{Character. Choose between \code{"merge"} (combined enriched and depleted in one plot) or \code{"sep"} (two-panel for enriched/depleted). Default is "merge".}
+\item{type}{Character. Either \code{"merge"} (default) to plot a unified enrichment logo or \code{"sep"} to plot enriched and depleted residues in separate panels. Only applies when \code{method = "enrich"}.}
 
-\item{col_scheme}{Residue color scheme passed to \code{ggseqlogo}; default is \code{"chemistry2"}.}
+\item{col_scheme}{Character. Amino acid color scheme used for rendering logos. Passed to \code{ggseqlogo()}.}
 
-\item{method}{Character; the logo type to use. One of \code{"bits"}, \code{"prob"}, \code{"EDLogo"}, or \code{"enrich"}.
-See Details for explanation.}
+\item{method}{Character. Visualization method. Can be one of:
+\itemize{
+\item \code{"bits"}: Shannon bit-based sequence logo (information content, uses \pkg{ggseqlogo}).
+\item \code{"prob"}: Residue probability-based logo (uses \pkg{ggseqlogo}).
+\item \code{"EDLogo"}: Uses EDLogo rendering from package \pkg{Logolas}.
+\item \code{"enrich"}: Enrichment logo showing log2 ratio of foreground vs background residue frequencies.
+}}
 }
 \value{
-A ggplot2 object showing the sequence logo.
+A \code{ggplot} object (or a \code{cowplot} object when \code{type = "sep"}) representing the motif logo visualization.
 }
 \description{
-This function generates a sequence logo visualization using different methods, including:
-bits-based, probability-based, EDLogo, and enrichment logo (custom log2-ratio based).
-For enrichment logo, both foreground and background amino acid sequences are required.
+This function creates sequence logo plots using various visualization approaches,
+including Shannon bits, probabilities, EDLogo, and enrichment-based log2-ratio logos.
 }
 \details{
-\describe{
-\item{"bits"}{Standard information-theory based sequence logo (Shannon bits).}
-\item{"prob"}{Probability-based logo using relative residue frequencies.}
-\item{"EDLogo"}{Enhanced difference logo from the Logolas package.}
-\item{"enrich"}{Log2 enrichment-based logo:
-Computes log2 fold-change of normalized residue frequencies between foreground and background.}}
-
-When method = "enrich", both foreground_seqs and background_seqs must be of equal length.
-Internally uses Biostrings::consensusMatrix() for frequency matrix generation.
+\code{logo_plot()} allows for visualizing motifs using traditional or comparative methods:
+\itemize{
+\item For \code{"bits"} and \code{"prob"}, only foreground data is used.
+\item For \code{"EDLogo"}, a matrix or data frame is expected and will be passed to \code{Logolas::logomaker()}.
+\item For \code{"enrich"}, foreground and background sequences are processed into position-specific frequency matrices, followed by computation of a log2-ratio enrichment matrix. This matrix is used to construct the pLogo-style enriched/depleted visualization.
+\item Negative log2 values indicate depletion; positive values indicate enrichment.
+}
+In \code{"enrich"} mode with \code{type = "sep"}, the plot is split into "enriched" (positive) and "depleted" (negative) panels using \pkg{cowplot}.
+}
+\note{
+The \code{"enrich"} method requires background sequences and assumes sequences are aligned and of the same length. \code{Biostrings} is used internally for consensus matrix generation.
 }
 \examples{
 \dontrun{
-fg <- c("ARSDGPQLMKT", "ARRDGPQLMKA", "CRSDGPQLMKL")
-bg <- c("GSDGPQLMKLQ", "DRSDAPTLMKR", "MRRDGPQLMSL")
+## Bits-based logo
+fg <- c("AKTGRRKS", "AKSGRRKS", "AKTRRRRS")
+logo_plot(foreground_seqs = fg, method = "bits")
 
-# Probability logo
-create_sequence_logo(fg, method = "prob")
+## Enrichment logo (merge)
+bg <- c("AKAAAKTS", "AKVVVKTS", "AKGGGKTS", "AKSSSKTS")
+logo_plot(foreground_seqs = fg, background_seqs = bg, method = "enrich", type = "merge")
 
-# Enrichment logo (requires background)
-create_sequence_logo(fg, bg, method = "enrich")
+## Enrichment logo (split panels)
+logo_plot(foreground_seqs = fg, background_seqs = bg, method = "enrich", type = "sep")
 }
 
 }
