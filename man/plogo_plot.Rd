@@ -12,7 +12,8 @@ plogo_plot(
   col_scheme = "chemistry2",
   npcx = 0.98,
   npcy = 0.98,
-  size = 3.5
+  size = 3.5,
+  return_data = FALSE
 )
 }
 \arguments{
@@ -31,9 +32,11 @@ plogo_plot(
 \item{npcy}{Numeric. Relative y-position for annotation text; default is 0.98.}
 
 \item{size}{Numeric. Font size for annotation text. Default is 3.5.}
+
+\item{return_data}{Logical; if \code{TRUE}, returns the log-odds matrix instead of the plot. Default: \code{FALSE}.}
 }
 \value{
-A \code{ggplot} or \code{patchwork} object representing the sequence motif logo.
+A ggplot object displaying the pLogo-style sequence logo, or a numeric matrix of log-odds enrichment scores if \code{return_data = TRUE}.
 }
 \description{
 This function visualizes statistically enriched or depleted amino acid positions

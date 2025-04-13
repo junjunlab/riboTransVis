@@ -19,6 +19,7 @@
 #'   \item \code{"EDLogo"}: Uses EDLogo rendering from package \pkg{Logolas}.
 #'   \item \code{"enrich"}: Enrichment logo showing log2 ratio of foreground vs background residue frequencies.
 #' }
+#' @param return_data Logical. If \code{TRUE}, returns the log2 enrichment matrix instead of a plot (only valid when \code{method = "enrich"}). Defaults to \code{FALSE}.
 #'
 #' @return A \code{ggplot} object (or a \code{cowplot} object when \code{type = "sep"}) representing the motif logo visualization.
 #'
@@ -57,7 +58,8 @@ logo_plot <- function(foreground_seqs = NULL,
                       rev_stack_order = FALSE,
                       type = c("merge","sep"),
                       col_scheme = "chemistry2",
-                      method = c("bits","prob","EDLogo","enrich")){
+                      method = c("bits","prob","EDLogo","enrich"),
+                      return_data = FALSE){
   method <- match.arg(method, c("bits","prob","EDLogo","enrich"))
   # ============================================================================
   # check method
@@ -152,7 +154,7 @@ logo_plot <- function(foreground_seqs = NULL,
             ylab("Depletted")
 
           # combine
-          logo <- cowplot::plot_grid(plotlist = list(up,down),align = "hv")
+          logo <- cowplot::plot_grid(plotlist = list(up,down),align = "hv",ncol = 1)
         }else{
           warning("Package 'ggseqlogo', 'cowplot' and 'ggpp' is needed for this function to work.")
         }
@@ -163,7 +165,13 @@ logo_plot <- function(foreground_seqs = NULL,
     }
   }
 
-  return(logo)
+  # return
+  if(return_data == FALSE){
+    return(logo)
+  }else{
+    return(log2ratio)
+  }
+
 }
 
 
@@ -189,8 +197,10 @@ logo_plot <- function(foreground_seqs = NULL,
 #' @param npcx Numeric. Relative x-position for annotation text via \code{geom_text_npc()}; default is 0.98.
 #' @param npcy Numeric. Relative y-position for annotation text; default is 0.98.
 #' @param size Numeric. Font size for annotation text. Default is 3.5.
+#' @param return_data Logical; if \code{TRUE}, returns the log-odds matrix instead of the plot. Default: \code{FALSE}.
 #'
-#' @return A \code{ggplot} or \code{patchwork} object representing the sequence motif logo.
+#' @return A ggplot object displaying the pLogo-style sequence logo, or a numeric matrix of log-odds enrichment scores if \code{return_data = TRUE}.
+#'
 #'
 #' @details
 #' Internally, this function performs several steps:
@@ -227,7 +237,8 @@ plogo_plot <- function(foreground_seqs = NULL,
                        rev_stack_order = TRUE,
                        type = c("merge","sep"),
                        col_scheme = "chemistry2",
-                       npcx = 0.98, npcy = 0.98, size = 3.5){
+                       npcx = 0.98, npcy = 0.98, size = 3.5,
+                       return_data = FALSE){
   type <- match.arg(type,choices = c("merge","sep"))
   # ============================================================================
   # enrichment logo
@@ -280,6 +291,7 @@ plogo_plot <- function(foreground_seqs = NULL,
   # plot
   if (requireNamespace(c("ggseqlogo","cowplot","ggpp"), quietly = TRUE)) {
     if(type == "merge"){
+      logo <-
       ggseqlogo::ggseqlogo(log_score_mat,method= "custom",
                 rev_stack_order = rev_stack_order, col_scheme = col_scheme) +
         geom_hline(yintercept = 0,lty = "solid", color = "black", linewidth = 1.25) +
@@ -325,11 +337,17 @@ plogo_plot <- function(foreground_seqs = NULL,
         ylab("Depletted")
 
       # combine
-      cowplot::plot_grid(plotlist = list(up,down),align = "hv")
+      logo <- cowplot::plot_grid(plotlist = list(up,down),align = "hv",ncol = 1)
 
     }
   } else {
     warning("Package 'ggseqlogo', 'cowplot' and 'ggpp' are needed for this function to work.")
   }
 
+  # return
+  if(return_data == FALSE){
+    return(logo)
+  }else{
+    return(log_score_mat)
+  }
 }

@@ -10,7 +10,8 @@ logo_plot(
   rev_stack_order = FALSE,
   type = c("merge", "sep"),
   col_scheme = "chemistry2",
-  method = c("bits", "prob", "EDLogo", "enrich")
+  method = c("bits", "prob", "EDLogo", "enrich"),
+  return_data = FALSE
 )
 }
 \arguments{
@@ -31,6 +32,8 @@ logo_plot(
 \item \code{"EDLogo"}: Uses EDLogo rendering from package \pkg{Logolas}.
 \item \code{"enrich"}: Enrichment logo showing log2 ratio of foreground vs background residue frequencies.
 }}
+
+\item{return_data}{Logical. If \code{TRUE}, returns the log2 enrichment matrix instead of a plot (only valid when \code{method = "enrich"}). Defaults to \code{FALSE}.}
 }
 \value{
 A \code{ggplot} object (or a \code{cowplot} object when \code{type = "sep"}) representing the motif logo visualization.
