@@ -50,7 +50,10 @@ Suggests:
     GenomeInfoDb,
     pkgconfig,
     clusterProfiler,
-    ggpubr
+    ggpubr,
+    ggseqlogo,
+    stringr,
+    Logolas
 VignetteBuilder: knitr
 Depends: 
     methods
