@@ -187,7 +187,7 @@ generate_kmers <- function(cds_fa = NULL,
     len <- nchar(seq)
 
     # check length
-    if(len == kmer_length){
+    if(len == n){
       return(as.character(seq))
     }else{
       interval <- seq(1, len - n, by = 1)
