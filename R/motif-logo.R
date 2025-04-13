@@ -154,7 +154,8 @@ logo_plot <- function(foreground_seqs = NULL,
             ylab("Depletted")
 
           # combine
-          logo <- cowplot::plot_grid(plotlist = list(up,down),align = "hv",ncol = 1)
+          # logo <- cowplot::plot_grid(plotlist = list(up,down),align = "hv",ncol = 1)
+          logo <- up/down
         }else{
           warning("Package 'ggseqlogo', 'cowplot' and 'ggpp' is needed for this function to work.")
         }
@@ -337,7 +338,8 @@ plogo_plot <- function(foreground_seqs = NULL,
         ylab("Depletted")
 
       # combine
-      logo <- cowplot::plot_grid(plotlist = list(up,down),align = "hv",ncol = 1)
+      # logo <- cowplot::plot_grid(plotlist = list(up,down),align = "hv",ncol = 1)
+      logo <- up/down
 
     }
   } else {
