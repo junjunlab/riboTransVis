@@ -3,6 +3,7 @@
 export("%>%")
 export(TE_differential_analysis)
 export(codon_occupancy_plot)
+export(codon_scatter_plot)
 export(construct_ribotrans)
 export(construct_serp)
 export(cor_plot)

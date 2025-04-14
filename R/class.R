@@ -9,7 +9,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
                   "Abbreviation1", "Abbreviation3", "AminoAcid", "abbrev", "codon_seq", "freq", "occup","rpk",
                   "occurrence", "pause_score", "pep_seq", "ratio", "rel_pause", "tripep_val","motif","nt_pos",
                   "sample_group","sum_pi","counts.y", "periodicity.x","codons","log2FoldChange","Amplitude",
-                  "Period","mapped", "pvalue", "seq_type"))
+                  "Period","mapped", "pvalue", "seq_type","ccdf"))
 
 
 #' ribotrans Class

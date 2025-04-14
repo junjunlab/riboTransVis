@@ -207,3 +207,122 @@ setMethod("codon_occupancy_plot",
             }
           }
 )
+
+
+
+
+
+
+# ==============================================================================
+# codon occupancy scatter plot
+# ==============================================================================
+
+#' Codon or Amino Acid Occupancy Scatter Plot
+#'
+#' Generate a scatter plot comparing codon or amino acid occupancy between two samples.
+#' Supports optional labeling of specific codons/amino acids, with identity line and correlation statistics.
+#'
+#' @param codon_data A \code{data.frame} or \code{tibble} containing occupancy data. Should include columns \code{sample}, \code{codon_seq} (for codon analysis), \code{Abbreviation1} (for amino acid analysis), and \code{reloccup}.
+#' @param x Character. Sample name to be shown on the x-axis (must match one of the sample names in \code{codon_data}).
+#' @param y Character. Sample name to be shown on the y-axis (must match one of the sample names in \code{codon_data}).
+#' @param type Character. Type of sequence to analyze: either \code{"codon"} or \code{"amino"}. Default is \code{"codon"}.
+#' @param codon_labels Character vector. Optional. A vector of codon triplets or one-letter amino acid codes to label in the plot.
+#' @param color Character. Color code for points (default: \code{"#FF6600"}).
+#' @param size Numeric. Size of points in the scatter plot (default: 2).
+#'
+#' @return A \code{ggplot2} object of the scatter plot, showing codon or amino acid occupancy in two conditions.
+#'
+#' @details
+#' Function workflow:
+#' \itemize{
+#'   \item For type = "codon": reshapes \code{codon_data} to wide format and plots codon-level scatter plot.
+#'   \item For type = "amino": averages occupancy per amino acid and plots amino acid-level scatter plot.
+#'   \item Optionally labels selected codons or amino acids.
+#'   \item Includes reference y = x dashed line and Pearson correlation coefficient (via \code{ggpubr::stat_cor}).
+#' }
+#'
+#'
+#' @examples
+#' \dontrun{
+#' # For codon-level comparison
+#' codon_scatter_plot(codon_data = df, x = "wt", y = "mut", type = "codon",
+#'                    codon_labels = c("AAA", "GGG"))
+#'
+#' # For amino acid comparison
+#' codon_scatter_plot(codon_data = df, x = "ctrl", y = "treat", type = "amino")
+#' }
+#'
+#' @export
+codon_scatter_plot <- function(codon_data = NULL,
+                               x = NULL, y = NULL,
+                               type = c("codon","amino"),
+                               codon_labels = NULL,
+                               color = "#FF6600", size = 2){
+  type <- match.arg(type,choices = c("codon","amino"))
+  # ============================================================================
+  if(type == "codon"){
+    ccdf_wide <- codon_data %>%
+      dplyr::select(sample, codon_seq, reloccup) %>%
+      tidyr::pivot_wider(names_from = sample, values_from = reloccup)
+
+    ccdf_wide[is.na(ccdf_wide)] <- 0
+
+    # mark label
+    if(!is.null(codon_labels)){
+      mk <- ggrepel::geom_text_repel(data = subset(ccdf_wide, codon_seq %in% codon_labels),
+                                     aes(label = codon_seq),max.overlaps = 200)
+    }else{
+      mk <- ggrepel::geom_text_repel(aes(label = codon_seq),max.overlaps = 200)
+    }
+
+    # scatter plot
+    p <-
+      ggplot(ccdf_wide,
+             aes(x = .data[[x]],y = .data[[y]])) +
+      geom_abline(slope = 1,intercept = 0,lty = "dashed") +
+      geom_point(size = size,color = color) +
+      mk +
+      ggtitle("Codon occupancy") +
+      theme_bw(base_size = 12) +
+      theme(panel.grid = element_blank(),
+            plot.title = element_text(hjust = 0.5),
+            axis.text = element_text(colour = "black")) +
+      xlim(0,round(max(ccdf$reloccup),digits = 0)) + ylim(0,round(max(ccdf$reloccup),digits = 0)) +
+      coord_equal() +
+      ggpubr::stat_cor()
+  }else{
+    # ==========================================================================
+    # aa
+    ccdf_wide <- codon_data %>%
+      dplyr::group_by(sample,Abbreviation1) %>%
+      dplyr::summarise(reloccup = mean(reloccup)) %>%
+      tidyr::pivot_wider(names_from = sample,values_from = reloccup)
+
+    ccdf_wide[is.na(ccdf_wide)] <- 0
+
+    if(!is.null(codon_labels)){
+      mk <- ggrepel::geom_text_repel(data = subset(ccdf_wide, Abbreviation1 %in% codon_labels),
+                                     aes(label = Abbreviation1),max.overlaps = 200)
+    }else{
+      mk <- ggrepel::geom_text_repel(aes(label = Abbreviation1),max.overlaps = 200)
+    }
+
+    # 5x5
+    p <-
+      ggplot(ccdf_wide,
+             aes(x = .data[[x]],y = .data[[y]])) +
+      geom_abline(slope = 1,intercept = 0,lty = "dashed") +
+      geom_point(size = size,color = color) +
+      mk +
+      ggtitle("Amino acid occupancy") +
+      theme_bw(base_size = 12) +
+      theme(panel.grid = element_blank(),
+            plot.title = element_text(hjust = 0.5),
+            axis.text = element_text(colour = "black")) +
+      xlim(0,round(max(ccdf_wide[,-1]),digits = 0)) + ylim(0,round(max(ccdf_wide[,-1]),digits = 0)) +
+      coord_equal() +
+      ggpubr::stat_cor()
+  }
+
+  return(p)
+}
