@@ -132,7 +132,7 @@ setMethod("relative_motif_occupancy",
 
               # filter in-frame codon position
               if(search_type == "codon"){
-                motif.pos <- motif.pos %>% fastplyr::f_filter(pos %% 3 == 1)
+                motif.pos <- motif.pos %>% fastplyr::f_filter(pos %% 3 == 0)
               }
 
               return(motif.pos)
@@ -140,9 +140,9 @@ setMethod("relative_motif_occupancy",
 
             # condon position to nucleotide position
             if(search_type == "amino"){
-              motif.pos <- motif.pos %>% dplyr::mutate(nt_pos = pos*3 - 2)
+              motif.pos <- motif.pos %>% dplyr::mutate(nt_pos = pos*3 - 3)
             }else{
-              motif.pos <- motif.pos %>% dplyr::mutate(nt_pos = pos)
+              motif.pos <- motif.pos %>% dplyr::mutate(nt_pos = pos - 1)
             }
 
 
