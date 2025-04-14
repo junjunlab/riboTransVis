@@ -186,7 +186,7 @@ generate_kmers <- function(fa_file = NULL,
   # ============================================================================
   # define func
   extract_nmers <- function(seq, n = 15) {
-    len <- nchar(seq)
+    len <- Biostrings::width(seq)
 
     # check length
     if(len == n){
