@@ -111,75 +111,77 @@ do_offset_correction <- function(object = NULL, shift = 0) {
 
 
 
-#' Generate Unique k-mer Peptides from Coding or Peptide Sequences
+#' Generate Unique k-mers from Sequence Files
 #'
-#' This function extracts all unique amino acid k-mers (subsequences of fixed length) from
-#' either DNA coding sequences (CDS) or peptide sequences. It supports automatic translation
-#' from CDS to protein sequences using the standard genetic code and filters out invalid input
-#' such as sequences with ambiguous nucleotides.
+#' This function extracts unique k-mers from a given set of sequences, which can be amino acid (proteins), DNA, or RNA.
+#' It supports reading sequences from FASTA files or directly from in-memory Biostrings objects.
 #'
-#' @param cds_fa Character. File path to a FASTA file containing CDS (DNA sequences). If this is
-#'     provided, the sequences will be translated to peptides using \code{Biostrings::translate()}.
-#' @param peptide_fa Character. File path to a FASTA file containing amino acid sequences. Used
-#'     only if \code{cds_fa} is NULL.
-#' @param kmer_length Integer. Length of the peptide k-mers to be extracted. Default is 15.
+#' - For DNA/RNA sequences, the function optionally translates them to amino acids before k-mer extraction (using the standard genetic code).
+#' - Sequences containing ambiguous characters (e.g., N in DNA or RNA) will be removed by default.
 #'
-#' @return A character vector containing all unique amino acid k-mer subsequences
-#'     (length = \code{kmer_length}) from the translated or provided protein sequences.
+#' @param fa_file Character. Path to the input FASTA file. Required if \code{fa_obj} is not provided.
+#' @param fa_obj Biostrings object. An optional preloaded AAStringSet, DNAStringSet, or RNAStringSet object. If provided, \code{fa_file} will be ignored.
+#' @param fa_type Character. Type of input sequence. Must be one of \code{c("aa", "dna", "rna")}. Default is \code{"aa"}.
+#' @param translate Logical. Whether to translate nucleotide sequences to amino acids (only applicable if \code{fa_type} is \code{"dna"} or \code{"rna"}). Default is \code{FALSE}.
+#' @param kmer_length Integer. Length of k-mers to extract. Default is \code{15}.
 #'
-#' @details
-#' This function performs the following operations:
-#' \itemize{
-#'   \item Reads CDS (DNA) or peptide sequences from a FASTA file.
-#'   \item Filters out DNA sequences containing ambiguous nucleotides (non-ACGT).
-#'   \item Translates CDS into amino acid sequences using the standard genetic code.
-#'   \item Selects sequences with length >= \code{kmer_length}.
-#'   \item Extracts overlapping k-mers from each sequence using a sliding window (step = 1).
-#'   \item Removes duplicate k-mers and returns a unique list.
-#' }
-#' Requires the \pkg{Biostrings} and \pkg{stringr} packages.
-#'
-#' @importFrom Biostrings readDNAStringSet translate readAAStringSet width
+#' @return A character vector containing unique k-mers.
 #'
 #' @examples
 #' \dontrun{
-#' # Example: Generate 15-mers from CDS
-#' kmers <- generate_kmers(cds_fa = "transcripts.fasta", kmer_length = 15)
-#' head(kmers)
+#' # Extract AA 15-mers from protein FASTA
+#' kmers <- generate_kmers(fa_file = "proteome.fasta", fa_type = "aa", kmer_length = 15)
 #'
-#' # Example: Generate 10-mers from amino acid sequences
-#' kmers <- generate_kmers(peptide_fa = "proteins.fasta", kmer_length = 10)
-#' head(kmers)
+#' # Extract translated 15-mer peptides from DNA
+#' peptides <- generate_kmers(fa_file = "transcripts.fasta", fa_type = "dna",
+#' translate = TRUE, kmer_length = 15)
+#'
+#' # Providing in-memory AAStringSet
+#' library(Biostrings)
+#' fa <- readAAStringSet("proteome.fasta")
+#' kmers <- generate_kmers(fa_obj = fa, fa_type = "aa", kmer_length = 15)
 #' }
 #'
+#'
 #' @export
-generate_kmers <- function(cds_fa = NULL,
-                           peptide_fa = NULL,
+generate_kmers <- function(fa_file = NULL,
+                           fa_obj = NULL,
+                           fa_type = c("aa", "dna", "rna"),
+                           translate = FALSE,
                            kmer_length = 15){
+  fa_type <- match.arg(fa_type,choices = c("aa", "dna", "rna"))
+  # ============================================================================
   # check data type
-  if(!is.null(cds_fa)){
-    cds <- Biostrings::readDNAStringSet(cds_fa)
+  if(is.null(fa_obj)){
+    if(fa_type == "aa"){
+      proteome <- Biostrings::readAAStringSet(fa_file)
+    }else if(fa_type %in% c("dna","rna")){
+      if(fa_type == "dna"){
+        xna <- Biostrings::readDNAStringSet(fa_file)
 
-    # remove transcript contains Ns in sequence
-    valid_cds <- cds[!grepl("[^ACGTacgt]", as.character(cds))]
+        # remove transcript contains Ns in sequence
+        valid_xna <- xna[!grepl("[^ACGTacgt]", as.character(xna))]
+      }else{
+        xna <- Biostrings::readRNAStringSet(fa_file)
+        # remove transcript contains Ns in sequence
+        valid_xna <- xna[!grepl("[^ACGUacgu]", as.character(xna))]
+      }
 
-    # translate codon to amino acid
-    proteome <- Biostrings::translate(x = valid_cds,genetic.code = Biostrings::GENETIC_CODE)
 
+      # translate codon to amino acid
+      if(translate == TRUE){
+        proteome <- Biostrings::translate(x = valid_xna, genetic.code = Biostrings::GENETIC_CODE)
+      }else{
+        proteome <- valid_xna
+      }
+    }
   }else{
-    proteome <- Biostrings::readAAStringSet(peptide_fa)
+    proteome <- fa_obj
   }
 
   # filter
   valid_idx <- which(Biostrings::width(proteome) >= kmer_length)
   filtered_proteome <- proteome[valid_idx]
-
-  # select longest cds for analysis
-  names(filtered_proteome) <- sapply(strsplit(names(filtered_proteome),split = " "),"[",4)
-
-  leninfo <- data.frame(id = names(filtered_proteome),
-                        len = Biostrings::width(filtered_proteome)) %>%
-    dplyr::slice_max(order_by = len,n = 1,by = id)
 
   # ============================================================================
   # define func
@@ -210,6 +212,58 @@ generate_kmers <- function(cds_fa = NULL,
 }
 
 
+
+
+
+#' Convert Aligned Sequences to a Position Frequency Matrix
+#'
+#' This function converts a set of aligned biological sequences into a position frequency matrix (PFM) using Biostrings::consensusMatrix(). It supports amino acid (AA), DNA, and RNA sequence types and filters the result to include only expected characters for the given type.
+#'
+#' @param seqs A Biostrings XStringSet object. Must be an instance of AAStringSet (for protein sequences), DNAStringSet (for DNA), or RNAStringSet (for RNA).
+#' @param seq_type Character. Type of sequence, must be one of: \code{"aa"}, \code{"dna"}, or \code{"rna"}. Determines the allowed residues/bases for row filtering.
+#'
+#' @return A matrix where rows correspond to residues or bases, and columns correspond to positions in the aligned sequences. Each value in the matrix represents the count of a particular character at a given position.
+#'
+#' @details
+#' This function uses \code{Biostrings::consensusMatrix()} to calculate a position-wise summary of aligned sequences. The result is filtered to retain only rows corresponding to valid residues/bases for the specified sequence type:
+#' \itemize{
+#' \item \code{"aa"}: 20 standard amino acids (A, R, N, D, ... V)
+#' \item \code{"dna"}: A, C, G, T
+#' \item \code{"rna"}: A, C, G, U
+#' }
+#'
+#' @seealso \code{\link[Biostrings]{consensusMatrix}}
+#'
+#' @examples
+#' \dontrun{
+#' library(Biostrings)
+#'
+#' # DNA example
+#' dna_seqs <- DNAStringSet(c("ATGG", "ATGC", "ATGT"))
+#' mat_dna <- to_position_matrix(dna_seqs, seq_type = "dna")
+#' print(mat_dna)
+#'
+#' # Protein example
+#' aa_seqs <- AAStringSet(c("ARND", "ARNE", "ARNQ"))
+#' mat_aa <- to_position_matrix(aa_seqs, seq_type = "aa")
+#' print(mat_aa)
+#' }
+#'
+#' @importFrom Biostrings consensusMatrix
+#' @export
+to_position_matrix <- function(seqs,seq_type){
+  if(seq_type == "aa"){
+    base_char <- c("A","R","N","D","C","E","Q","G","H","I","L","K","M","F","P","S","T","W","Y","V")
+  }else if(seq_type == "dna"){
+    base_char <- c("A", "G", "C", "T")
+  }else if(seq_type == "rna"){
+    base_char <- c("A", "G", "C", "U")
+  }
+
+  mat <- Biostrings::consensusMatrix(seqs, as.prob = FALSE)
+  mat <- mat[intersect(base_char, rownames(mat)), ]
+  return(mat)
+}
 
 
 

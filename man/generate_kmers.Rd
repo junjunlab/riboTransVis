@@ -2,50 +2,54 @@
 % Please edit documentation in R/utils.R
 \name{generate_kmers}
 \alias{generate_kmers}
-\title{Generate Unique k-mer Peptides from Coding or Peptide Sequences}
+\title{Generate Unique k-mers from Sequence Files}
 \usage{
-generate_kmers(cds_fa = NULL, peptide_fa = NULL, kmer_length = 15)
+generate_kmers(
+  fa_file = NULL,
+  fa_obj = NULL,
+  fa_type = c("aa", "dna", "rna"),
+  translate = FALSE,
+  kmer_length = 15
+)
 }
 \arguments{
-\item{cds_fa}{Character. File path to a FASTA file containing CDS (DNA sequences). If this is
-provided, the sequences will be translated to peptides using \code{Biostrings::translate()}.}
+\item{fa_file}{Character. Path to the input FASTA file. Required if \code{fa_obj} is not provided.}
 
-\item{peptide_fa}{Character. File path to a FASTA file containing amino acid sequences. Used
-only if \code{cds_fa} is NULL.}
+\item{fa_obj}{Biostrings object. An optional preloaded AAStringSet, DNAStringSet, or RNAStringSet object. If provided, \code{fa_file} will be ignored.}
 
-\item{kmer_length}{Integer. Length of the peptide k-mers to be extracted. Default is 15.}
+\item{fa_type}{Character. Type of input sequence. Must be one of \code{c("aa", "dna", "rna")}. Default is \code{"aa"}.}
+
+\item{translate}{Logical. Whether to translate nucleotide sequences to amino acids (only applicable if \code{fa_type} is \code{"dna"} or \code{"rna"}). Default is \code{FALSE}.}
+
+\item{kmer_length}{Integer. Length of k-mers to extract. Default is \code{15}.}
 }
 \value{
-A character vector containing all unique amino acid k-mer subsequences
-(length = \code{kmer_length}) from the translated or provided protein sequences.
+A character vector containing unique k-mers.
 }
 \description{
-This function extracts all unique amino acid k-mers (subsequences of fixed length) from
-either DNA coding sequences (CDS) or peptide sequences. It supports automatic translation
-from CDS to protein sequences using the standard genetic code and filters out invalid input
-such as sequences with ambiguous nucleotides.
+This function extracts unique k-mers from a given set of sequences, which can be amino acid (proteins), DNA, or RNA.
+It supports reading sequences from FASTA files or directly from in-memory Biostrings objects.
 }
 \details{
-This function performs the following operations:
 \itemize{
-\item Reads CDS (DNA) or peptide sequences from a FASTA file.
-\item Filters out DNA sequences containing ambiguous nucleotides (non-ACGT).
-\item Translates CDS into amino acid sequences using the standard genetic code.
-\item Selects sequences with length >= \code{kmer_length}.
-\item Extracts overlapping k-mers from each sequence using a sliding window (step = 1).
-\item Removes duplicate k-mers and returns a unique list.
+\item For DNA/RNA sequences, the function optionally translates them to amino acids before k-mer extraction (using the standard genetic code).
+\item Sequences containing ambiguous characters (e.g., N in DNA or RNA) will be removed by default.
 }
-Requires the \pkg{Biostrings} and \pkg{stringr} packages.
 }
 \examples{
 \dontrun{
-# Example: Generate 15-mers from CDS
-kmers <- generate_kmers(cds_fa = "transcripts.fasta", kmer_length = 15)
-head(kmers)
+# Extract AA 15-mers from protein FASTA
+kmers <- generate_kmers(fa_file = "proteome.fasta", fa_type = "aa", kmer_length = 15)
 
-# Example: Generate 10-mers from amino acid sequences
-kmers <- generate_kmers(peptide_fa = "proteins.fasta", kmer_length = 10)
-head(kmers)
+# Extract translated 15-mer peptides from DNA
+peptides <- generate_kmers(fa_file = "transcripts.fasta", fa_type = "dna",
+translate = TRUE, kmer_length = 15)
+
+# Providing in-memory AAStringSet
+library(Biostrings)
+fa <- readAAStringSet("proteome.fasta")
+kmers <- generate_kmers(fa_obj = fa, fa_type = "aa", kmer_length = 15)
 }
+
 
 }

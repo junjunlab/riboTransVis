@@ -2,12 +2,13 @@
 % Please edit documentation in R/motif-logo.R
 \name{plogo_plot}
 \alias{plogo_plot}
-\title{Plot a pLogo-style Logo Based on Foreground and Background Sequences}
+\title{Statistical Sequence Logo Plot (pLogo-style)}
 \usage{
 plogo_plot(
   foreground_seqs = NULL,
   background_seqs = NULL,
   rev_stack_order = TRUE,
+  seq_type = c("aa", "dna", "rna"),
   type = c("merge", "sep"),
   col_scheme = "chemistry2",
   npcx = 0.98,
@@ -17,57 +18,58 @@ plogo_plot(
 )
 }
 \arguments{
-\item{foreground_seqs}{A character vector of amino acid sequences representing the foreground dataset.}
+\item{foreground_seqs}{A character vector or Biostrings::XStringSet of aligned foreground sequences
+(e.g. amino acid motif windows).}
 
-\item{background_seqs}{A character vector of amino acid sequences representing the background dataset.}
+\item{background_seqs}{A character vector or Biostrings::XStringSet of aligned background sequences. Required.}
 
-\item{rev_stack_order}{Logical. Should the residue stacks be ordered with the most significant on top? Default is TRUE.}
+\item{rev_stack_order}{Logical. Reverse the stacking order of letters (default: TRUE).}
 
-\item{type}{Character. Choose between \code{"merge"} (combined enriched and depleted in one plot) or \code{"sep"} (two-panel for enriched/depleted). Default is "merge".}
+\item{seq_type}{Character. Sequence type, one of \code{"aa"} (amino acid), \code{"dna"}, or \code{"rna"}.}
 
-\item{col_scheme}{Residue color scheme passed to \code{ggseqlogo}; default is \code{"chemistry2"}.}
+\item{type}{Character. Display style. If \code{"merge"}, plot shows both enriched/depleted residues
+in one panel. If \code{"sep"}, returns a top and bottom panel separately (like canonical pLogo).}
 
-\item{npcx}{Numeric. Relative x-position for annotation text via \code{geom_text_npc()}; default is 0.98.}
+\item{col_scheme}{Character. Color scheme to use, passed to \code{ggseqlogo}. Default: \code{"chemistry2"}.}
 
-\item{npcy}{Numeric. Relative y-position for annotation text; default is 0.98.}
+\item{npcx}{Numeric \verb{[0–1]}. X position (NPC units) for annotation text.}
 
-\item{size}{Numeric. Font size for annotation text. Default is 3.5.}
+\item{npcy}{Numeric \verb{[0–1]}. Y position (NPC units) for annotation text.}
 
-\item{return_data}{Logical; if \code{TRUE}, returns the log-odds matrix instead of the plot. Default: \code{FALSE}.}
+\item{size}{Numeric. Text size of the annotation.}
+
+\item{return_data}{Logical. If \code{TRUE}, returns the internally computed log-odds matrix instead of a plot.}
 }
 \value{
-A ggplot object displaying the pLogo-style sequence logo, or a numeric matrix of log-odds enrichment scores if \code{return_data = TRUE}.
+A ggplot object showing a sequence logo with log-probability-scaled residue heights, or a numeric
+matrix of log-odds ratios if \code{return_data=TRUE}.
 }
 \description{
-This function visualizes statistically enriched or depleted amino acid positions
-from aligned sequences. It uses binomial probabilities to calculate log-odds scores
-and generates a pLogo-like sequence logo using \code{ggseqlogo}. Both enriched and
-depleted residues are shown, and a Bonferroni-corrected significance bar is added.
+This function generates a statistical sequence logo (pLogo-style) that visualizes overrepresented and
+underrepresented residues based on a binomial test. It compares position-specific counts
+in a foreground and background dataset using a log-odds scoring approach. A Bonferroni-corrected
+significance threshold (P < 0.05) is used to display a reference line.
 }
 \details{
-Internally, this function performs several steps:
-\itemize{
-\item Parses and counts each amino acid by position for both foreground and background sequences.
-\item Builds position matrices and computes frequency matrix for the background.
-\item Calculates residue log-odds using a binomial over/under probability ratio, via \code{get_log_ratio_mat()}.
-\item Adds red dashed lines to show Bonferroni-corrected p-value threshold (typically P < 0.05).
-\item Optionally splits plots into enriched and depleted panels (\code{type = "sep"}).
-}
+This implementation follows the principles of the pLogo algorithm (O’Shea et al, Nature Methods, 2013):
+residues are scaled according to the log odds of their binomial probability of enrichment or depletion
+given the background. Significant thresholds are marked with dashed lines, using Bonferroni-corrected tests.
 
-Visualization is constructed using \code{ggseqlogo} and optionally arranged using the \code{patchwork} package.
+A red dashed horizontal line is shown at:
+\deqn{\pm \log_{10}\left(\frac{\alpha'}{1-\alpha'}\right)}
+where \eqn{\alpha'} is the corrected significance level, accounting for multiple testing:
+\deqn{\alpha' = \frac{0.05}{N_{positions} \times N_{residues} - N_{zero\ fg}}}
 }
 \examples{
 \dontrun{
-# Example: Generate logo from short protein sequences
-fg <- c("ARGGGKTSV", "ARRRGKTSV", "ARSGGKTSV")
-bg <- c("AKGGGKTSV", "ALGGGKTSV", "AKGGGKTSV", "ARAGGKTSV")
-
-plogo_plot(
-  foreground_seqs = fg,
-  background_seqs = bg,
-  type = "merge",
-  col_scheme = "chemistry2"
-)
+library(Biostrings)
+fg <- c("ARND", "ARNE", "ARNQ", "ARNA")
+bg <- rep(c("ARND", "GHIL", "PQRS"), each = 5)
+plogo_plot(fg, bg, seq_type = "aa", type = "merge")
 }
 
+}
+\references{
+O’Shea JP, Chou MF, Quader SA, Ryan JK, Church GM, Schwartz D. pLogo: a probabilistic
+approach to visualizing sequence motifs. Nat Methods. 2013 Dec;10(12):1211–1212. \doi{10.1038/nmeth.2646}
 }

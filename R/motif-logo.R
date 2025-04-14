@@ -2,72 +2,78 @@
 # logo plot
 # ==============================================================================
 
-#' Plot Sequence Logos with Multiple Visualization Methods
+#' Sequence Logo Plot for Biological Motifs
 #'
-#' This function creates sequence logo plots using various visualization approaches,
-#' including Shannon bits, probabilities, EDLogo, and enrichment-based log2-ratio logos.
+#' This function generates a sequence logo visualization based on aligned biological
+#' sequences using multiple methods, including Shannon information content, relative
+#' frequency, EDLogo and log2 enrichment (foreground vs. background). It supports amino acid, DNA and RNA sequence types.
 #'
-#' @param foreground_seqs A character vector of foreground sequences (aligned peptide motifs) or a matrix. This input is used across all plotting modes.
-#' @param background_seqs Optional character vector of background sequences. Only used when \code{method = "enrich"} to compute enrichment over a background model.
-#' @param rev_stack_order Logical. Whether to reverse the stacking order of residues within each logo column. Default is \code{FALSE}.
-#' @param type Character. Either \code{"merge"} (default) to plot a unified enrichment logo or \code{"sep"} to plot enriched and depleted residues in separate panels. Only applies when \code{method = "enrich"}.
-#' @param col_scheme Character. Amino acid color scheme used for rendering logos. Passed to \code{ggseqlogo()}.
-#' @param method Character. Visualization method. Can be one of:
+#' @param foreground_seqs A character vector or Biostrings::XStringSet object of foreground sequences (e.g., motif-aligned peptides or DNA k-mers).
+#' @param background_seqs A character vector or Biostrings::XStringSet of background sequences. Required when \code{method = "enrich"}.
+#' @param rev_stack_order Logical. Reverse stacking order of letters. Default is \code{FALSE}.
+#' @param type Character. Only applies to \code{method = "enrich"}. If \code{"merge"} (default),
+#' enriched and depleted residues are shown in one logo with positive/negative y-axis. If \code{"sep"},
+#' the two are split into two subplots (up/down).
+#' @param col_scheme Character. Color scheme to be passed to \code{ggseqlogo}. Examples include \code{"chemistry"}, \code{"hydro"}, \code{"classic"}, etc.
+#' @param seq_type Character. Type of sequence: \code{"aa"} (amino acids), \code{"dna"}, or \code{"rna"}.
+#' @param method Character. One of \code{"bits"}, \code{"prob"}, \code{"EDLogo"}, or \code{"enrich"}:
 #' \itemize{
-#'   \item \code{"bits"}: Shannon bit-based sequence logo (information content, uses \pkg{ggseqlogo}).
-#'   \item \code{"prob"}: Residue probability-based logo (uses \pkg{ggseqlogo}).
-#'   \item \code{"EDLogo"}: Uses EDLogo rendering from package \pkg{Logolas}.
-#'   \item \code{"enrich"}: Enrichment logo showing log2 ratio of foreground vs background residue frequencies.
+#' \item \code{"bits"}: Shannon information content.
+#' \item \code{"prob"}: Residue frequency logo.
+#' \item \code{"EDLogo"}: Positional deviation using the Logolas package.
+#' \item \code{"enrich"}: Log2 enrichment (foreground vs. background) at each position, similar to pLogo-style representation (not statistical).
 #' }
-#' @param return_data Logical. If \code{TRUE}, returns the log2 enrichment matrix instead of a plot (only valid when \code{method = "enrich"}). Defaults to \code{FALSE}.
+#' @param return_data Logical. If \code{TRUE} and \code{method = "enrich"}, returns the numeric log2 enrichment matrix instead of a plot object.
 #'
-#' @return A \code{ggplot} object (or a \code{cowplot} object when \code{type = "sep"}) representing the motif logo visualization.
+#' @return A ggplot object representing a sequence logo, or a numeric enrichment matrix if \code{return_data = TRUE} and \code{method = "enrich"}.
 #'
 #' @details
-#' \code{logo_plot()} allows for visualizing motifs using traditional or comparative methods:
-#' \itemize{
-#'   \item For \code{"bits"} and \code{"prob"}, only foreground data is used.
-#'   \item For \code{"EDLogo"}, a matrix or data frame is expected and will be passed to \code{Logolas::logomaker()}.
-#'   \item For \code{"enrich"}, foreground and background sequences are processed into position-specific frequency matrices, followed by computation of a log2-ratio enrichment matrix. This matrix is used to construct the pLogo-style enriched/depleted visualization.
-#'   \item Negative log2 values indicate depletion; positive values indicate enrichment.
-#' }
-#' In \code{"enrich"} mode with \code{type = "sep"}, the plot is split into "enriched" (positive) and "depleted" (negative) panels using \pkg{cowplot}.
+#' For \code{method = "enrich"}, the function computes:
+#' \deqn{ \log_2 \left(\frac{P_\mathrm{fg}}{P_\mathrm{bg}} \right) }
+#' where \eqn{P_\mathrm{fg}}, \eqn{P_\mathrm{bg}} are position-specific residue frequencies.
+#' Residues with infinite log ratios are set to 0 to avoid plotting artifacts.
 #'
-#' @note The \code{"enrich"} method requires background sequences and assumes sequences are aligned and of the same length. \code{Biostrings} is used internally for consensus matrix generation.
-#'
-#' @importFrom Biostrings AAStringSet consensusMatrix
-#' @importFrom ggplot2 theme_bw theme element_blank element_text element_line ylab geom_hline
+#' Unlike pLogo, this method does not compute statistical significance (no binomial test or
+#' Bonferroni adjustment), but provides a fast approximate visual signature.
 #'
 #' @examples
 #' \dontrun{
-#' ## Bits-based logo
-#' fg <- c("AKTGRRKS", "AKSGRRKS", "AKTRRRRS")
-#' logo_plot(foreground_seqs = fg, method = "bits")
+#' library(Biostrings)
+#' # Example: log2 enrichment between foreground and background
+#' fg <- c("ARND", "ARNE", "ARNQ")
+#' bg <- c("ARND", "GHIY", "PQRS", "ARND", "ARND")
+#' logo_plot(foreground_seqs = fg, background_seqs = bg, method = "enrich", seq_type = "aa")
 #'
-#' ## Enrichment logo (merge)
-#' bg <- c("AKAAAKTS", "AKVVVKTS", "AKGGGKTS", "AKSSSKTS")
-#' logo_plot(foreground_seqs = fg, background_seqs = bg, method = "enrich", type = "merge")
+#' # AA probabilistic logo
+#' logo_plot(foreground_seqs = fg, method = "prob", seq_type = "aa")
 #'
-#' ## Enrichment logo (split panels)
-#' logo_plot(foreground_seqs = fg, background_seqs = bg, method = "enrich", type = "sep")
+#' # DNA bits logo
+#' dna_fg <- c("ATGC", "ATGT", "ATGA")
+#' logo_plot(foreground_seqs = dna_fg, method = "bits", seq_type = "dna")
 #' }
 #'
+#' @seealso \code{\link[ggseqlogo]{ggseqlogo}}, \code{\link[Logolas]{logomaker}}, \code{\link{to_position_matrix}}
+#' @import ggplot2
+#' @importFrom Biostrings AAStringSet DNAStringSet RNAStringSet
 #' @export
 logo_plot <- function(foreground_seqs = NULL,
                       background_seqs = NULL,
                       rev_stack_order = FALSE,
                       type = c("merge","sep"),
                       col_scheme = "chemistry2",
+                      seq_type = c("aa", "dna", "rna"),
                       method = c("bits","prob","EDLogo","enrich"),
                       return_data = FALSE){
-  method <- match.arg(method, c("bits","prob","EDLogo","enrich"))
+  method <- match.arg(method, choices = c("bits","prob","EDLogo","enrich"))
+  seq_type <- match.arg(seq_type, choices = c("aa", "dna", "rna"))
   # ============================================================================
   # check method
   if(method %in% c("bits","prob")){
     if (requireNamespace("ggseqlogo", quietly = TRUE)) {
       logo <- ggseqlogo::ggseqlogo(foreground_seqs, method = method,
                                    rev_stack_order = rev_stack_order,
-                                   col_scheme = col_scheme) +
+                                   col_scheme = col_scheme,
+                                   seq_type = seq_type) +
         theme_bw() +
         theme(panel.grid = element_blank(),
               axis.text = element_text(color = "black"))
@@ -86,17 +92,21 @@ logo_plot <- function(foreground_seqs = NULL,
     # enrichment logo
     # ==========================================================================
     if(!is.null(background_seqs)){
-      to_position_matrix <- function(seqs){
-        AA_STANDARD <- c("A","R","N","D","C","E","Q","G","H","I","L",
-                         "K","M","F","P","S","T","W","Y","V")
 
-        mat <- Biostrings::consensusMatrix(AAStringSet(seqs), as.prob = FALSE)
-        mat <- mat[intersect(AA_STANDARD, rownames(mat)), ]
-        return(mat)
+      # check seq_type
+      if(seq_type == "aa"){
+        fg_seq <- Biostrings::AAStringSet(foreground_seqs)
+        bg_seq <- Biostrings::AAStringSet(background_seqs)
+      }else if(seq_type == "dna"){
+        fg_seq <- Biostrings::DNAStringSet(foreground_seqs)
+        bg_seq <- Biostrings::DNAStringSet(background_seqs)
+      }else if(seq_type == "rna"){
+        fg_seq <- Biostrings::RNAStringSet(foreground_seqs)
+        bg_seq <- Biostrings::RNAStringSet(background_seqs)
       }
 
-      fg_matrix <- to_position_matrix(Biostrings::AAStringSet(foreground_seqs))
-      bg_matrix <- to_position_matrix(Biostrings::AAStringSet(background_seqs))
+      fg_matrix <- to_position_matrix(fg_seq, seq_type = seq_type)
+      bg_matrix <- to_position_matrix(bg_seq, seq_type = seq_type)
 
       fg_matrix_freq <- sweep(fg_matrix, 2, colSums(fg_matrix), "/")
       bg_matrix_freq <- sweep(bg_matrix, 2, colSums(bg_matrix), "/")
@@ -110,7 +120,7 @@ logo_plot <- function(foreground_seqs = NULL,
       if(type == "merge"){
         if (requireNamespace("ggseqlogo", quietly = TRUE)) {
           logo <- ggseqlogo::ggseqlogo(log2ratio,
-                                       seq_type == "aa",
+                                       seq_type = seq_type,
                                        method = "custom",
                                        rev_stack_order = rev_stack_order,
                                        col_scheme = col_scheme) +
@@ -135,6 +145,7 @@ logo_plot <- function(foreground_seqs = NULL,
 
           up <-
             ggseqlogo::ggseqlogo(log_score_mat_pos, method= "custom",
+                                 seq_type = seq_type,
                                  rev_stack_order = rev_stack_order, col_scheme = col_scheme) +
             ggtitle("Log2 ratio of the frequency") +
             theme(legend.position = "none",
@@ -146,6 +157,7 @@ logo_plot <- function(foreground_seqs = NULL,
 
           down <-
             ggseqlogo::ggseqlogo(log_score_mat_neg, method= "custom",
+                                 seq_type = seq_type,
                                  rev_stack_order = rev_stack_order, col_scheme = col_scheme) +
             theme(axis.text.x = element_blank(),
                   axis.line.y = element_line(),
@@ -183,79 +195,83 @@ logo_plot <- function(foreground_seqs = NULL,
 # define plogo plot
 # ==============================================================================
 
-#' Plot a pLogo-style Logo Based on Foreground and Background Sequences
+#' Statistical Sequence Logo Plot (pLogo-style)
 #'
-#' This function visualizes statistically enriched or depleted amino acid positions
-#' from aligned sequences. It uses binomial probabilities to calculate log-odds scores
-#' and generates a pLogo-like sequence logo using \code{ggseqlogo}. Both enriched and
-#' depleted residues are shown, and a Bonferroni-corrected significance bar is added.
+#' This function generates a statistical sequence logo (pLogo-style) that visualizes overrepresented and
+#' underrepresented residues based on a binomial test. It compares position-specific counts
+#' in a foreground and background dataset using a log-odds scoring approach. A Bonferroni-corrected
+#' significance threshold (P < 0.05) is used to display a reference line.
 #'
-#' @param foreground_seqs A character vector of amino acid sequences representing the foreground dataset.
-#' @param background_seqs A character vector of amino acid sequences representing the background dataset.
-#' @param rev_stack_order Logical. Should the residue stacks be ordered with the most significant on top? Default is TRUE.
-#' @param type Character. Choose between \code{"merge"} (combined enriched and depleted in one plot) or \code{"sep"} (two-panel for enriched/depleted). Default is "merge".
-#' @param col_scheme Residue color scheme passed to \code{ggseqlogo}; default is \code{"chemistry2"}.
-#' @param npcx Numeric. Relative x-position for annotation text via \code{geom_text_npc()}; default is 0.98.
-#' @param npcy Numeric. Relative y-position for annotation text; default is 0.98.
-#' @param size Numeric. Font size for annotation text. Default is 3.5.
-#' @param return_data Logical; if \code{TRUE}, returns the log-odds matrix instead of the plot. Default: \code{FALSE}.
+#' @param foreground_seqs A character vector or Biostrings::XStringSet of aligned foreground sequences
+#' (e.g. amino acid motif windows).
+#' @param background_seqs A character vector or Biostrings::XStringSet of aligned background sequences. Required.
+#' @param rev_stack_order Logical. Reverse the stacking order of letters (default: TRUE).
+#' @param seq_type Character. Sequence type, one of \code{"aa"} (amino acid), \code{"dna"}, or \code{"rna"}.
+#' @param type Character. Display style. If \code{"merge"}, plot shows both enriched/depleted residues
+#' in one panel. If \code{"sep"}, returns a top and bottom panel separately (like canonical pLogo).
+#' @param col_scheme Character. Color scheme to use, passed to \code{ggseqlogo}. Default: \code{"chemistry2"}.
+#' @param npcx Numeric `[0–1]`. X position (NPC units) for annotation text.
+#' @param npcy Numeric `[0–1]`. Y position (NPC units) for annotation text.
+#' @param size Numeric. Text size of the annotation.
+#' @param return_data Logical. If \code{TRUE}, returns the internally computed log-odds matrix instead of a plot.
 #'
-#' @return A ggplot object displaying the pLogo-style sequence logo, or a numeric matrix of log-odds enrichment scores if \code{return_data = TRUE}.
-#'
+#' @return A ggplot object showing a sequence logo with log-probability-scaled residue heights, or a numeric
+#' matrix of log-odds ratios if \code{return_data=TRUE}.
 #'
 #' @details
-#' Internally, this function performs several steps:
-#' \itemize{
-#'   \item Parses and counts each amino acid by position for both foreground and background sequences.
-#'   \item Builds position matrices and computes frequency matrix for the background.
-#'   \item Calculates residue log-odds using a binomial over/under probability ratio, via \code{get_log_ratio_mat()}.
-#'   \item Adds red dashed lines to show Bonferroni-corrected p-value threshold (typically P < 0.05).
-#'   \item Optionally splits plots into enriched and depleted panels (\code{type = "sep"}).
-#' }
+#' This implementation follows the principles of the pLogo algorithm (O’Shea et al, Nature Methods, 2013):
+#' residues are scaled according to the log odds of their binomial probability of enrichment or depletion
+#' given the background. Significant thresholds are marked with dashed lines, using Bonferroni-corrected tests.
 #'
-#' Visualization is constructed using \code{ggseqlogo} and optionally arranged using the \code{patchwork} package.
+#' A red dashed horizontal line is shown at:
+#' \deqn{\pm \log_{10}\left(\frac{\alpha'}{1-\alpha'}\right)}
+#' where \eqn{\alpha'} is the corrected significance level, accounting for multiple testing:
+#' \deqn{\alpha' = \frac{0.05}{N_{positions} \times N_{residues} - N_{zero\ fg}}}
 #'
-#' @importFrom Biostrings AAStringSet consensusMatrix
-#' @importFrom ggplot2 geom_hline aes ylab theme element_text element_line
+#' @references
+#' O’Shea JP, Chou MF, Quader SA, Ryan JK, Church GM, Schwartz D. pLogo: a probabilistic
+#' approach to visualizing sequence motifs. Nat Methods. 2013 Dec;10(12):1211–1212. \doi{10.1038/nmeth.2646}
+#'
 #'
 #' @examples
 #' \dontrun{
-#' # Example: Generate logo from short protein sequences
-#' fg <- c("ARGGGKTSV", "ARRRGKTSV", "ARSGGKTSV")
-#' bg <- c("AKGGGKTSV", "ALGGGKTSV", "AKGGGKTSV", "ARAGGKTSV")
-#'
-#' plogo_plot(
-#'   foreground_seqs = fg,
-#'   background_seqs = bg,
-#'   type = "merge",
-#'   col_scheme = "chemistry2"
-#' )
+#' library(Biostrings)
+#' fg <- c("ARND", "ARNE", "ARNQ", "ARNA")
+#' bg <- rep(c("ARND", "GHIL", "PQRS"), each = 5)
+#' plogo_plot(fg, bg, seq_type = "aa", type = "merge")
 #' }
 #'
+#' @import ggplot2
+#' @importFrom Biostrings AAStringSet DNAStringSet RNAStringSet
 #' @export
 plogo_plot <- function(foreground_seqs = NULL,
                        background_seqs = NULL,
                        rev_stack_order = TRUE,
+                       seq_type = c("aa", "dna", "rna"),
                        type = c("merge","sep"),
                        col_scheme = "chemistry2",
                        npcx = 0.98, npcy = 0.98, size = 3.5,
                        return_data = FALSE){
+  seq_type <- match.arg(seq_type, choices = c("aa", "dna", "rna"))
   type <- match.arg(type,choices = c("merge","sep"))
   # ============================================================================
   # enrichment logo
   # ==========================================================================
 
-  to_position_matrix <- function(seqs){
-    AA_STANDARD <- c("A","R","N","D","C","E","Q","G","H","I","L",
-                     "K","M","F","P","S","T","W","Y","V")
-
-    mat <- Biostrings::consensusMatrix(AAStringSet(seqs), as.prob = FALSE)
-    mat <- mat[intersect(AA_STANDARD, rownames(mat)), ]
-    return(mat)
+  # check seq_type
+  if(seq_type == "aa"){
+    fg_seq <- Biostrings::AAStringSet(foreground_seqs)
+    bg_seq <- Biostrings::AAStringSet(background_seqs)
+  }else if(seq_type == "dna"){
+    fg_seq <- Biostrings::DNAStringSet(foreground_seqs)
+    bg_seq <- Biostrings::DNAStringSet(background_seqs)
+  }else if(seq_type == "rna"){
+    fg_seq <- Biostrings::RNAStringSet(foreground_seqs)
+    bg_seq <- Biostrings::RNAStringSet(background_seqs)
   }
 
-  fg_matrix <- to_position_matrix(Biostrings::AAStringSet(foreground_seqs))
-  bg_matrix <- to_position_matrix(Biostrings::AAStringSet(background_seqs))
+  fg_matrix <- to_position_matrix(fg_seq, seq_type = seq_type)
+  bg_matrix <- to_position_matrix(bg_seq, seq_type = seq_type)
 
   # fg_matrix_freq <- sweep(fg_matrix, 2, colSums(fg_matrix), "/")
   bg_matrix_freq <- sweep(bg_matrix, 2, colSums(bg_matrix), "/")
@@ -294,6 +310,7 @@ plogo_plot <- function(foreground_seqs = NULL,
     if(type == "merge"){
       logo <-
       ggseqlogo::ggseqlogo(log_score_mat,method= "custom",
+                           seq_type = seq_type,
                 rev_stack_order = rev_stack_order, col_scheme = col_scheme) +
         geom_hline(yintercept = 0,lty = "solid", color = "black", linewidth = 1.25) +
         geom_hline(yintercept = c(-ssbp,ssbp),lty = "dashed", color = "red", linewidth = 1) +
@@ -316,6 +333,7 @@ plogo_plot <- function(foreground_seqs = NULL,
 
       up <-
         ggseqlogo::ggseqlogo(log_score_mat_pos, method= "custom",
+                             seq_type = seq_type,
                   rev_stack_order = rev_stack_order, col_scheme = col_scheme) +
         geom_hline(yintercept = -ssbp,lty = "dashed", color = "red", linewidth = 1) +
         ggpp::geom_text_npc(aes(label = anno,npcx = npcx,npcy = npcy),size = size) +
@@ -329,6 +347,7 @@ plogo_plot <- function(foreground_seqs = NULL,
 
       down <-
         ggseqlogo::ggseqlogo(log_score_mat_neg, method= "custom",
+                             seq_type = seq_type,
                   rev_stack_order = rev_stack_order, col_scheme = col_scheme) +
         geom_hline(yintercept = ssbp,lty = "dashed", color = "red", linewidth = 1) +
         theme(axis.text.x = element_blank(),
