@@ -203,7 +203,9 @@ generate_kmers <- function(fa_file = NULL,
   }
 
   # get all kmers
-  all_nmers <- unlist(lapply(filtered_proteome, function(x) extract_nmers(x, n = kmer_length)))
+  all_nmers <- unlist(lapply(seq_along(filtered_proteome), function(x){
+    extract_nmers(seq = filtered_proteome[x], n = kmer_length)
+  }))
 
   # remove duplicate kmers
   all_nmers_unique <- unique(all_nmers)
