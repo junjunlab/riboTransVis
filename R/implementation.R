@@ -237,10 +237,16 @@ get_transcript_sequence <- function(genome_file = NULL,
     return(exon.final)
   }else{
     # filter regions in genome
-    exon.final <- exon.final %>%
-      fastplyr::f_filter(seqnames %in% chr_len$seqnames) %>%
-      fastplyr::f_inner_join(chr_len, by = "seqnames") %>%
-      fastplyr::f_filter(end <= len)
+    if(extend == TRUE){
+      exon.final <- exon.final %>%
+        fastplyr::f_filter(end <= len)
+    }else{
+      exon.final <- exon.final %>%
+        fastplyr::f_filter(seqnames %in% chr_len$seqnames) %>%
+        fastplyr::f_inner_join(chr_len, by = "seqnames") %>%
+        fastplyr::f_filter(end <= len)
+    }
+
 
     # include stop codon
     if(feature == "CDS"){
