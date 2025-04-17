@@ -14,7 +14,7 @@ relative_motif_occupancy(object, ...)
   do_offset_correct = FALSE,
   position_shift = 0,
   search_type = c("amino", "codon"),
-  exclude_length = c(100, 100),
+  exclude_length = c(45, 45),
   min_counts = 64,
   motif_pattern = "PPP",
   motif_upstream = 50,
@@ -42,7 +42,7 @@ during offset correction. \strong{Default}: \code{0}.}
 or \code{"codon"} to search \strong{specific codon triplets}.}
 
 \item{exclude_length}{A numeric vector of length two specifying the number of nucleotides
-to exclude from the start and end of the CDS to avoid boundary effects. Default is \code{c(100, 100)}.}
+to exclude from the start and end of the CDS to avoid boundary effects. Default is \code{c(45, 45)}.}
 
 \item{min_counts}{A numeric value indicating the minimum read counts required for a transcript
 to be included in the analysis. Default is \code{64}.}

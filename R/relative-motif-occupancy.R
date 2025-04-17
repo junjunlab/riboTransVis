@@ -19,7 +19,7 @@
 #' @param search_type Search mode, either `"amino"` (default) to search **protein motifs**
 #' or `"codon"` to search **specific codon triplets**.
 #' @param exclude_length A numeric vector of length two specifying the number of nucleotides
-#' to exclude from the start and end of the CDS to avoid boundary effects. Default is `c(100, 100)`.
+#' to exclude from the start and end of the CDS to avoid boundary effects. Default is `c(45, 45)`.
 #' @param min_counts A numeric value indicating the minimum read counts required for a transcript
 #' to be included in the analysis. Default is `64`.
 #' @param motif_pattern A character vector specifying one or more amino acid motifs to be analyzed.
@@ -84,7 +84,7 @@ setMethod("relative_motif_occupancy",
                    do_offset_correct = FALSE,
                    position_shift = 0,
                    search_type = c("amino", "codon"),
-                   exclude_length = c(100,100),
+                   exclude_length = c(45,45),
                    min_counts = 64,
                    motif_pattern = "PPP",
                    motif_upstream = 50,

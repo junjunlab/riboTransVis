@@ -158,8 +158,8 @@ setMethod("codon_occupancy_plot",
             # annotatate with amino acid info
             pltdf3 <- pltdf2 %>%
               fastplyr::f_inner_join(y = aa_info,by = c("codon_seq" = "Codon")) %>%
-              dplyr::mutate(codon = paste(codon_seq, Abbreviation1,sep = " | "),
-                            abbrev = paste(Abbreviation3, Abbreviation1,sep = " | "),)
+              dplyr::mutate(codon = paste(codon_seq, Abbreviation1,sep = "|"),
+                            abbrev = paste(Abbreviation3, Abbreviation1,sep = "|"),)
 
             # check plot type
             if(plot_abbreviation == TRUE){

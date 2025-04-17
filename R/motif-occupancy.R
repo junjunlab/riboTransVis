@@ -1,54 +1,42 @@
 
-#' Motif Occupancy Analysis
+#' Analyze Codon or Amino Acid Motif Occupancy from Ribosome Profiling Data
 #'
-#' This function calculates the occupancy of specified motifs (either amino acid string or codon pattern) within coding sequence (CDS) regions using ribosome profiling data stored in a ribotrans object.
-#' It optionally performs read offset correction, aggregates biological replicates, and visualizes the relative occupancy as cumulative distribution curves (ECDFs).
+#' This function calculates and visualizes motif-level translational occupancy from a \code{ribotrans} object, assessing motif-specific ribosome densities at codon or amino acid resolution. It provides options for offset correction, motif searching, replicate merging, and boxplot insets.
 #'
-#' @param object A \code{ribotrans} object containing processed ribosome profiling data.
-#' @param merge_rep Logical. Whether to merge replicates (\code{sample_group}) during analysis. Default: \code{FALSE}.
-#' @param cds_fa Character. Path to the CDS FASTA file. The sequences are filtered and translated depending on \code{search_type}.
-#' @param do_offset_correct Logical. Whether to perform read offset correction before summarizing coverage. Default: \code{FALSE}.
-#' @param position_shift Numeric. Integer value to apply as position shift during offset correction. Default: \code{0}.
-#' @param search_type Character. Specifies motif space used for searching: either \code{"amino"} (peptide sequence) or \code{"codon"} (nucleotide codon sequences). Default: \code{"amino"}.
-#' @param exclude_length A numeric vector of length two specifying the number of nucleotides
-#' to exclude from the start and end of the CDS to avoid boundary effects. Default is `c(100, 100)`.
-#' @param min_counts Integer. Minimum number of total reads required for a transcript to be included in occupancy calculation. Default: 64.
-#' @param motif_pattern Character vector. Motif string(s) to search in amino acid or codon space, e.g., \code{c("PPP", "KKK")}.
-#' @param facet_layer ggplot2 facet call. Faceting layer for ECDF plot. Default: \code{facet_wrap(~motif)}.
-#' @param return_data Logical. If \code{TRUE}, returns the data.frame of motif-level occupancy; otherwise returns a ggplot object. Default: \code{FALSE}.
+#' @param object A \code{ribotrans} object containing preprocessed ribosome profiling data with corresponding annotations in \code{@features} and positional read density in \code{@summary_info}.
+#' @param merge_rep Logical. If \code{TRUE}, replicates from the same \code{sample_group} will be averaged before visualization. Default is \code{FALSE}.
+#' @param cds_fa Path to the CDS fasta file with transcript nucleotide sequences.
+#' @param do_offset_correct Logical. If \code{TRUE}, perform read offset correction using \code{do_offset_correction()}. Default is \code{FALSE}.
+#' @param position_shift Integer. Number of nucleotides used to correct P-site position. Default is 0.
+#' @param search_type Search level: "amino" (default) or "codon". Determines whether the motif is searched at the amino acid or codon sequence level.
+#' @param exclude_length Integer vector of length 2. Number of codons to exclude from the start and end of CDS. Default is \code{c(45, 45)}.
+#' @param min_counts Integer. Minimum read count per transcript to include for analysis. Default is 64.
+#' @param motif_pattern Character vector. Motif(s) (amino acids or nucleotides) to search for. Default is "PPP".
+#' @param insert_box Logical. Whether to include an inset boxplot in ECDF plots. Default is \code{TRUE}.
+#' @param box_pos Numeric vector of length 2. The relative position (npc coordinates) of the inset box. Default is \code{c(0.99, 0.5)}.
+#' @param box_width_height Numeric vector of length 2. Absolute width and height of the inset box. Default is \code{c(0.3, 0.8)}.
+#' @param return_data Logical. If \code{TRUE}, return data frame instead of plotting. Default is \code{FALSE}.
 #' @param ... Additional arguments (currently unused).
 #'
-#' @return If \code{return_data = FALSE} (default), returns a \code{ggplot} object showing ECDF curves of log2-transformed codon/amino acid occupancies at motif locations.
-#' If \code{return_data = TRUE}, returns a \code{data.frame} containing normalized occupancy values for each motif instance.
+#' @details
+#' This function determines transcript positions matching specified motifs (on codon or amino acid level) and evaluates their normalized ribosome occupancy. Occupancy is calculated as read density normalized by transcript average. Plots display the distribution of log2 occupancy for each motif using ECDF curves. Optionally, inset boxplots illustrate sample-wise distributions.
 #'
-#' @details This function performs:
-#' \enumerate{
-#' \item CDS filtering and translation
-#' \item Identification of motif positions across transcripts
-#' \item Read normalization (per-length scaling)
-#' \item Relative density calculation
-#' \item Visualization of cumulative codon/amino acid occupancy at motif positions
-#' }
+#' The analysis includes CDS filtering, motif location extraction, optional offset correction, normalization of read counts, and final plotting with optional replicate merging.
 #'
-#' @import ggplot2
-#' @importFrom Biostrings readDNAStringSet translate vmatchPattern start
-#' @importFrom dplyr filter mutate inner_join rename select summarise group_by
-#' @importFrom fastplyr f_filter f_group_by f_select f_summarise
+#' Requires packages: \code{Biostrings}, \code{fastplyr}, \code{data.table}, \code{ggplot2}, \code{cowplot}, and optionally \code{ggpp}.
+#'
+#' @return If \code{return_data = FALSE}, returns a \code{ggplot2} object with motif occupancy plots. Otherwise returns a data frame of motif positions and relative occupancy values.
+#'
 #'
 #' @examples
 #' \dontrun{
-#' motif_occupancy(
-#' object = ribo_obj,
-#' cds_fa = "coding_sequences.fasta",
-#' search_type = "amino",
-#' motif_pattern = c("PPP", "KKK"),
-#' do_offset_correct = TRUE,
-#' merge_rep = TRUE
-#' )
+#' motif_occupancy(object = ribo_obj,
+#' cds_fa = "cds.fa",
+#' motif_pattern = c("PPP", "GGG"),
+#' search_type = "amino")
 #' }
 #'
 #' @export
-#' @seealso \code{\link{do_offset_correction}}
 setGeneric("motif_occupancy",function(object,...) standardGeneric("motif_occupancy"))
 
 
@@ -65,10 +53,12 @@ setMethod("motif_occupancy",
                    do_offset_correct = FALSE,
                    position_shift = 0,
                    search_type = c("amino", "codon"),
-                   exclude_length = c(100,100),
+                   exclude_length = c(45,45),
                    min_counts = 64,
                    motif_pattern = "PPP",
-                   facet_layer = facet_wrap(~motif),
+                   insert_box = TRUE,
+                   box_pos = c(0.99,0.5),
+                   box_width_height = c(0.3,0.8),
                    return_data = FALSE){
             search_type <- match.arg(search_type,choices = c("amino", "codon"))
             # ==================================================================
@@ -113,7 +103,7 @@ setMethod("motif_occupancy",
               # filter in-frame codon position
               if(search_type == "codon"){
                 motif.pos <- motif.pos %>% fastplyr::f_filter(pos %% 3 == 0) %>%
-                  dplyr::mutate(pos = pos %/% 3)
+                  dplyr::mutate(pos = (pos - 1) %/% 3)
               }
 
               return(motif.pos)
@@ -173,22 +163,72 @@ setMethod("motif_occupancy",
 
             # ==================================================================
             # plot
-            p <-
-              ggplot(rel2motif.df) +
-              stat_ecdf(mapping = aes(x = log2(value),color = sample)) +
-              theme_bw(base_size = 12) +
-              facet_layer +
-              theme(panel.grid = element_blank(),
-                    # strip.background = element_blank(),
-                    strip.text = element_text(face = "bold",size = rel(1)),
-                    axis.text = element_text(colour = "black")) +
-              ylab("Cumulative fracton") +
-              xlab("Log2 (codon/amino occupancy)")
+            # p <-
+
+            # loop for each motif
+            mt <- unique(rel2motif.df$motif)
+
+            lapply(seq_along(mt),function(x){
+              pdf <- subset(rel2motif.df,motif == mt[x])
+
+              pbg <-
+                ggplot(pdf) +
+                stat_ecdf(mapping = aes(x = log2(value),color = sample)) +
+                theme_bw(base_size = 12) +
+                facet_wrap(~motif) +
+                theme(panel.grid = element_blank(),
+                      # strip.background = element_blank(),
+                      strip.text = element_text(face = "bold",size = rel(1)),
+                      axis.text = element_text(colour = "black")) +
+                ylab("Cumulative fracton") +
+                xlab("Log2 (codon/amino occupancy)")
+
+              # whether inset boxplot
+              if(insert_box == TRUE){
+                pin <-
+                  ggplot(pdf,
+                         aes(x = sample,y = log2(value),fill = sample)) +
+                  stat_boxplot(geom = "errorbar", width = 0.5,linewidth = 0.25) +
+                  geom_boxplot(outliers = F,show.legend = F,width = 0.75) +
+                  theme_classic() +
+                  theme(panel.grid = element_blank(),
+                        plot.background = element_blank(),
+                        panel.background = element_blank(),
+                        axis.line.x = element_blank(),
+                        axis.text.x = element_blank(),
+                        axis.title.x = element_blank(),
+                        axis.ticks.x = element_blank()) +
+                  ylab("Log2 (codon/amino occupancy)")
+
+
+                df <- tibble(x = box_pos[1], y = box_pos[2], plot = list(pin))
+
+                if (requireNamespace("ggpp", quietly = TRUE)) {
+                  pcb <- pbg +
+                    expand_limits(x = 0, y = 0) +
+                    ggpp::geom_plot_npc(data = df, aes(npcx = x, npcy = y, label = plot),
+                                        vp.width = box_width_height[1], vp.height = box_width_height[2])
+                } else {
+                  warning("Package 'ggpp' is needed for this function to work.")
+                }
+
+              }else{
+                pcb <- pbg
+              }
+
+              return(pcb)
+            }) -> plist
+
+            if (requireNamespace("cowplot", quietly = TRUE)) {
+              cmb <- cowplot::plot_grid(plotlist = plist)
+            } else {
+              warning("Package 'cowplot' is needed for this function to work.")
+            }
 
 
             # return
             if(return_data == FALSE){
-              return(p)
+              return(cmb)
             }else{
               return(rel2motif.df)
             }
