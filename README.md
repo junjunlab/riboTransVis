@@ -27,6 +27,10 @@ devtools::install_github("junjunlab/riboTransVis")
 remotes::install_github("junjunlab/riboTransVis")
 ```
 
+## Documentation
+
+A detailed documentation is at **[https://junjunlab.github.io/riboTransVis-manual/](https://junjunlab.github.io/riboTransVis-manual/)**
+
 ## Citation
 
 > Jun Zhang (2025). *RiboTransVis: An R Package for Integrated Analysis and Visualization of Ribosome Profiling Data.*  https://github.com/junjunlab/riboTransVis
