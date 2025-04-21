@@ -85,6 +85,12 @@ setMethod("generate_summary",
             sp <- bams$sample
             gp <- bams$sample_group
 
+            if(length(type) == 2 & type %in% c("total", "ip")){
+              sp <- paste(sp,bams$type, sep = "-")
+              gp <- paste(gp,bams$type, sep = "-")
+            }
+
+
             features <- object@features
 
             # x = 1

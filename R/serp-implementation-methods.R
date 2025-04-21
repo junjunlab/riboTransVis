@@ -221,6 +221,7 @@ setGeneric("get_enrichment",function(object,...) standardGeneric("get_enrichment
 #'
 #' @param smooth Logical. Whether to apply smoothing to the enrichment profile. Default: TRUE.
 #' @param window_size Numeric. Size of the sliding window for smoothing. Default: 105.
+#' @param ... Additional arguments (currently unused).
 #'
 #' @details
 #' For objects of class 'serp', this method calculates the enrichment ratio between

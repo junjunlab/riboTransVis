@@ -1068,20 +1068,25 @@ setMethod("relative_offset_plot",
             }
 
             # extarct data to plot
+            if(object@assignment_mode == "end5"){
+              xpos <- c(-9,-12,-15)
+            }else{
+              xpos <- c(12,15,18)
+            }
+
+
             if(type == "rel2start"){
               summary.info <- object@summary_info %>%
                 fastplyr::f_filter(mstart > 0 & mstop > 0) %>%
                 dplyr::mutate(rel_pos = pos - mstart)
 
               xlab <- "Distance to start codon (nt)"
-              xpos <- c(-12,-15,-18)
             }else{
               summary.info <- object@summary_info %>%
                 fastplyr::f_filter(mstart > 0 & mstop > 0) %>%
                 dplyr::mutate(rel_pos = pos - mstop)
 
               xlab <- "Distance to stop codon (nt)"
-              xpos <- c(12,15,18)
             }
 
             # filter data

@@ -12,7 +12,7 @@ get_enrichment(object, ...)
 \arguments{
 \item{object}{An S4 object containing ribosome profiling data.}
 
-\item{...}{Additional arguments passed to specific method implementations.}
+\item{...}{Additional arguments (currently unused).}
 
 \item{smooth}{Logical. Whether to apply smoothing to the enrichment profile. Default: TRUE.}
 
