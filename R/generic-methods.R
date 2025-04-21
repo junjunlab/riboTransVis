@@ -78,7 +78,7 @@ setMethod("generate_summary",
           signature(object = "ribotrans"),
           function(object, exp_type = c("ribo", "rna", "total", "ip"),
                    nThreads = 1){
-            exp_type <- match.arg(exp_type, c("ribo", "rna", "total", "ip"))
+            # exp_type <- match.arg(exp_type, c("ribo", "rna", "total", "ip"))
 
             bams <- subset(object@library, type %in% exp_type)
             bfn <- bams$bam
