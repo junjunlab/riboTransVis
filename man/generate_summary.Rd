@@ -7,7 +7,11 @@
 \usage{
 generate_summary(object, ...)
 
-\S4method{generate_summary}{ribotrans}(object, exp_type = c("ribo", "rna"), nThreads = 1)
+\S4method{generate_summary}{ribotrans}(
+  object,
+  exp_type = c("ribo", "rna", "total", "ip"),
+  nThreads = 1
+)
 }
 \arguments{
 \item{object}{A ribotrans object containing BAM file information and transcript features}
@@ -16,8 +20,10 @@ generate_summary(object, ...)
 
 \item{exp_type}{Character, specify the experiment type to analyze:
 \itemize{
-\item "ribo": ribosome profiling data
+\item "ribo": Ribosome profiling data
 \item "rna": RNA-seq data
+\item "total": Total translatome from selective ribosome profiling
+\item "ip": Protein-bound translatome from selective ribosome profiling
 }}
 
 \item{nThreads}{Integer, number of threads to use for BAM file processing}

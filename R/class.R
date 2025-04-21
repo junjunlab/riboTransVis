@@ -403,8 +403,10 @@ serp <- setClass("serp",
 #'                         Only used when extend = TRUE. Default is 0.
 #' @param total_bam_file Character vector. Path(s) to BAM file(s) for total ribosome profiling samples.
 #' @param total_sample_name Character vector. Sample name(s) for total ribosome profiling samples.
+#' @param total_sample_group Character vector. Group labels or conditions for total ribosome profiling samples.
 #' @param IP_bam_file Character vector. Path(s) to BAM file(s) for IP ribosome profiling samples.
 #' @param IP_sample_name Character vector. Sample name(s) for IP ribosome profiling samples.
+#' @param IP_sample_group Character vector. Group labels or conditions for IP ribosome profiling samples.
 #' @param choose_longest_trans Logical value indicating whether to select the longest transcript
 #' for each gene. If TRUE, only the longest transcript (based on CDS and transcript length)
 #' will be kept for each gene. This is useful to reduce redundancy when multiple transcript
@@ -454,8 +456,10 @@ construct_serp <- function(genome_file = NULL,
                            extend_downstream = 0,
                            total_bam_file = NULL,
                            total_sample_name = NULL,
+                           total_sample_group = NULL,
                            IP_bam_file = NULL,
                            IP_sample_name = NULL,
+                           IP_sample_group = NULL,
                            choose_longest_trans = FALSE){
   mapping_type <- match.arg(mapping_type, choices = c("transcriptome", "genome"))
   assignment_mode <- match.arg(assignment_mode, choices = c("end5", "end3"))
@@ -520,10 +524,15 @@ construct_serp <- function(genome_file = NULL,
   # total mapped reads
   bams <- c(total_bam_file, IP_bam_file)
   sp <- c(total_sample_name, IP_sample_name)
+
+  total_sample_group <- if (is.null(total_sample_group)) total_sample_name else total_sample_group
+  IP_sample_group <- if (is.null(IP_sample_group)) IP_sample_name else IP_sample_group
+  gp <- c(total_sample_group, IP_sample_group)
+
   tp <- rep(c("total", "ip"), c(length(total_bam_file),length(IP_bam_file)))
 
   # summary
-  x = 1
+  # x = 1
   lapply(seq_along(bams),function(x){
     # check index file for bam
     if(!file.exists(paste(bams[x],"bai",sep = "."))){
@@ -535,7 +544,8 @@ construct_serp <- function(genome_file = NULL,
     data.frame(bam = bams[x],
                mappped_reads = total_reads,
                type = tp[x],
-               sample = sp[x])
+               sample = sp[x],
+               sample_group = gp[x])
   }) %>% do.call("rbind", .) %>% data.frame() -> library
 
 
@@ -545,7 +555,8 @@ construct_serp <- function(genome_file = NULL,
   bam_file <- data.frame(bam = bams,
                          type = rep(c("total", "ip"),
                                     c(length(total_bam_file),length(IP_bam_file))),
-                         sample = c(total_sample_name, IP_sample_name)
+                         sample = c(total_sample_name, IP_sample_name),
+                         sample_group = gp
   )
 
   res <- methods::new("serp",

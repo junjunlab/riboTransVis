@@ -119,7 +119,7 @@ setMethod("enrichment_plot",
             tid <- feature$idnew
 
             # loop for each transcript_id
-            x = 1
+            # x = 1
             lapply(seq_along(tid),function(x){
               tmp_feature <- subset(feature, idnew == tid[x])
               tmp <- subset(plotdf, rname == tid[x])

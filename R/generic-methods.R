@@ -27,8 +27,10 @@ setGeneric("generate_summary",function(object,...) standardGeneric("generate_sum
 #'
 #' @param object A ribotrans object containing BAM file information and transcript features
 #' @param exp_type Character, specify the experiment type to analyze:
-#'   - "ribo": ribosome profiling data
+#'   - "ribo": Ribosome profiling data
 #'   - "rna": RNA-seq data
+#'   - "total": Total translatome from selective ribosome profiling
+#'   - "ip": Protein-bound translatome from selective ribosome profiling
 #' @param nThreads Integer, number of threads to use for BAM file processing
 #'
 #' @details
@@ -74,11 +76,11 @@ setGeneric("generate_summary",function(object,...) standardGeneric("generate_sum
 #' @rdname generate_summary
 setMethod("generate_summary",
           signature(object = "ribotrans"),
-          function(object, exp_type = c("ribo", "rna"),
+          function(object, exp_type = c("ribo", "rna", "total", "ip"),
                    nThreads = 1){
-            exp_type <- match.arg(exp_type, c("ribo", "rna"))
+            exp_type <- match.arg(exp_type, c("ribo", "rna", "total", "ip"))
 
-            bams <- subset(object@library, type == exp_type)
+            bams <- subset(object@library, type %in% exp_type)
             bfn <- bams$bam
             sp <- bams$sample
             gp <- bams$sample_group
