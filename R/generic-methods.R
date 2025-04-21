@@ -85,7 +85,7 @@ setMethod("generate_summary",
             sp <- bams$sample
             gp <- bams$sample_group
 
-            if(length(exp_type) == 2 & exp_type %in% c("total", "ip")){
+            if(length(exp_type) == 2 & all(exp_type %in% c("total", "ip"))){
               sp <- paste(sp,bams$type, sep = "-")
               gp <- paste(gp,bams$type, sep = "-")
             }
