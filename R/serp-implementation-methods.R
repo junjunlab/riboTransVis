@@ -16,7 +16,9 @@
 #' @param coordinate_to_trans Logical. Whether to convert genome coordinates to transcript coordinates
 #'        when using genome mapping. Default: FALSE.
 #' @param do_reads_offset Logical. Whether to apply read offset correction. Default: FALSE.
+#' @param merge_rep Logical. If \code{TRUE}, average replicate samples within the same sample_group. Default: \code{FALSE}.
 #' @param slide_window Numeric. Size of the sliding window for smoothing. Default: 30.
+#' @param ... Additional arguments (currently unused).
 #'
 #' @return An updated 'serp' object with the occupancy data stored in the corresponding slot
 #'         (either 'total_occupancy' or 'ip_occupancy').
@@ -74,6 +76,7 @@ setMethod("get_occupancy",
                    serp_exp = c("total","ip"),
                    coordinate_to_trans = FALSE,
                    do_reads_offset = FALSE,
+                   merge_rep = FALSE,
                    slide_window = 30){
             serp_exp <- match.arg(serp_exp,choices = c("total","ip"))
 
@@ -81,7 +84,8 @@ setMethod("get_occupancy",
 
             bf <- subset(object@bam_file, type == serp_exp)
             ribobams <- bf$bam
-            gp <- bf$sample
+            sp <- bf$sample
+            gp <- bf$sample_group
 
             lib <- subset(object@library, type == serp_exp)
             lib <- lib[match(ribobams, lib$bam),]
@@ -105,7 +109,8 @@ setMethod("get_occupancy",
               }
 
               # add sample name
-              tmp$sample <- gp[x]
+              tmp$sample <- sp[x]
+              tmp$sample_group <- gp[x]
 
               # ================================================================
               # whether do read offset
@@ -142,6 +147,14 @@ setMethod("get_occupancy",
 
               return(adjusted)
             }) -> ribo.df
+
+            # whether aggregate replicates
+            if(merge_rep == TRUE){
+              ribo.df <- ribo.df %>%
+                fastplyr::f_group_by(sample_group,rname,pos) %>%
+                fastplyr::f_summarise(count = mean(count),rpm = mean(rpm)) %>%
+                dplyr::rename(sample = sample_group)
+            }
 
             # smooth for each position
             cond <- object@mapping_type == "genome" & coordinate_to_trans == TRUE | object@mapping_type == "transcriptome"

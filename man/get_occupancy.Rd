@@ -26,6 +26,7 @@ get_occupancy(object, ...)
   serp_exp = c("total", "ip"),
   coordinate_to_trans = FALSE,
   do_reads_offset = FALSE,
+  merge_rep = FALSE,
   slide_window = 30
 )
 }
