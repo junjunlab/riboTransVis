@@ -19,6 +19,20 @@ prob2odds <- function(p){p / ( 1 - p )}
 
 
 
+
+#' Theme for plot
+#' @export
+theme_ribo <- function(){
+  theme_bw() +
+    theme(panel.grid = element_blank(),
+          axis.text = element_text(colour = "black"),
+          strip.text = element_text(face = "bold",size = rel(1))
+    )
+}
+
+
+
+
 #' Generate a Codon to Amino Acid Translation Table
 #'
 #' This function creates a codon-to-amino acid translation table based on the standard genetic code.

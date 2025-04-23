@@ -3,81 +3,51 @@
 \name{generate_summary}
 \alias{generate_summary}
 \alias{generate_summary,ribotrans-method}
-\title{Generate Summary Information for Ribosome Profiling Data}
+\title{Generate Summary Information from BAM Files}
 \usage{
 generate_summary(object, ...)
 
 \S4method{generate_summary}{ribotrans}(
   object,
   exp_type = c("ribo", "rna", "total", "ip"),
+  load_local = FALSE,
   nThreads = 1
 )
 }
 \arguments{
-\item{object}{A ribotrans object containing BAM file information and transcript features}
+\item{object}{A \code{ribotrans} S4 object that contains experiment library information, features, and settings such as mapping type.}
 
-\item{...}{Additional arguments passed to methods}
+\item{...}{Additional arguments (currently unused).}
 
-\item{exp_type}{Character, specify the experiment type to analyze:
-\itemize{
-\item "ribo": Ribosome profiling data
-\item "rna": RNA-seq data
-\item "total": Total translatome from selective ribosome profiling
-\item "ip": Protein-bound translatome from selective ribosome profiling
-}}
+\item{exp_type}{Character vector specifying experiment types to include. Options are \code{"ribo"}, \code{"rna"}, \code{"total"}, \code{"ip"}.}
 
-\item{nThreads}{Integer, number of threads to use for BAM file processing}
+\item{load_local}{Logical; if \code{TRUE}, tries to load precomputed summary data \code{tinfo.anno.rda} from local directory.}
+
+\item{nThreads}{Integer; number of threads to use when reading BAM files. Passed to \code{Rsamtools::scanBam}.}
 }
 \value{
-An updated object containing summary information
-
-Returns the input ribotrans object with updated summary_info slot containing
-the processed mapping statistics
+A modified \code{ribotrans} object with the slot \code{summary_info} populated with annotated read counts.
 }
 \description{
-Generic function to generate summary information from ribosome profiling
-or RNA-seq data.
-
-This method processes BAM files to generate position-wise read counts and mapping statistics
-for either ribosome profiling or RNA-seq data. It handles both transcriptome and genome-aligned
-data, performing appropriate coordinate conversions when necessary.
+This method processes ribosome profiling BAM files and generates positional read count data (footprints)
+across annotated features. It supports multiple experiment types (such as ribosome footprints, RNA-seq, total RNA, and IP).
+Mapping positions are adjusted based on user-defined assignment mode (5'-end or 3'-end), and if genome mapping is used,
+reads are converted to transcriptomic coordinates.
 }
 \details{
-The function performs the following steps:
-\enumerate{
-\item Filters library information based on experiment type
-\item Processes each BAM file to extract read positions and counts
-\item For genome-aligned data:
-\itemize{
-\item Converts genomic coordinates to transcript coordinates
-\item Handles 5' or 3' end assignment based on strand information
+If \code{exp_type} includes both \code{"total"} and \code{"ip"}, the \code{sample} and \code{sample_group} columns are suffixed
+with the experiment type to differentiate datasets.
+
+For genome-mapped data, genomic coordinates are translated to transcriptomic positions using a transcript feature annotation table
+provided in \code{object@genome_trans_features}. If not genome-mapped, data are grouped and summarized directly by transcript ID and position.
+
+If \code{load_local = FALSE}, coverage information is read from BAM files and annotated against the transcript features.
+Data is summarized and merged with transcript metadata (like CDS start and stop).
+The result is saved as \code{tinfo.anno.rda} in the working directory for future reuse.
 }
-\item For transcriptome-aligned data:
-\itemize{
-\item Directly uses transcript coordinates
-}
-\item Merges position information with transcript annotations
+\examples{
+\dontrun{
+object <- generate_summary(object, exp_type = c("ribo", "rna"), load_local = FALSE)
 }
 
-The resulting summary includes:
-\itemize{
-\item rname: transcript identifier
-\item pos: position along transcript
-\item qwidth: read length
-\item count: number of reads at each position
-\item sample: sample identifier
-\item mstart/mstop: CDS start/stop positions
-\item translen: transcript length
-}
-}
-\note{
-\itemize{
-\item For large BAM files, increasing nThreads can significantly improve processing speed
-\item Memory usage increases with BAM file size and number of threads
-\item Genome-aligned data requires more processing time due to coordinate conversion
-}
-}
-\seealso{
-\code{\link{construct_ribotrans}} for creating ribotrans objects
-\code{\link{get_occupancy}} for calculating ribosome occupancy
 }

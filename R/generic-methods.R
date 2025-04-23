@@ -2,81 +2,58 @@
 # function to get detailed information for reads
 # ==============================================================================
 
-#' Generate Summary Information for Ribosome Profiling Data
-#'
-#' @description Generic function to generate summary information from ribosome profiling
-#' or RNA-seq data.
-#'
-#' @param object An object containing experimental data
-#' @param ... Additional arguments passed to methods
-#'
-#' @return An updated object containing summary information
-#'
-#' @export
-#' @rdname generate_summary
-setGeneric("generate_summary",function(object,...) standardGeneric("generate_summary"))
-
-
-
-#' Generate summary statistics for ribosome profiling or RNA-seq data
+#' @title Generate Summary Information from BAM Files
 #'
 #' @description
-#' This method processes BAM files to generate position-wise read counts and mapping statistics
-#' for either ribosome profiling or RNA-seq data. It handles both transcriptome and genome-aligned
-#' data, performing appropriate coordinate conversions when necessary.
+#' This method processes ribosome profiling BAM files and generates positional read count data (footprints)
+#' across annotated features. It supports multiple experiment types (such as ribosome footprints, RNA-seq, total RNA, and IP).
+#' Mapping positions are adjusted based on user-defined assignment mode (5'-end or 3'-end), and if genome mapping is used,
+#' reads are converted to transcriptomic coordinates.
 #'
-#' @param object A ribotrans object containing BAM file information and transcript features
-#' @param exp_type Character, specify the experiment type to analyze:
-#'   - "ribo": Ribosome profiling data
-#'   - "rna": RNA-seq data
-#'   - "total": Total translatome from selective ribosome profiling
-#'   - "ip": Protein-bound translatome from selective ribosome profiling
-#' @param nThreads Integer, number of threads to use for BAM file processing
+#' @param object A \code{ribotrans} S4 object that contains experiment library information, features, and settings such as mapping type.
+#' @param exp_type Character vector specifying experiment types to include. Options are \code{"ribo"}, \code{"rna"}, \code{"total"}, \code{"ip"}.
+#' @param load_local Logical; if \code{TRUE}, tries to load precomputed summary data \code{tinfo.anno.rda} from local directory.
+#' @param nThreads Integer; number of threads to use when reading BAM files. Passed to \code{Rsamtools::scanBam}.
+#' @param ... Additional arguments (currently unused).
+#'
 #'
 #' @details
-#' The function performs the following steps:
-#' 1. Filters library information based on experiment type
-#' 2. Processes each BAM file to extract read positions and counts
-#' 3. For genome-aligned data:
-#'    - Converts genomic coordinates to transcript coordinates
-#'    - Handles 5' or 3' end assignment based on strand information
-#' 4. For transcriptome-aligned data:
-#'    - Directly uses transcript coordinates
-#' 5. Merges position information with transcript annotations
+#' If \code{exp_type} includes both \code{"total"} and \code{"ip"}, the \code{sample} and \code{sample_group} columns are suffixed
+#' with the experiment type to differentiate datasets.
 #'
-#' The resulting summary includes:
-#' - rname: transcript identifier
-#' - pos: position along transcript
-#' - qwidth: read length
-#' - count: number of reads at each position
-#' - sample: sample identifier
-#' - mstart/mstop: CDS start/stop positions
-#' - translen: transcript length
+#' For genome-mapped data, genomic coordinates are translated to transcriptomic positions using a transcript feature annotation table
+#' provided in \code{object@genome_trans_features}. If not genome-mapped, data are grouped and summarized directly by transcript ID and position.
 #'
-#' @return Returns the input ribotrans object with updated summary_info slot containing
-#' the processed mapping statistics
+#' If \code{load_local = FALSE}, coverage information is read from BAM files and annotated against the transcript features.
+#' Data is summarized and merged with transcript metadata (like CDS start and stop).
+#' The result is saved as \code{tinfo.anno.rda} in the working directory for future reuse.
+#'
+#' @return A modified \code{ribotrans} object with the slot \code{summary_info} populated with annotated read counts.
 #'
 #' @importFrom Rsamtools scanBam ScanBamParam scanBamFlag
 #' @importFrom GenomicRanges GRanges
 #' @importFrom IRanges findOverlaps
-#' @importFrom dplyr mutate rename group_by summarise n case_when
-#' @importFrom fastplyr f_group_by f_summarise f_left_join
-#' @importFrom purrr map_df
+#' @importFrom fastplyr f_group_by f_summarise f_left_join f_select
+#' @importFrom dplyr mutate case_when rename n
 #'
-#' @note
-#' - For large BAM files, increasing nThreads can significantly improve processing speed
-#' - Memory usage increases with BAM file size and number of threads
-#' - Genome-aligned data requires more processing time due to coordinate conversion
 #'
-#' @seealso
-#' \code{\link{construct_ribotrans}} for creating ribotrans objects
-#' \code{\link{get_occupancy}} for calculating ribosome occupancy
+#' @examples
+#' \dontrun{
+#' object <- generate_summary(object, exp_type = c("ribo", "rna"), load_local = FALSE)
+#' }
 #'
 #' @export
+setGeneric("generate_summary",function(object,...) standardGeneric("generate_summary"))
+
+
+
 #' @rdname generate_summary
+#' @export
 setMethod("generate_summary",
           signature(object = "ribotrans"),
-          function(object, exp_type = c("ribo", "rna", "total", "ip"),
+          function(object,
+                   exp_type = c("ribo", "rna", "total", "ip"),
+                   load_local = FALSE,
                    nThreads = 1){
             # exp_type <- match.arg(exp_type, c("ribo", "rna", "total", "ip"))
 
@@ -93,88 +70,95 @@ setMethod("generate_summary",
 
             features <- object@features
 
-            # x = 1
-            purrr::map_df(seq_along(bfn),function(x){
-              # get position
-              bam_data <- Rsamtools::scanBam(file = bfn[x],
-                                             nThreads = nThreads,
-                                             param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
-                                                                             flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE))
-              )
+            # whether load saved data
+            if(load_local == TRUE){
+              load(file = "tinfo.anno.rda")
+            }else{
+              # x = 1
+              purrr::map_df(seq_along(bfn),function(x){
+                # get position
+                bam_data <- Rsamtools::scanBam(file = bfn[x],
+                                               nThreads = nThreads,
+                                               param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
+                                                                               flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE))
+                )
 
-              tinfo <- data.frame(bam_data[[1]])
+                tinfo <- data.frame(bam_data[[1]])
 
-              # check mapping_type
-              if(object@mapping_type == "genome"){
-                if(object@assignment_mode == "end5"){
-                  # check strand to assign 5'end position
-                  tinfo <- tinfo %>%
-                    dplyr::mutate(pos = ifelse(strand == "-", pos + qwidth - 1, pos))
+                # check mapping_type
+                if(object@mapping_type == "genome"){
+                  if(object@assignment_mode == "end5"){
+                    # check strand to assign 5'end position
+                    tinfo <- tinfo %>%
+                      dplyr::mutate(pos = ifelse(strand == "-", pos + qwidth - 1, pos))
+                  }else{
+                    # check strand to assign 3'end position
+                    tinfo <- tinfo %>%
+                      dplyr::mutate(pos = ifelse(strand == "+", pos + qwidth - 1, pos))
+                  }
+
+                  tinfo.gr <- tinfo %>%
+                    fastplyr::f_group_by(rname,pos,qwidth) %>%
+                    fastplyr::f_summarise(count = dplyr::n(),.groups = "drop") %>%
+                    dplyr::rename(seqnames = rname, start = pos) %>%
+                    dplyr::mutate(end = start,.after = "start")
+
+                  # to GRanges
+                  tinfo.gr <- GenomicRanges::GRanges(tinfo.gr)
+
+                  # transcript annotation regions
+                  trans_rg <- GenomicRanges::GRanges(object@genome_trans_features)
+
+                  # genomic position to transcriptome position
+                  ov <- IRanges::findOverlaps(query = tinfo.gr,subject = trans_rg)
+
+                  # get overlap data
+                  if (requireNamespace("S4Vectors", quietly = TRUE)) {
+                    lo <- cbind(as.data.frame(tinfo.gr[S4Vectors::queryHits(ov)]),
+                                as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
+                  } else {
+                    warning("Package 'S4Vectors' is needed for this function to work.")
+                  }
+
+
+                  # make unique names
+                  names(lo) <- make.names(names(lo),unique = T)
+
+                  # calculate transcript position
+                  tinfo <- lo %>%
+                    dplyr::mutate(pos = dplyr::case_when(strand.1 == "+" ~ tx_len - abs(end.1 - start),
+                                                         strand.1 == "-" ~ tx_len - abs(start - start.1)),
+                                  rname = paste(transcript_id,gene_name,sep = "|")) %>%
+                    fastplyr::f_select(rname,pos,qwidth,count)
+
                 }else{
-                  # check strand to assign 3'end position
+                  if(object@assignment_mode == "end3"){
+                    # check strand to assign 5'end position
+                    tinfo <- tinfo %>%
+                      dplyr::mutate(pos = ifelse(strand == "-", pos + qwidth - 1, pos))
+                  }
+
                   tinfo <- tinfo %>%
-                    dplyr::mutate(pos = ifelse(strand == "+", pos + qwidth - 1, pos))
+                    fastplyr::f_group_by(rname,pos,qwidth) %>%
+                    fastplyr::f_summarise(count = dplyr::n())
+
                 }
 
-                tinfo.gr <- tinfo %>%
-                  fastplyr::f_group_by(rname,pos,qwidth) %>%
-                  fastplyr::f_summarise(count = dplyr::n(),.groups = "drop") %>%
-                  dplyr::rename(seqnames = rname, start = pos) %>%
-                  dplyr::mutate(end = start,.after = "start")
+                # add sample and group info
+                tinfo$sample <- sp[x]
+                tinfo$sample_group <- gp[x]
 
-                # to GRanges
-                tinfo.gr <- GenomicRanges::GRanges(tinfo.gr)
+                return(tinfo)
+              }) -> all.tinfo
 
-                # transcript annotation regions
-                trans_rg <- GenomicRanges::GRanges(object@genome_trans_features)
+              # merge with transcript annotation
+              tinfo.anno <- all.tinfo %>%
+                fastplyr::f_left_join(y = features[,c("idnew","mstart","mstop","translen")],
+                                      by = c("rname" = "idnew"))
 
-                # genomic position to transcriptome position
-                ov <- IRanges::findOverlaps(query = tinfo.gr,subject = trans_rg)
-
-                # get overlap data
-                if (requireNamespace("S4Vectors", quietly = TRUE)) {
-                  lo <- cbind(as.data.frame(tinfo.gr[S4Vectors::queryHits(ov)]),
-                              as.data.frame(trans_rg[S4Vectors::subjectHits(ov)]))
-                } else {
-                  warning("Package 'S4Vectors' is needed for this function to work.")
-                }
-
-
-                # make unique names
-                names(lo) <- make.names(names(lo),unique = T)
-
-                # calculate transcript position
-                tinfo <- lo %>%
-                  dplyr::mutate(pos = dplyr::case_when(strand.1 == "+" ~ tx_len - abs(end.1 - start),
-                                                       strand.1 == "-" ~ tx_len - abs(start - start.1)),
-                                rname = paste(transcript_id,gene_name,sep = "|")) %>%
-                  fastplyr::f_select(rname,pos,qwidth,count)
-
-              }else{
-                if(object@assignment_mode == "end3"){
-                  # check strand to assign 5'end position
-                  tinfo <- tinfo %>%
-                    dplyr::mutate(pos = ifelse(strand == "-", pos + qwidth - 1, pos))
-                }
-
-                tinfo <- tinfo %>%
-                  fastplyr::f_group_by(rname,pos,qwidth) %>%
-                  fastplyr::f_summarise(count = dplyr::n())
-
-              }
-
-              # add sample and group info
-              tinfo$sample <- sp[x]
-              tinfo$sample_group <- gp[x]
-
-              return(tinfo)
-            }) -> all.tinfo
-
-            # merge with transcript annotation
-            tinfo.anno <- all.tinfo %>%
-              fastplyr::f_left_join(y = features[,c("idnew","mstart","mstop","translen")],
-                                    by = c("rname" = "idnew"))
-
+              # save in local
+              save(tinfo.anno, file = "tinfo.anno.rda", compress = TRUE)
+            }
 
             object@summary_info <- tinfo.anno
             return(object)
