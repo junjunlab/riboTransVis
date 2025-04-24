@@ -3,79 +3,50 @@
 \name{get_enrichment}
 \alias{get_enrichment}
 \alias{get_enrichment,serp-method}
-\title{Calculate Enrichment from Ribosome Profiling Data}
+\title{Get Enrichment Values From a serp Object}
 \usage{
 get_enrichment(object, ...)
 
-\S4method{get_enrichment}{serp}(object, smooth = TRUE, window_size = 105)
+\S4method{get_enrichment}{serp}(object, smooth = TRUE, window_size = 45)
 }
 \arguments{
-\item{object}{An S4 object containing ribosome profiling data.}
+\item{object}{A \code{serp} object containing metadata, occupancy, and gene annotation information.}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{smooth}{Logical. Whether to apply smoothing to the enrichment profile. Default: TRUE.}
+\item{smooth}{Logical; whether to apply smoothing based on Agresti-Coull-based estimation in sliding windows. Default is \code{TRUE}.}
 
-\item{window_size}{Numeric. Size of the sliding window for smoothing. Default: 105.}
+\item{window_size}{Integer; width of the sliding window applied when smoothing. Default is \code{45}.}
 }
 \value{
-An updated object with calculated enrichment data.
-
-An updated 'serp' object with enrichment data stored in the 'enriched_ratio' slot.
+A modified \code{serp} object with an additional \code{enriched_ratio} slot containing a data frame of enrichment values.
 }
 \description{
-Generic function for calculating enrichment ratios between IP and total samples in selective
-ribosome profiling experiments.
+This function calculates the enrichment of IP (e.g., Ribo-seq) signal over total RNA signal
+for each transcript of interest in the serp object. Optionally, a smoothing operation
+can be applied using a sliding window and Agresti-Coull confidence intervals.
 }
 \details{
-This is a generic function that computes enrichment ratios between immunoprecipitated (IP)
-and total ribosome profiling samples. The specific implementation depends on the class of the
-input object.
+The function computes the enrichment value (IP RPM / total RPM) across each aligned position.
+If \code{smooth=TRUE}, the method uses a sliding window along the CDS to estimate local enrichment
+with Agresti-Coull confidence intervals and outputs average enrichments corrected for IP/total mapped read ratio.
+If smoothing is disabled (\code{smooth=FALSE}), enrichment is averaged in codon-resolution (3-nt bins).
 
-For objects of class 'serp', this method calculates the enrichment ratio between
-IP and total ribosome profiling samples. The method requires both 'total_occupancy'
-and 'ip_occupancy' data to be present in the object.
-
-The enrichment calculation process includes:
-\enumerate{
-\item Calculating the ratio of IP RPM to total RPM for each position
-\item Filtering for coding sequence (CDS) regions
-\item Optionally applying smoothing using a sliding window approach
-\item When smoothing is applied, confidence intervals are calculated using the Agresti-Coull method
-and normalized by the ratio of total mapped reads between IP and total samples
-\item When smoothing is not applied, positions are grouped by codon (every 3 nucleotides)
-and average enrichment is calculated
-}
-}
-\section{Methods (by class)}{
+Required slots in the \code{serp} object:
 \itemize{
-\item \code{get_enrichment(serp)}: Calculate enrichment ratios for SERP objects
+\item{\code{total_occupancy}}: data frame with columns 'sample', 'rname', 'pos', 'count', 'rpm'.
+\item{\code{ip_occupancy}}: same structure as above for the IP (e.g., Ribo-seq) library.
+\item{\code{library}}: metadata indicating mapped reads per library (must contain 'sample', 'type', 'mappped_reads').
+\item{\code{features}}: transcript annotation with fields such as exon length, CDS start/stop, transcript ID, etc.
+\item{\code{gene_name}}: character string indicating the target gene.
+}
 
-}}
+The calculated result is stored in the \code{@enriched_ratio} slot of the \code{serp} object.
+}
 \examples{
 \dontrun{
-# Create a serp object and process data
-serp_obj <- construct_serp(...)
-serp_obj <- get_occupancy(serp_obj, serp_exp = "total")
-serp_obj <- get_occupancy(serp_obj, serp_exp = "ip")
-
-# Calculate enrichment
-serp_obj <- get_enrichment(serp_obj)
-}
-
-\dontrun{
-# Process a serp object
-serp_obj <- get_occupancy(serp_obj, serp_exp = "total")
-serp_obj <- get_occupancy(serp_obj, serp_exp = "ip")
-
-# Calculate enrichment with default smoothing
-serp_obj <- get_enrichment(serp_obj)
-
-# Calculate enrichment without smoothing
-serp_obj <- get_enrichment(serp_obj, smooth = FALSE)
-
-# Calculate enrichment with custom window size
-serp_obj <- get_enrichment(serp_obj, window_size = 51)
+# Assuming 'serp_obj' is a valid serp object:
+serp_obj <- get_enrichment(serp_obj, smooth = TRUE, window_size = 45)
 }
 
 }

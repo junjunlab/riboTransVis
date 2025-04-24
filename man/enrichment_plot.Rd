@@ -3,7 +3,7 @@
 \name{enrichment_plot}
 \alias{enrichment_plot}
 \alias{enrichment_plot,serp-method}
-\title{Plot Enrichment Ratios from Selective Ribosome Profiling}
+\title{Enrichment Profile Plot for SERP Object}
 \usage{
 enrichment_plot(object, ...)
 
@@ -18,100 +18,56 @@ enrichment_plot(object, ...)
   range_y = 0.98,
   range_size = 4,
   range_digit = 1,
+  facet = facet_grid(sample ~ rname, switch = "y"),
   nrow = NULL,
   ncol = NULL
 )
 }
 \arguments{
-\item{object}{An S4 object containing enrichment data.}
+\item{object}{An object of class \code{serp}. Must contain enrichment data calculated via \code{get_enrichment}.}
 
-\item{...}{Additional arguments passed to specific method implementations.}
+\item{...}{Additional arguments (currently unused).}
 
-\item{cds_line}{Vector. Color and line width for the CDS indicator line. Default: c("#CC6600", 4).}
+\item{cds_line}{A vector specifying the color and line width of the CDS start marker. Default: \code{c("#CC6600", 4)}.}
 
-\item{line_col}{Character. Color of the enrichment line. Default: "#377CC0" (blue).}
+\item{line_col}{Color of enrichment line and the fill of confidence interval rectangles. Default: \code{"#377CC0"}.}
 
-\item{shadow_alpha}{Numeric vector. Alpha range for confidence interval shading. Default: c(0.1, 0.3).}
+\item{shadow_alpha}{A numeric vector of length 2 for the alpha transparency range (min, max) of the enrichment CI shading. Default: \code{c(0.1, 0.3)}.}
 
-\item{enrich_threshold}{Numeric. Threshold line for enrichment ratio. Default: 1.}
+\item{enrich_threshold}{A numeric scalar defining the horizontal dashed line threshold for enrichment (e.g., 1 = equal signal). Default: \code{1}.}
 
-\item{new_signal_range}{Logical. Whether to display signal range annotation. Default: FALSE.}
+\item{new_signal_range}{Logical, whether to annotate a textual enrichment signal range label (from 0 to max upper). Default: \code{FALSE}.}
 
-\item{range_x}{Numeric. X position of signal range annotation (normalized). Default: 0.99.}
+\item{range_x}{X position of the signal range label, in NPC units (0–1). Used only if \code{new_signal_range = TRUE}. Default: \code{0.99}.}
 
-\item{range_y}{Numeric. Y position of signal range annotation (normalized). Default: 0.98.}
+\item{range_y}{Y position of the signal range label, in NPC units (0–1). Default: \code{0.98}.}
 
-\item{range_size}{Numeric. Font size of signal range annotation. Default: 4.}
+\item{range_size}{Text size of the signal range annotation. Default: \code{4}.}
 
-\item{range_digit}{Numeric. Number of decimal places for signal range annotation. Default: 1.}
+\item{range_digit}{Number of digits to round in signal range label. Default: \code{1}.}
 
-\item{nrow}{Numeric. Number of rows when arranging multiple plots. Default: NULL.}
+\item{facet}{A ggplot2 faceting specification, e.g., \code{facet_grid(sample~rname)}. Default: \code{facet_grid(sample~rname, switch = "y")}.}
 
-\item{ncol}{Numeric. Number of columns when arranging multiple plots. Default: NULL.}
+\item{nrow, ncol}{Number of rows and columns in multi-figure layout when plotting multiple transcripts. Default: \code{NULL} (automatic).}
 }
 \value{
-A plot visualizing the enrichment data.
-
-A ggplot object or a combined plot grid if multiple transcripts are present.
+A patchwork of enrichment line plots (using cowplot::plot_grid), one per transcript.
+Additionally shows enrichment variability via shaded area and optionally range labeling and CDS marks.
 }
 \description{
-Generic function for plotting enrichment ratios from selective ribosome profiling experiments.
+Visualizes the ribosome profiling signal enrichment (IP / total) from a \code{serp} object.
+For each transcript, the function plots the enrichment curve and uncertainty shading,
+optionally with customized signal ranges, CDS boundary annotation, and faceting layout.
+Requires \code{get_enrichment} to be run beforehand.
 }
-\details{
-This is a generic function that creates visualizations of enrichment ratios between
-immunoprecipitated (IP) and total ribosome profiling samples. The specific implementation
-depends on the class of the input object.
-
-For objects of class 'serp', this method creates a visualization of the enrichment ratio
-between IP and total ribosome profiling samples. The method requires enrichment data to be
-present in the 'enriched_ratio' slot of the object, which can be calculated using the
-\code{get_enrichment} method.
-
-The plot includes:
-\enumerate{
-\item A line representing the mean enrichment ratio at each position
-\item Shaded areas representing confidence intervals, with opacity reflecting precision
-\item A dashed horizontal line at the specified enrichment threshold (typically 1)
-\item A bar at the bottom indicating the coding sequence (CDS) region
-\item Optional signal range annotation
-}
-
-The x-axis is scaled to represent codon/amino acid positions rather than nucleotide positions.
-}
-\section{Methods (by class)}{
-\itemize{
-\item \code{enrichment_plot(serp)}: Plot enrichment ratios for SERP objects
-
-}}
 \examples{
 \dontrun{
-# Process a serp object
-serp_obj <- get_occupancy(serp_obj, serp_exp = "total")
-serp_obj <- get_occupancy(serp_obj, serp_exp = "ip")
-serp_obj <- get_enrichment(serp_obj)
-
-# Create enrichment plot
-enrichment_plot(serp_obj)
+# Assuming `x` is a serp object with enrichment already computed
+enrichment_plot(x)
+enrichment_plot(x, cds_line = c("red", 2), enrich_threshold = 1.5, new_signal_range = TRUE)
 }
 
-\dontrun{
-# Process a serp object
-serp_obj <- get_occupancy(serp_obj, serp_exp = "total")
-serp_obj <- get_occupancy(serp_obj, serp_exp = "ip")
-serp_obj <- get_enrichment(serp_obj)
-
-# Basic enrichment plot
-enrichment_plot(serp_obj)
-
-# Customized enrichment plot
-enrichment_plot(serp_obj,
-               line_col = "darkred",
-               shadow_alpha = c(0.05, 0.2),
-               enrich_threshold = 1.5,
-               new_signal_range = TRUE)
-
-# Multiple transcripts in a grid
-enrichment_plot(serp_obj, nrow = 2, ncol = 3)
 }
-
+\seealso{
+\code{\link{get_enrichment}} for enrichment computation.
 }

@@ -30,7 +30,8 @@ Imports:
     purrr,
     reticulate,
     Rsamtools,
-    scales
+    scales,
+    stats
 Suggests: 
     AnnotationDbi,
     glue,
@@ -55,7 +56,8 @@ Suggests:
     stringr,
     Logolas,
     ggrepel,
-    tidyr
+    tidyr,
+    boot
 VignetteBuilder: knitr
 Depends: 
     methods

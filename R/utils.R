@@ -32,6 +32,27 @@ theme_ribo <- function(){
 
 
 
+boot_ci <- function(x, n = 1000, conf = 0.95){
+  stat_fun <- function(data, indices) {
+    mean(data[indices])
+  }
+
+  if (requireNamespace("boot", quietly = TRUE)) {
+    boot_obj <- boot::boot(data = x, statistic = stat_fun, R = n)
+    bci <- boot::boot.ci(boot_obj,conf = conf, type = "perc")
+  } else {
+    warning("Package 'boot' is needed for this function to work.")
+  }
+
+
+  ci_low <- bci$percent[4]
+  ci_high <- bci$percent[5]
+
+  return(c(ci_low, ci_high))
+}
+
+
+
 
 #' Generate a Codon to Amino Acid Translation Table
 #'
