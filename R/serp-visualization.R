@@ -341,8 +341,9 @@ setMethod("enrichment_plot2",
                 fastplyr::f_group_by(sample_group,rname,pos) %>%
                 fastplyr::f_summarise(rpm.x = mean(rpm.x),rpm.y = mean(rpm.y),
                                       sm1 = mean(sm1),sm2 = mean(sm2),
-                                      smratio = mean(smratio),
-                                      sd = stats::sd(smratio)) %>%
+                                      sd = stats::sd(smratio),
+                                      smratio = mean(smratio)
+                ) %>%
                 dplyr::rename(sample = sample_group)
 
               shadow <- geom_ribbon(aes(ymin = smratio - sd,
@@ -427,7 +428,7 @@ setMethod("enrichment_plot2",
                 theme_bw() +
                 theme(panel.grid = element_blank(),
                       axis.text = element_text(colour = "black"),
-                      strip.text.y.left = element_text(angle = 0),
+                      strip.text.y.left = element_text(angle = 0, hjust = 1),
                       strip.background = element_blank(),
                       strip.text = element_text(face = "bold"),
                       strip.placement = "outside",
@@ -458,6 +459,304 @@ setMethod("enrichment_plot2",
               return(cmb)
             }else{
               return(mb.smoothed)
+            }
+          }
+)
+
+
+
+
+
+# ==============================================================================
+# transcript for single gene
+# ==============================================================================
+
+
+#' @noRd
+#' @export
+setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
+
+
+
+
+#' Plot Ribosome density Across Transcripts
+#'
+#' @description
+#' Visualize interactive ribosome profiling (IP) or total ribosome (total) signal across the transcript body for one or more transcripts from a \code{serp} object. This function supports codon- or nucleotide-resolution visualization, replicate merging, structural annotations (e.g., exon and CDS information), and optional summary statistics.
+#'
+#' @param object A \code{serp} object. Must contain the slots \code{total_occupancy}, \code{ip_occupancy}, and \code{features}.
+#' @param merge_rep Logical. If \code{TRUE}, biological replicates are merged (by \code{sample_group}) and plotted with mean values and shaded standard deviation ribbons. Default: \code{FALSE}.
+#' @param var_alpha Numeric. Transparency level for the shaded ribbon when \code{merge_rep = TRUE}. Default: 0.5.
+#' @param retain_cds Logical. If \code{TRUE}, restricts plotting to coding sequence (CDS) regions only. Default: \code{TRUE}.
+#' @param mode Character. Resolution of x-axis: either \code{"codon"} (default) for amino acid-level or \code{"nt"} for nucleotide-level.
+#' @param new_signal_range Logical. Whether to annotate the plot with the observed signal range (e.g., [0–2.1]). Default: \code{FALSE}.
+#' @param enrich_threshold Numeric. Not used in current implementation but included for compatibility with other functions. Default: 1.
+#' @param range_x, range_y Numeric. X and Y coordinates (normalized between 0–1) used to position the signal range label. Default: 0.99, 0.98.
+#' @param range_size Numeric. Font size of the signal range label. Default: 4.
+#' @param range_digit Integer. Number of digits to round the signal range annotation. Default: 1.
+#' @param exon_line Character vector of length 2 (e.g., \code{c("grey", 3)}). Specifies the color and line width of the exon annotation in \code{"nt"} mode.
+#' @param cds_line Character vector of length 2 (e.g., \code{c("grey30", 7)}). Specifies the color and line width of the CDS annotation.
+#' @param facet ggplot2 facet. Default is \code{facet_grid(sample ~ rname, switch = "y")}.
+#' @param nrow, ncol Number of rows and columns when combining multiple panel plots using \code{cowplot::plot_grid}. Optional.
+#' @param return_data Logical. If \code{TRUE}, return the underlying processed data instead of plot. Default: \code{FALSE}.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @details
+#' This function aggregates and visualizes transcript-level signal for both IP (immunoprecipitation) and total RNA data stored in a \code{serp} object. It supports CDS-only rendering, codon resolution, and shows structure annotations such as exon and coding regions using \code{ggside} extensions.
+#'
+#' If \code{merge_rep = TRUE}, signals for replicate samples belonging to the same \code{sample_group} are averaged, and standard deviation is visualized using \code{geom_ribbon()}.
+#'
+#' The object returned is either a \code{ggplot} object or a \code{data.frame} if \code{return_data = TRUE}.
+#'
+#' Requires pre-computed smooth signal (column named \code{smooth}) within the IP and total input data.
+#'
+#' @return A \code{ggplot} object or a \code{data.frame} if \code{return_data = TRUE}.
+#'
+#' @importFrom dplyr filter mutate left_join rename
+#' @importFrom purrr map_df
+#' @importFrom fastplyr f_group_by f_summarise
+#' @importFrom ggplot2 ggplot geom_line geom_ribbon facet_grid theme element_blank element_text theme_bw xlab ylab aes
+#' @importFrom ggside ggside geom_xsidesegment scale_xsidey_continuous
+#'
+#'
+#'
+#' @examples
+#' \dontrun{
+#' # Plot ribosome and total signal at codon resolution
+#' trans_plot(serp_obj, mode = "codon")
+#'
+#' # Merge replicates and plot with standard deviation shading
+#' trans_plot(serp_obj, merge_rep = TRUE)
+#'
+#' # Return processed data without plotting
+#' data <- trans_plot(serp_obj, return_data = TRUE)
+#' }
+#' @export
+setMethod("trans_plot",
+          signature(object = "serp"),
+          function(object,
+                   merge_rep = FALSE,
+                   var_alpha = 0.5,
+                   retain_cds = TRUE,
+                   mode = c("codon", "nt"),
+                   new_signal_range = FALSE,
+                   enrich_threshold = 1,
+                   range_x = 0.99,
+                   range_y = 0.98,
+                   range_size = 4,
+                   range_digit = 1,
+                   exon_line = c("grey",3),
+                   cds_line = c("grey30",7),
+                   facet = facet_grid(sample~rname,switch = "y"),
+                   nrow = NULL, ncol = NULL,
+                   return_data = FALSE){
+            mode <- match.arg(mode,choices = c("codon", "nt"))
+            # ==================================================================
+            # ribo rpm/rna rpm for each position
+
+            # check rna coverage
+            if(is.null(object@total_occupancy)){
+              stop("Please supply total_occupancy data!")
+            }else{
+              tt <- object@total_occupancy
+              tt$type <- "Total"
+            }
+
+            if(is.null(object@ip_occupancy)){
+              stop("Please supply ip_occupancy data!")
+            }else{
+              ip <- object@ip_occupancy
+              ip$type <- "IP"
+            }
+
+            # combine
+
+            mb <- rbind(tt, ip)
+
+            # loop for each sample and transcript to smooth
+            tanno <- subset(object@features, gene == object@gene_name)
+
+            # check whether smooth data
+            # x = 1
+            purrr::map_df(1:nrow(tanno),function(x){
+              tmp <- tanno[x,]
+
+              tmp2 <- mb %>%
+                dplyr::filter(rname == tmp$idnew)
+
+              sp <- unique(tmp2$sample)
+
+              # loop for each sample
+              # s = 1
+              purrr::map_df(seq_along(sp),function(s){
+                tmp3 <- tmp2 %>%
+                  dplyr::filter(sample == sp[s])
+
+                # loop for type
+                tp <- unique(tmp3$type)
+
+                # t = 1
+                purrr::map_df(seq_along(tp),function(t){
+                  tmp4 <- tmp3 %>% dplyr::filter(type == tp[t])
+
+                  # each pos
+                  pos.df <- data.frame(rname = tmp4$rname[1],pos = 1:tmp$exonlen,type = tp[t])
+
+                  # merge with value
+                  pos.df <- pos.df %>% dplyr::left_join(y = tmp4,by = c("rname", "pos", "type"))
+                  pos.df$sample <- tmp4$sample[1]
+                  pos.df$sample_group <- tmp4$sample_group[1]
+                  pos.df[is.na(pos.df)] <- 0
+
+                  # retain CDS region
+                  if(retain_cds == TRUE){
+                    pos.df <- pos.df %>%
+                      dplyr::filter(pos >= tmp$mstart & pos <= tmp$mstop) %>%
+                      dplyr::mutate(pos = pos - tmp$mstart + 1)
+
+                    # codon pos
+                    if(mode == "codon"){
+                      pos.df <- pos.df %>%
+                        dplyr::mutate(pos = (pos - 1) %/% 3 + 1) %>%
+                        fastplyr::f_group_by(rname, sample, sample_group,type, pos) %>%
+                        fastplyr::f_summarise(rpm = sum(rpm), smooth = sum(smooth))
+                    }
+                  }
+                  return(pos.df)
+                }) -> tmpdf
+
+                return(tmpdf)
+              }) -> tmpdf2
+
+              return(tmpdf2)
+            }) -> pldf
+
+
+            # ==================================================================
+            # plot
+            if(merge_rep == TRUE){
+              pldf <- pldf %>%
+                fastplyr::f_group_by(sample_group,type,rname,pos) %>%
+                fastplyr::f_summarise(rpm = mean(rpm),
+                                      sd = sd(smooth),
+                                      smooth = mean(smooth)
+                ) %>%
+                dplyr::rename(sample = sample_group)
+
+              shadow <- geom_ribbon(aes(ymin = smooth - sd,
+                                        ymax = smooth + sd,
+                                        x = pos,y = smooth,
+                                        fill = type), alpha = var_alpha)
+            }else{
+              shadow <- NULL
+            }
+            # ================================================================
+            tid <- tanno$idnew
+
+            # loop for each transcript_id
+            # x = 1
+            lapply(seq_along(tid),function(x){
+              tmp_feature <- subset(tanno, idnew == tid[x])
+              tmp <- subset(pldf, rname == tid[x])
+
+              tmp$sample <- paste(tmp$sample," (",tmp$type,")",sep = "")
+
+              # whether add new signal range
+              if(new_signal_range == TRUE){
+                axis.text.y = element_blank()
+                axis.ticks.y = element_blank()
+
+                range <- paste("[0-",round(max(tmp$smooth),digits = range_digit),"]",sep = "")
+
+                if (requireNamespace("ggpp", quietly = TRUE)) {
+                  range_label <- ggpp::annotate(geom = "text_npc",
+                                                npcx = range_x,npcy = range_y,
+                                                label = range,
+                                                size = range_size)
+                } else {
+                  warning("Package 'ggpp' is needed for this function to work.")
+                }
+
+              }else{
+                axis.text.y = NULL
+                axis.ticks.y = NULL
+                range_label <- NULL
+              }
+
+              # structure
+              if(mode == "codon"){
+                struc_cds <- data.frame(x = 1,xend = tmp_feature$cds/3)
+
+                sly2 <- ggside::geom_xsidesegment(data = struc_cds,
+                                                  aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                  inherit.aes = F,
+                                                  linewidth = as.numeric(cds_line[2]),color = cds_line[1])
+
+                sly1 <- NULL
+              }else{
+                struc_exon <- data.frame(x = 1,xend = tmp_feature$exonlen)
+
+                sly1 <- ggside::geom_xsidesegment(data = struc_exon,
+                                                  aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                  inherit.aes = F,
+                                                  linewidth = as.numeric(exon_line[2]),color = exon_line[1])
+
+                struc_cds <- data.frame(x = tmp_feature$mstart,xend = tmp_feature$mstop)
+
+                sly2 <- ggside::geom_xsidesegment(data = struc_cds,
+                                                  aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                  inherit.aes = F,
+                                                  linewidth = as.numeric(cds_line[2]),color = cds_line[1])
+              }
+
+              # xlabel
+              if(mode == "codon"){
+                xlabel <- "Ribosome position (codons / amino acids)"
+              }else{
+                xlabel <- "Ribosome position (nucleotides)"
+              }
+
+              # ================================================================
+              p <-
+                ggplot(tmp) +
+                shadow +
+                geom_line(aes(x = pos,y = smooth, color = type)) +
+                range_label +
+                facet +
+                theme_bw() +
+                theme(panel.grid = element_blank(),
+                      axis.text = element_text(colour = "black"),
+                      strip.text.y.left = element_text(angle = 0, hjust = 1),
+                      strip.background = element_blank(),
+                      strip.text = element_text(face = "bold"),
+                      strip.placement = "outside",
+                      axis.text.y = axis.text.y,
+                      axis.ticks.y = axis.ticks.y,
+                      ggh4x.facet.nestline = element_line(colour = "black"),
+                      ggside.panel.background = element_blank(),
+                      ggside.panel.border = element_blank()) +
+                xlab(xlabel) +
+                ylab("Ribosome density [AU]") +
+                # add structure
+                sly1 + sly2  +
+                ggside::scale_xsidey_continuous(breaks = NULL) +
+                ggside::ggside(collapse = "x")
+
+              return(p)
+            }) -> plist
+
+            # combine plot list
+            if (requireNamespace("cowplot", quietly = TRUE)) {
+              cmb <- cowplot::plot_grid(plotlist = plist, nrow = nrow, ncol = ncol)
+            } else {
+              warning("Package 'cowplot' is needed for this function to work.")
+            }
+
+            # return
+            if(return_data == FALSE){
+              return(cmb)
+            }else{
+              return(pldf)
             }
           }
 )
