@@ -46,7 +46,9 @@
 
 \item{position_mode}{Character. Plot resolution: \code{"nt"} (nucleotide) or \code{"codon"} (amino acid/codon level). Default: \code{"nt"}.}
 
-\item{range_x, }{range_y Numeric. X and Y position (normalized 0–1) for the signal range label. Default: 0.98, 0.98.}
+\item{range_x}{X position (normalized 0–1) for the signal range label. Default: 0.98.}
+
+\item{range_y}{Y position (normalized 0–1) for the signal range label. Default: 0.98.}
 
 \item{range_size}{Numeric. Font size for signal range label. Default: 4.}
 
@@ -54,11 +56,17 @@
 
 \item{scale_factor}{Numeric. Scaling factor for RNA signal when comparing ribo and RNA together (used only when \code{type = "ribo_rna"}). Default: 1.}
 
-\item{utr_width, }{cds_width Numeric. Line width for 5'/3' UTR and CDS region annotations respectively. Default: \code{1} for UTR, \code{3} for CDS.}
+\item{utr_width}{Line width for 5'/3' UTR region annotations respectively. Default: \code{1} for UTR.}
 
-\item{utr_col, }{cds_col Character. Colors used to annotate UTR and CDS in \code{ggside} alignment strip. Default: \code{"grey"} and \code{"grey30"}.}
+\item{cds_width}{Line width for CDS region annotations respectively. Default: \code{3} for CDS.}
 
-\item{nrow, }{ncol Number of rows or columns in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.}
+\item{utr_col}{Colors used to annotate UTR in \code{ggside} alignment strip. Default: \code{"grey"}.}
+
+\item{cds_col}{Colors used to annotate CDS in \code{ggside} alignment strip. Default: \code{"grey30"}.}
+
+\item{nrow}{Number of rows in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.}
+
+\item{ncol}{Number of columns in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.}
 }
 \value{
 A \code{ggplot} object (consisting of multiple panels combined using \pkg{cowplot}); each panel represents one transcript. Plot can show either separate or merged replicate signals.

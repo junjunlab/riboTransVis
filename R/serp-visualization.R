@@ -472,7 +472,17 @@ setMethod("enrichment_plot2",
 # ==============================================================================
 
 
-#' @noRd
+#' Plot translation profiles
+#'
+#' @description
+#' This is a generic function for plotting translation-related profiles (such as
+#' ribosome occupancy or enrichment signals) for different types of transcriptome data.
+#'
+#' @param object An object of class \code{serp} or \code{ribotrans}, containing necessary data for plotting.
+#' @param ... Additional arguments passed to the specific method.
+#'
+#' @return A plot, typically a ggplot2 object.
+#'
 #' @export
 setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 
@@ -482,29 +492,37 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #' Plot Ribosome density Across Transcripts
 #'
 #' @description
-#' Visualize interactive ribosome profiling (IP) or total ribosome (total) signal across the transcript body for one or more transcripts from a \code{serp} object. This function supports codon- or nucleotide-resolution visualization, replicate merging, structural annotations (e.g., exon and CDS information), and optional summary statistics.
+#' Visualize interactive ribosome profiling (IP) or total ribosome (total) signal across
+#' the transcript body for one or more transcripts from a \code{serp} object. This function
+#' supports codon- or nucleotide-resolution visualization, replicate merging, structural
+#' annotations (e.g., exon and CDS information), and optional summary statistics.
 #'
 #' @param object A \code{serp} object. Must contain the slots \code{total_occupancy}, \code{ip_occupancy}, and \code{features}.
 #' @param merge_rep Logical. If \code{TRUE}, biological replicates are merged (by \code{sample_group}) and plotted with mean values and shaded standard deviation ribbons. Default: \code{FALSE}.
 #' @param var_alpha Numeric. Transparency level for the shaded ribbon when \code{merge_rep = TRUE}. Default: 0.5.
 #' @param retain_cds Logical. If \code{TRUE}, restricts plotting to coding sequence (CDS) regions only. Default: \code{TRUE}.
 #' @param mode Character. Resolution of x-axis: either \code{"codon"} (default) for amino acid-level or \code{"nt"} for nucleotide-level.
-#' @param new_signal_range Logical. Whether to annotate the plot with the observed signal range (e.g., [0–2.1]). Default: \code{FALSE}.
+#' @param new_signal_range Logical. Whether to annotate the plot with the observed signal range. Default: \code{FALSE}.
 #' @param enrich_threshold Numeric. Not used in current implementation but included for compatibility with other functions. Default: 1.
-#' @param range_x, range_y Numeric. X and Y coordinates (normalized between 0–1) used to position the signal range label. Default: 0.99, 0.98.
+#' @param range_x X position (normalized 0–1) for the signal range label. Default: 0.98.
+#' @param range_y Y position (normalized 0–1) for the signal range label. Default: 0.98.
 #' @param range_size Numeric. Font size of the signal range label. Default: 4.
 #' @param range_digit Integer. Number of digits to round the signal range annotation. Default: 1.
 #' @param exon_line Character vector of length 2 (e.g., \code{c("grey", 3)}). Specifies the color and line width of the exon annotation in \code{"nt"} mode.
 #' @param cds_line Character vector of length 2 (e.g., \code{c("grey30", 7)}). Specifies the color and line width of the CDS annotation.
 #' @param facet ggplot2 facet. Default is \code{facet_grid(sample ~ rname, switch = "y")}.
-#' @param nrow, ncol Number of rows and columns when combining multiple panel plots using \code{cowplot::plot_grid}. Optional.
+#' @param nrow Number of rows in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.
+#' @param ncol Number of columns in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.
 #' @param return_data Logical. If \code{TRUE}, return the underlying processed data instead of plot. Default: \code{FALSE}.
-#' @param ... Additional arguments (currently unused).
+#'
 #'
 #' @details
-#' This function aggregates and visualizes transcript-level signal for both IP (immunoprecipitation) and total RNA data stored in a \code{serp} object. It supports CDS-only rendering, codon resolution, and shows structure annotations such as exon and coding regions using \code{ggside} extensions.
+#' This function aggregates and visualizes transcript-level signal for both IP (immunoprecipitation)
+#' and total RNA data stored in a \code{serp} object. It supports CDS-only rendering, codon resolution,
+#' and shows structure annotations such as exon and coding regions using \code{ggside} extensions.
 #'
-#' If \code{merge_rep = TRUE}, signals for replicate samples belonging to the same \code{sample_group} are averaged, and standard deviation is visualized using \code{geom_ribbon()}.
+#' If \code{merge_rep = TRUE}, signals for replicate samples belonging to the same \code{sample_group}
+#' are averaged, and standard deviation is visualized using \code{geom_ribbon()}.
 #'
 #' The object returned is either a \code{ggplot} object or a \code{data.frame} if \code{return_data = TRUE}.
 #'

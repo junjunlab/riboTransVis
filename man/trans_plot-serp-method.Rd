@@ -35,11 +35,13 @@
 
 \item{mode}{Character. Resolution of x-axis: either \code{"codon"} (default) for amino acid-level or \code{"nt"} for nucleotide-level.}
 
-\item{new_signal_range}{Logical. Whether to annotate the plot with the observed signal range (e.g., \link{0–2.1}). Default: \code{FALSE}.}
+\item{new_signal_range}{Logical. Whether to annotate the plot with the observed signal range. Default: \code{FALSE}.}
 
 \item{enrich_threshold}{Numeric. Not used in current implementation but included for compatibility with other functions. Default: 1.}
 
-\item{range_x, }{range_y Numeric. X and Y coordinates (normalized between 0–1) used to position the signal range label. Default: 0.99, 0.98.}
+\item{range_x}{X position (normalized 0–1) for the signal range label. Default: 0.98.}
+
+\item{range_y}{Y position (normalized 0–1) for the signal range label. Default: 0.98.}
 
 \item{range_size}{Numeric. Font size of the signal range label. Default: 4.}
 
@@ -51,22 +53,28 @@
 
 \item{facet}{ggplot2 facet. Default is \code{facet_grid(sample ~ rname, switch = "y")}.}
 
-\item{nrow, }{ncol Number of rows and columns when combining multiple panel plots using \code{cowplot::plot_grid}. Optional.}
+\item{nrow}{Number of rows in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.}
+
+\item{ncol}{Number of columns in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.}
 
 \item{return_data}{Logical. If \code{TRUE}, return the underlying processed data instead of plot. Default: \code{FALSE}.}
-
-\item{...}{Additional arguments (currently unused).}
 }
 \value{
 A \code{ggplot} object or a \code{data.frame} if \code{return_data = TRUE}.
 }
 \description{
-Visualize interactive ribosome profiling (IP) or total ribosome (total) signal across the transcript body for one or more transcripts from a \code{serp} object. This function supports codon- or nucleotide-resolution visualization, replicate merging, structural annotations (e.g., exon and CDS information), and optional summary statistics.
+Visualize interactive ribosome profiling (IP) or total ribosome (total) signal across
+the transcript body for one or more transcripts from a \code{serp} object. This function
+supports codon- or nucleotide-resolution visualization, replicate merging, structural
+annotations (e.g., exon and CDS information), and optional summary statistics.
 }
 \details{
-This function aggregates and visualizes transcript-level signal for both IP (immunoprecipitation) and total RNA data stored in a \code{serp} object. It supports CDS-only rendering, codon resolution, and shows structure annotations such as exon and coding regions using \code{ggside} extensions.
+This function aggregates and visualizes transcript-level signal for both IP (immunoprecipitation)
+and total RNA data stored in a \code{serp} object. It supports CDS-only rendering, codon resolution,
+and shows structure annotations such as exon and coding regions using \code{ggside} extensions.
 
-If \code{merge_rep = TRUE}, signals for replicate samples belonging to the same \code{sample_group} are averaged, and standard deviation is visualized using \code{geom_ribbon()}.
+If \code{merge_rep = TRUE}, signals for replicate samples belonging to the same \code{sample_group}
+are averaged, and standard deviation is visualized using \code{geom_ribbon()}.
 
 The object returned is either a \code{ggplot} object or a \code{data.frame} if \code{return_data = TRUE}.
 
