@@ -1162,6 +1162,7 @@ setMethod("relative_offset_plot",
 #'
 #' @param object A \code{ribotrans} object containing ribosome profiling data.
 #' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
+#' @param selected_genes Character vector. A subset of gene names to include in the plot. If NULL, all genes are used. Default: NULL.
 #' @param do_offset_correct Logical, whether to perform read position offset correction (default: FALSE).
 #' @param position_shift Numeric, shift value for offset correction (default: 0).
 #' @param norm_method Normalization method, either "average" or "tpm" (default: "average").
@@ -1226,6 +1227,7 @@ setMethod("metagene_plot",
           signature(object = "ribotrans"),
           function(object,
                    merge_rep = FALSE,
+                   selected_genes = NULL,
                    do_offset_correct = FALSE,
                    position_shift = 0,
                    norm_method = c("average", "tpm"),
@@ -1263,6 +1265,13 @@ setMethod("metagene_plot",
 
             sry <- sry %>% fastplyr::f_filter(mstart != 0 | mstop != 0,
                                               qwidth >= read_length[1] & qwidth <= read_length[2])
+
+            # filter genes
+            if(!is.null(selected_genes)){
+              ft <- subset(obj@features, gene %in% selected_genes)
+
+              sry <- subset(sry, rname %in% ft$idnew)
+            }
 
             # average counts per position
             avg.ct <- sry %>%

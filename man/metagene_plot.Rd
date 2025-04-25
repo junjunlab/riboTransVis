@@ -10,6 +10,7 @@ metagene_plot(object, ...)
 \S4method{metagene_plot}{ribotrans}(
   object,
   merge_rep = FALSE,
+  selected_genes = NULL,
   do_offset_correct = FALSE,
   position_shift = 0,
   norm_method = c("average", "tpm"),
@@ -31,6 +32,8 @@ metagene_plot(object, ...)
 \item{...}{Additional arguments (currently unused).}
 
 \item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
+
+\item{selected_genes}{Character vector. A subset of gene names to include in the plot. If NULL, all genes are used. Default: NULL.}
 
 \item{do_offset_correct}{Logical, whether to perform read position offset correction (default: FALSE).}
 
