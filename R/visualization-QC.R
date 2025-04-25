@@ -1268,7 +1268,7 @@ setMethod("metagene_plot",
 
             # filter genes
             if(!is.null(selected_genes)){
-              ft <- subset(obj@features, gene %in% selected_genes)
+              ft <- subset(object@features, gene %in% selected_genes)
 
               sry <- subset(sry, rname %in% ft$idnew)
             }
