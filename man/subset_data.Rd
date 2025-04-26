@@ -15,31 +15,30 @@ subset_data(object, ...)
 \arguments{
 \item{object}{An object of class \code{serp} or \code{ribotrans}.}
 
-\item{...}{Logical conditions used for subsetting data frames inside the object.
-These are passed to the standard \code{subset()} function.}
+\item{...}{Logical expressions passed to the internal \code{subset()} functions to filter data frames inside the object.}
 }
 \value{
-An updated object of class \code{serp} or \code{ribotrans}, with internal slots filtered
-according to the given criteria.
+An updated \code{serp} or \code{ribotrans} object with internal data slots subsetted according to the specified criteria.
 }
 \description{
-A generic method to subset \code{serp} and \code{ribotrans} objects. This function filters internal data
-slots (\code{bam_file}, \code{library}, \code{summary_info}) based on user-defined criteria.
+A generic method to subset data contained within \code{serp} and \code{ribotrans} objects. This function filters internal data slots,
+including \code{bam_file}, \code{library}, \code{summary_info}, and if present, \code{reads_offset_info}, based on user-specified logical conditions.
 }
 \details{
-For \code{ribotrans} objects, this method:
+For \code{ribotrans} objects, the method:
 \itemize{
-\item Subsets the \code{bam_file} data frame based on \code{...}.
-\item Subsets the \code{library} data frame based on \code{...}.
-\item Filters \code{summary_info} to include only rows where \code{sample} exists in the filtered \code{library}.
+\item Subsets the \code{bam_file} data frame according to the filtering conditions.
+\item Subsets the \code{library} data frame according to the filtering conditions.
+\item Filters \code{summary_info} to retain only rows where the \code{sample} column is present in the filtered \code{library}.
+\item If the slot \code{reads_offset_info} contains rows, it is subsetted similarly by matching \code{sample} values in the filtered \code{library}.
 }
 
-For \code{serp} objects, this method:
+For \code{serp} objects, the method:
 \itemize{
-\item Subsets the \code{bam_file} data frame based on \code{...}.
-\item Subsets the \code{library} data frame based on \code{...}.
-\item Filters \code{summary_info} where the \code{sample} column matches
-\code{paste(lib$sample, lib$type, sep = "-")}, typically used for compound sample IDs.
+\item Subsets the \code{bam_file} data frame according to the filtering conditions.
+\item Subsets the \code{library} data frame accordingly.
+\item Filters \code{summary_info} where the \code{sample} column matches the compound sample IDs formed by concatenating \code{lib$sample} and \code{lib$type} with a hyphen (\code{paste(lib$sample, lib$type, sep = "-")}).
+\item If \code{reads_offset_info} is present and non-empty, it is subsetted by samples in the filtered \code{library}.
 }
 }
 \section{Methods (by class)}{
@@ -51,10 +50,10 @@ For \code{serp} objects, this method:
 }}
 \examples{
 \dontrun{
-# Subset a ribotrans object to include only a specific sample
+# Subset a ribotrans object to include only samples named "SampleA"
 subset_data(ribo, sample == "SampleA")
 
-# Subset a serp object based on type in library
+# Subset a serp object to keep only 'ip' type samples
 subset_data(serp_obj, type == "ip")
 }
 
