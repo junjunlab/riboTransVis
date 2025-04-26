@@ -81,7 +81,7 @@ setMethod("subset_data",
             object@summary_info <- sry
 
             if(nrow(object@reads_offset_info) > 0){
-              offset <- subset(object@reads_offset_info, sample %in% lib$sample)
+              offset <- subset(object@reads_offset_info, sample %in% paste(lib$sample, lib$type,sep = "-"))
               object@reads_offset_info <- offset
             }
 
