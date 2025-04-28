@@ -181,7 +181,7 @@ setMethod("metagene_plot",
             if(mode == "codon"){
               pltdf.tmp[, rel := rel %/% 3 + 1]
               pltdf.tmp <- pltdf.tmp[
-                , .(norm = mean(norm)),
+                , .(norm = sum(norm)),
                 by = .(sample, sample_group, rname, rel)
               ]
 
