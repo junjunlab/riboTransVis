@@ -88,6 +88,8 @@ theme_ribo <- function(){
 #' @importFrom stats quantile
 #' @import Rcpp
 #' @import RcppArmadillo
+#'
+#' @useDynLib riboTransVis, .registration = TRUE
 do_boot <- function(mat = NULL, boot_n = 1000,
                     method = c("median","mean","sum"), conf = 0.95) {
   # Select the requested summary statistic method
