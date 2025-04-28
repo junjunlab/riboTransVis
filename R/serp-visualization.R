@@ -1,96 +1,243 @@
 # ==============================================================================
-# enrichment plot for single gene
+# enrichment plot1 for single gene
 # ==============================================================================
 
-#' @title Enrichment Profile Plot for SERP Object
-#' @description
-#' Visualizes the ribosome profiling signal enrichment (IP / total) from a \code{serp} object.
-#' For each transcript, the function plots the enrichment curve and uncertainty shading,
-#' optionally with customized signal ranges, CDS boundary annotation, and faceting layout.
-#' Requires \code{get_enrichment} to be run beforehand.
+#' Plot ribosome profiling enrichment with smoothing and confidence intervals
 #'
-#' @param object An object of class \code{serp}. Must contain enrichment data calculated via \code{get_enrichment}.
-#' @param cds_line A vector specifying the color and line width of the CDS start marker. Default: \code{c("#CC6600", 4)}.
-#' @param line_col Color of enrichment line and the fill of confidence interval rectangles. Default: \code{"#377CC0"}.
-#' @param shadow_alpha A numeric vector of length 2 for the alpha transparency range (min, max) of the enrichment CI shading. Default: \code{c(0.1, 0.3)}.
-#' @param enrich_threshold A numeric scalar defining the horizontal dashed line threshold for enrichment (e.g., 1 = equal signal). Default: \code{1}.
-#' @param new_signal_range Logical, whether to annotate a textual enrichment signal range label (from 0 to max upper). Default: \code{FALSE}.
-#' @param range_x X position of the signal range label, in NPC units (0–1). Used only if \code{new_signal_range = TRUE}. Default: \code{0.99}.
-#' @param range_y Y position of the signal range label, in NPC units (0–1). Default: \code{0.98}.
-#' @param range_size Text size of the signal range annotation. Default: \code{4}.
-#' @param range_digit Number of digits to round in signal range label. Default: \code{1}.
-#' @param facet A ggplot2 faceting specification, e.g., \code{facet_grid(sample~rname)}. Default: \code{facet_grid(sample~rname, switch = "y")}.
-#' @param nrow,ncol Number of rows and columns in multi-figure layout when plotting multiple transcripts. Default: \code{NULL} (automatic).
+#' @description
+#' `enrichment_plot1` creates a detailed visualization of ribosome profiling data, showing the enrichment of IP (immunoprecipitation) over total RNA across transcripts. It applies sliding window smoothing and calculates binomial confidence intervals using the Agresti–Coull method. Users can customize axis scaling, whether to focus on just the CDS region, and whether to display nucleotide (nt) or codon (amino acid) units on the x-axis.
+#'
+#' @param object An object of class `serp` containing:
+#'   - `@total_occupancy`: Total counts per position
+#'   - `@ip_occupancy`: IP counts per position
+#'   - `@features`: Transcript feature information
+#'   - `@library`: Mapping statistics
+#'   - `@gene_name`: The gene of interest
+#' @param shadow_alpha A numeric vector of length two specifying the transparency range for the confidence interval shading. Default is `c(0.1, 0.3)`.
+#' @param window_size Integer. Size of the sliding window for smoothing. Default `45`.
+#' @param retain_cds Logical. If `TRUE`, plot only the CDS region; if `FALSE`, include UTRs as well. Default `TRUE`.
+#' @param log2_transform Logical. If `TRUE`, apply log2 scale to the y-axis (enrichment values). Default `FALSE`.
+#' @param mode Character. Should be `"codon"` (default) to display x-axis in codons/amino acids, or `"nt"` to display in nucleotides.
+#' @param new_signal_range Logical. Whether to add an annotation indicating the signal range (max smoothed ratio). Default `FALSE`.
+#' @param enrich_threshold Numeric. A threshold line is drawn at this enrichment value. Default is `1`.
+#' @param range_x Numeric. Position of the signal range label on the plot (only used if `new_signal_range = TRUE`).
+#' @param range_y Numeric. Position of the signal range label on the plot (only used if `new_signal_range = TRUE`).
+#' @param range_size Numeric. Font size for the signal range annotation label.
+#' @param range_digit Integer. Number of digits used when displaying the maximum enrichment value.
+#' @param exon_line A character vector specifying color and size for exon structure lines, e.g., `c("grey", 3)`.
+#' @param cds_line A character vector specifying color and size for CDS structure lines, e.g., `c("grey30", 7)`.
+#' @param sample_col Named character vector. Manual color mapping for samples. If `NULL`, default ggplot2 colors are used.
+#' @param facet A ggplot2 facetting function, e.g., `facet_grid(sample ~ rname, switch = "y")`. Controls how plots are arranged.
+#' @param nrow Integers. Number of rows and columns when combining multiple transcript plots.
+#' @param ncol Integers. Number of rows and columns when combining multiple transcript plots.
+#' @param return_data Logical. If `TRUE`, returns the smoothed enrichment calculation results as a dataframe instead of plotting. Default `FALSE`.
 #' @param ... Additional arguments (currently unused).
 #'
-#' @return A patchwork of enrichment line plots (using cowplot::plot_grid), one per transcript.
-#' Additionally shows enrichment variability via shaded area and optionally range labeling and CDS marks.
+#' @return
+#' - If `return_data = FALSE`, returns a `ggplot` or `cowplot` object containing the plotted results.
+#' - If `return_data = TRUE`, returns a `data.frame` containing:
+#'   * `sample`, `rname` - sample and transcript ID
+#'   * `winstart` - start position of the sliding window
+#'   * `win_ip`, `win_total` - counts in IP and Total within each window
+#'   * `enrich`, `lower`, `upper` - mean enrichment and its 95% confidence interval
+#'   * `bin` - window size
+#'   * `nmft` - normalization factor (IP library size/Total library size)
 #'
+#' @details
+#' The function first smooths the raw counts using a sliding window approach. For each window, it computes the proportion enriched (IP over IP+Total), and uses Agresti-Coull binomial confidence intervals via the `binom` package. The enrichment values are normalized using library sizes.
 #'
-#' @importFrom ggside geom_xsidesegment scale_xsidey_continuous ggside
-#' @importFrom fastplyr f_group_by f_summarise
+#' Depending on the mode:
+#' - `mode = "codon"`: x-axis position is rescaled by 3 to show codon units.
+#' - `mode = "nt"`: x-axis position shows nucleotides.
 #'
+#' If `retain_cds = FALSE`, the full transcript including UTRs is plotted. Structural annotations visually mark exons and CDS regions separately.
 #'
-#' @seealso \code{\link{get_enrichment}} for enrichment computation.
+#' Users can opt to display enrichment on a log2 scale for better dynamic range visualization. Multiple samples and transcripts can be plotted together leveraging ggplot2 faceting.
+#'
+#' Requires the following R packages: `dplyr`, `purrr`, `ggplot2`, `ggside`, `cowplot`, `binom`, and optionally `ggpp`.
+#'
+#' @section Notes:
+#' - Plots generated with `ggside` append a horizontal bar displaying transcript structure along the x-axis.
+#' - If packages `binom`, `ggpp`, or `cowplot` are missing, a warning will be issued and some features may be disabled.
 #'
 #' @examples
 #' \dontrun{
-#' # Assuming `x` is a serp object with enrichment already computed
-#' enrichment_plot(x)
-#' enrichment_plot(x, cds_line = c("red", 2), enrich_threshold = 1.5, new_signal_range = TRUE)
+#' # Load a `serp` object
+#' data(serp_example)
+#'
+#' # Basic plot, codon unit, focus on CDS
+#' enrichment_plot1(serp_example)
+#'
+#' # Plot using nucleotide unit including UTRs
+#' enrichment_plot1(serp_example, mode = "nt", retain_cds = FALSE)
+#'
+#' # Return smoothed data instead of plot
+#' df <- enrichment_plot1(serp_example, return_data = TRUE)
+#'
+#' # Customize sample colors
+#' enrichment_plot1(serp_example, sample_col = c(Sample1 = "blue", Sample2 = "red"))
+#'
+#' # Display enrichment on log2 scale
+#' enrichment_plot1(serp_example, log2_transform = TRUE)
 #' }
 #'
+#'
+#'
+#' @name enrichment_plot1
+#' @rdname enrichment_plot1
 #' @export
-setGeneric("enrichment_plot",function(object,...) standardGeneric("enrichment_plot"))
+setGeneric("enrichment_plot1",function(object,...) standardGeneric("enrichment_plot1"))
 
 
 
 
 
-#' @rdname enrichment_plot
+#' @rdname enrichment_plot1
 #' @export
-setMethod("enrichment_plot",
+setMethod("enrichment_plot1",
           signature(object = "serp"),
           function(object,
-                   cds_line = c("#CC6600",4),
-                   line_col = "#377CC0",
                    shadow_alpha = c(0.1,0.3),
+                   window_size = 45,
+                   retain_cds = TRUE,
+                   log2_transform = FALSE,
+                   mode = c("codon", "nt"),
+                   new_signal_range = FALSE,
                    enrich_threshold = 1,
-                   new_signal_range = F,
                    range_x = 0.99,
                    range_y = 0.98,
                    range_size = 4,
                    range_digit = 1,
+                   exon_line = c("grey",3),
+                   cds_line = c("grey30",7),
+                   sample_col = NULL,
                    facet = facet_grid(sample~rname,switch = "y"),
-                   nrow = NULL, ncol = NULL){
-            # check data
-            if(nrow(object@enriched_ratio) == 0){
-              stop("Please run `get_enrichment` first!")
+                   nrow = NULL, ncol = NULL,
+                   return_data = FALSE){
+            mode <- match.arg(mode,choices = c("codon", "nt"))
+            # ==================================================================
+            # ribo rpm/rna rpm for each position
+
+            # check rna coverage
+            if(is.null(object@total_occupancy)){
+              stop("Please supply total_occupancy data!")
             }
 
-            plotdf <- object@enriched_ratio
+            if(is.null(object@ip_occupancy)){
+              stop("Please supply ip_occupancy data!")
+            }
 
-            # check data
-            feature <- subset(object@features, gene == object@gene_name)
+            # run
+            mb <- object@total_occupancy %>%
+              dplyr::select(sample,sample_group,rname,pos,count) %>%
+              dplyr::left_join(y = object@ip_occupancy[,c("sample","sample_group","rname","pos","count")],
+                               by = c("sample","sample_group","rname","pos"))
 
-            # window size
-            bin <- plotdf$window_size[1]
+            mb[is.na(mb)] <- 0
 
-            tid <- feature$idnew
+            # loop for each sample and transcript to smooth
+            tanno <- subset(object@features, gene == object@gene_name)
+
+            # check whether smooth data
+            # x = 1
+            purrr::map_df(1:nrow(tanno),function(x){
+              tmp <- tanno[x,]
+
+              tmp2 <- mb %>%
+                dplyr::filter(rname == tmp$idnew)
+
+              sp <- unique(tmp2$sample)
+
+              # loop for each sample
+              # s = 1
+              purrr::map_df(seq_along(sp),function(s){
+                tmp3 <- tmp2 %>%
+                  dplyr::filter(sample == sp[s])
+
+                # each pos
+                pos.df <- data.frame(rname = tmp3$rname[1],pos = 1:tmp$exonlen)
+
+                # merge with value
+                pos.df <- pos.df %>% dplyr::left_join(y = tmp3,by = c("rname", "pos"))
+                pos.df$sample <- tmp3$sample[1]
+                pos.df$sample_group <- tmp3$sample_group[1]
+                pos.df[is.na(pos.df)] <- 0
+
+                if(retain_cds == TRUE){
+                  pos.df <- pos.df %>%
+                    dplyr::filter(pos >= tmp$mstart & pos <= tmp$mstop) %>%
+                    dplyr::mutate(pos = pos - tmp$mstart + 1)
+                }
+
+                # ==============================================================
+                # smooth data for each position
+                ip_total <- subset(object@library, sample == sp[s] & type == "ip")$mappped_reads
+                total_total <- subset(object@library, sample == sp[s] & type == "total")$mappped_reads
+
+                probnorm <- ip_total / total_total
+
+                len_gene <- tmp$cds
+                ip <- pos.df$count.y
+                total <- pos.df$count.x
+
+                win_starts <- 1:(len_gene - window_size + 1)
+                win_ends <- window_size:len_gene
+
+                cumsum_ip <- c(0, cumsum(ip))
+                win_ip <- cumsum_ip[win_ends + 1] - cumsum_ip[win_starts]
+
+                cumsum_total <- c(0, cumsum(total))
+                win_total <- cumsum_total[win_ends+1] - cumsum_total[win_starts]
+
+                if (requireNamespace("binom", quietly = TRUE)) {
+                  cidf <- binom::binom.agresti.coull(win_ip, win_ip + win_total, conf.level = 0.95)
+                } else {
+                  warning("Package 'binom' is needed for this function to work.")
+                }
+
+                lower <- prob2odds(pmax(0, cidf$lower))
+                lower <- ifelse(is.nan(lower), 0, lower)
+
+                upper <- prob2odds(pmin(1, cidf$upper))
+                upper <- ifelse(is.nan(upper), Inf, upper)
+
+                mean <- prob2odds(cidf$mean)
+                mean <- ifelse(is.nan(mean), 0, mean)
+
+                # output
+                df <- data.frame(sample = sp[s],
+                                 rname = pos.df$rname[1],
+                                 winstart = win_starts,
+                                 win_ip = win_ip,
+                                 win_total = win_total,
+                                 enrich = mean/probnorm,
+                                 lower = lower/probnorm,
+                                 upper = upper/probnorm,
+                                 bin = window_size,
+                                 nmft = probnorm)
+
+                return(df)
+              }) -> smooth.df
+
+              return(smooth.df)
+            }) -> mb.smoothed
+
+            # ==================================================================
+            # plot
+            tid <- tanno$idnew
 
             # loop for each transcript_id
             # x = 1
             lapply(seq_along(tid),function(x){
-              tmp_feature <- subset(feature, idnew == tid[x])
-              tmp <- subset(plotdf, rname == tid[x])
+              tmp_feature <- subset(tanno, idnew == tid[x])
+              tmp <- subset(mb.smoothed, rname == tid[x])
 
-              # ================================================================
               # whether add new signal range
               if(new_signal_range == TRUE){
                 axis.text.y = element_blank()
                 axis.ticks.y = element_blank()
 
-                range <- paste("[0-",round(max(tmp$upper),digits = range_digit),"]",sep = "")
+                range <- paste("[0-",round(max(tmp$smratio),digits = range_digit),"]",sep = "")
 
                 if (requireNamespace("ggpp", quietly = TRUE)) {
                   range_label <- ggpp::annotate(geom = "text_npc",
@@ -107,21 +254,114 @@ setMethod("enrichment_plot",
                 range_label <- NULL
               }
 
+              # structure
+              if(mode == "codon"){
+                if(retain_cds == TRUE){
+                  struc_cds <- data.frame(x = 1,xend = tmp_feature$cds/3)
+
+                  sly2 <- ggside::geom_xsidesegment(data = struc_cds,
+                                                    aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                    inherit.aes = F,
+                                                    linewidth = as.numeric(cds_line[2]),color = cds_line[1])
+
+                  sly1 <- NULL
+                }else{
+                  stop('mode == "codon" is only used when retain_cds == TRUE!')
+                }
+
+              }else{
+                if(retain_cds == TRUE){
+                  struc_exon <- data.frame(x = 1,xend = tmp_feature$cds)
+
+                  sly1 <- ggside::geom_xsidesegment(data = struc_exon,
+                                                    aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                    inherit.aes = F,
+                                                    linewidth = as.numeric(cds_line[2]),color = cds_line[1])
+
+                  sly2 <- NULL
+                }else{
+                  struc_exon <- data.frame(x = 1,xend = tmp_feature$exonlen)
+
+                  sly1 <- ggside::geom_xsidesegment(data = struc_exon,
+                                                    aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                    inherit.aes = F,
+                                                    linewidth = as.numeric(exon_line[2]),color = exon_line[1])
+
+                  struc_cds <- data.frame(x = tmp_feature$mstart,xend = tmp_feature$mstop)
+
+                  sly2 <- ggside::geom_xsidesegment(data = struc_cds,
+                                                    aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                    inherit.aes = F,
+                                                    linewidth = as.numeric(cds_line[2]),color = cds_line[1])
+                }
+
+
+              }
+
+              # xlabel
+              if(mode == "codon"){
+                xlabel <- "Ribosome position (codons / amino acids)"
+              }else{
+                xlabel <- "Ribosome position (nucleotides)"
+              }
+
+              # check mode
+              if(mode == "codon"){
+                if(retain_cds == TRUE){
+                  layer.rect <- geom_rect(aes(xmin = (winstart + bin/2)/3 - 0.5,
+                                              xmax = (winstart + bin/2)/3 + 0.5,
+                                              ymin = lower/nmft,
+                                              ymax = upper/nmft,
+                                              alpha = 1/((1/win_total + 1/win_ip)*bin),
+                                              fill = sample),
+                                          show.legend = F)
+
+                  layer.line <- geom_line(aes(x = (winstart + bin/2)/3, y = enrich/nmft, color = sample))
+                }else{
+                  stop('mode == "codon" is only used when retain_cds == TRUE!')
+                }
+
+              }else{
+                layer.rect <- geom_rect(aes(xmin = (winstart + bin/2) - 0.5,
+                                            xmax = (winstart + bin/2) + 0.5,
+                                            ymin = lower/nmft,
+                                            ymax = upper/nmft,
+                                            alpha = 1/((1/win_total + 1/win_ip)*bin),
+                                            fill = sample),
+                                        show.legend = F)
+
+                layer.line <- geom_line(aes(x = (winstart + bin/2), y = enrich/nmft, color = sample))
+              }
+
+              # y log2 scale
+              if(log2_transform == TRUE){
+                layer.y <- scale_y_continuous(trans = "log2",
+                                              limits = 2^c(-5,sqrt(ceiling(max(tmp$enrich/tmp$nmft))) + 1),
+                                              oob = scales::squish)
+              }else{
+                layer.y <- scale_y_continuous(trans = "identity", oob = scales::squish)
+              }
+
+              # sample color
+              if(!is.null(sample_col)){
+                scol <- scale_color_manual(values = sample_col)
+                sfil <- scale_fill_manual(values = sample_col)
+              }else{
+                scol <- NULL
+                sfil <- NULL
+              }
               # ================================================================
-              # plot
-              ggplot(tmp) +
-                geom_rect(aes(xmin = (pos+bin/2)/3-0.5,
-                              xmax = (pos+bin/2)/3+0.5,
-                              ymin = lower,
-                              ymax = upper,
-                              alpha = 1/((1/win_total+1/win_ip)*bin) ),
-                          fill = line_col,show.legend = F) +
-                geom_line(aes(x = (pos+bin/2)/3, y = enrich), col = line_col) +
+              # draw
+
+              p <-
+                ggplot(tmp) +
+                layer.rect + layer.line +
                 geom_hline(yintercept = enrich_threshold,lty = "dashed",color = "black") +
                 range_label +
-                # scale_y_continuous(trans = "log2", oob = scales::squish, expand = c(0,0)) +
+                layer.y +
                 scale_alpha_continuous(trans = "sqrt", name = "prec", range = shadow_alpha) +
                 facet +
+                scol + sfil +
                 theme_bw() +
                 theme(panel.grid = element_blank(),
                       axis.text = element_text(colour = "black"),
@@ -133,28 +373,33 @@ setMethod("enrichment_plot",
                       axis.ticks.y = axis.ticks.y,
                       ggside.panel.background = element_blank(),
                       ggside.panel.border = element_blank()) +
-                xlab("Ribosome position\n(codons / amino acids)") +
-                ylab("Mean enrichment\n(IP / total)") +
-                ggside::geom_xsidesegment(data = data.frame(x = 1,xend = tmp_feature$cds/3),
-                                          aes(x = x,xend = xend,
-                                              y = 0.5,yend = 0.5),
-                                          inherit.aes = F,
-                                          linewidth = as.numeric(cds_line[2]),color = cds_line[1]) +
+                xlab(xlabel) +
+                ylab("Mean enrichment (IP / total)[AU]") +
+                # add structure
+                sly1 + sly2 +
                 ggside::scale_xsidey_continuous(breaks = NULL) +
-                # scale_x_continuous(expand = c(0,0)) +
                 ggside::ggside(collapse = "x")
 
 
+              return(p)
             }) -> plist
 
             # combine plot list
             if (requireNamespace("cowplot", quietly = TRUE)) {
-              cowplot::plot_grid(plotlist = plist,nrow = nrow,ncol = ncol)
+              cmb <- cowplot::plot_grid(plotlist = plist, nrow = nrow, ncol = ncol)
             } else {
               warning("Package 'cowplot' is needed for this function to work.")
             }
+
+            # return
+            if(return_data == FALSE){
+              return(cmb)
+            }else{
+              return(mb.smoothed)
+            }
           }
 )
+
 
 
 
@@ -162,62 +407,89 @@ setMethod("enrichment_plot",
 # enrichment plot2 for single gene
 # ==============================================================================
 
-#' Plot Enrichment Profiles for Target Gene
+#' Plot smoothed enrichment ratio (IP/Total) for ribosome profiling
 #'
-#' This function visualizes the enrichment signal (IP RPM / Total RPM) across transcripts
-#' in a \code{serp} object. It supports sample replication handling, signal smoothing,
-#' display in codon or nucleotide resolution, and graphical customization.
+#' @description
+#' `enrichment_plot2` generates enrichment plots showing the ratio between IP and Total RNA signals across transcripts using rpm (Reads Per Million) normalized values. It optionally smooths the profile using a sliding window and can merge biological replicates by plotting the mean and standard deviation shading.
 #'
-#' @param object A \code{serp} object generated and processed by previous analysis steps (must include \code{total_occupancy}, \code{ip_occupancy}, and \code{features}).
-#' @param merge_rep Logical; whether to merge biological replicates (sample groups) for plotting. Default is \code{FALSE}.
-#' @param var_alpha Alpha transparency level for shaded error region (standard deviation) when \code{merge_rep = TRUE}. Default is 0.5.
-#' @param smooth Logical; whether to apply rolling mean smoothing over enrichment signal. Default is \code{TRUE}.
-#' @param window_size Integer; sliding window size for smoothing (number of nucleotides or codons depending on \code{mode}). Default is 45.
-#' @param retain_cds Logical; if \code{TRUE}, restricts plot to CDS (coding sequence) regions of transcripts. Default is \code{TRUE}.
-#' @param mode Character; plotting resolution, either \code{"codon"} (per 3 nt) or \code{"nt"} (single nucleotide). Default is \code{"codon"}.
-#' @param new_signal_range Logical; whether to display signal range annotation on the right-top corner of plot. Default is \code{FALSE}.
-#' @param enrich_threshold Numeric; add a horizontal dashed line indicating enrichment threshold (useful to visually detect high/low enrichment). Default is \code{1}.
-#' @param range_x,range_y Coordinates used for positioning signal range label when \code{new_signal_range = TRUE}. Default to \code{0.99}, \code{0.98}.
-#' @param range_size Size of signal range annotation label. Default is \code{4}.
-#' @param range_digit Integer; number of digits to round displayed max enrichment range. Default is \code{1}.
-#' @param exon_line A vector specifying color and size (e.g., \code{c("grey", 3)}) for exon structure segments if \code{mode = "nt"}. Default is \code{c("grey", 3)}.
-#' @param cds_line A vector specifying color and size (e.g., \code{c("grey30", 7)}) for CDS structure line. Default is \code{c("grey30", 7)}.
-#' @param facet A \code{ggplot2} facet specification, default is \code{facet_grid(sample ~ rname, switch = "y")}.
-#' @param nrow,ncol Set layout for subplot arrangement when multiple transcripts or samples are included (used in cowplot::plot_grid).
-#' @param return_data Logical; if \code{TRUE}, return the processed enrichment data (data.frame) used for plotting. Default is \code{FALSE}.
+#' @param object An object of class `serp` containing:
+#'   - `@total_occupancy`: total RPM per position
+#'   - `@ip_occupancy`: IP RPM per position
+#'   - `@features`: transcript annotation (exons, CDS)
+#'   - `@library`: library sizes and sample info
+#'   - `@gene_name`: the gene to plot
+#' @param merge_rep Logical. If `TRUE`, merge biological replicates and plot mean ± SD shading. Default `FALSE`.
+#' @param var_alpha Numeric. Transparency value for SD error ribbon if `merge_rep = TRUE`.
+#' @param smooth Logical. Whether to apply rolling mean smoothing (`zoo::rollsum`) to RPM profiles. Default `TRUE`.
+#' @param window_size Integer. Size of the rolling window for smoothing. Default `45`.
+#' @param retain_cds Logical. If `TRUE`, restrict analysis to CDS region only; otherwise include UTRs.
+#' @param mode Character. Units on x-axis: `"codon"` for codon positions or `"nt"` for nucleotide positions.
+#' @param new_signal_range Logical. Whether to annotate the maximum signal range on the plot.
+#' @param enrich_threshold Numeric. Threshold line to highlight enrichment level, default `1`.
+#' @param range_x Numeric. Positions (npc units) to place the signal range annotation if enabled.
+#' @param range_y Numeric. Positions (npc units) to place the signal range annotation if enabled.
+#' @param range_size Numeric. Font size of the signal range annotation.
+#' @param range_digit Integer. Number of digits to display in the signal range maximum.
+#' @param exon_line A character vector specifying color and thickness for exon structure annotations.
+#' @param cds_line A character vector specifying color and thickness for CDS structure annotations.
+#' @param facet A `ggplot2` faceting function, e.g., `facet_grid(sample ~ rname, switch = "y")`.
+#' @param nrow Integers. Number of rows or columns if plotting multiple transcripts at once.
+#' @param ncol Integers. Number of rows or columns if plotting multiple transcripts at once.
+#' @param return_data Logical. If `TRUE`, return processed data instead of a plot.
 #' @param ... Additional arguments (currently unused).
 #'
+#' @return
+#' - If `return_data = FALSE`, returns a `ggplot` (possibly combined with `cowplot::plot_grid`) showing the enrichment ratio profiles.
+#' - If `return_data = TRUE`, returns a `data.frame` containing:
+#'   * `rname`, `sample`, `pos` - position, sample, transcript ID
+#'   * `rpm.x` (total) and `rpm.y` (IP) RPM values
+#'   * `sm1`, `sm2` - smoothed values (if smoothing is enabled)
+#'   * `smratio` - smoothed ratio of IP/Total
+#'   * `sd` - standard deviation of ratio (if merging replicates)
 #'
 #' @details
-#' The function uses annotation in the \code{serp} object to generate one or more plots showing enrichment (IP/Total) across exons or CDS regions.
+#' - The function calculates per-position rpm ratio (IP/Total) and optionally smooths using a centered rolling sum (sliding window) with size `window_size`.
+#' - When `merge_rep = TRUE`, replicates are averaged by `sample_group`, and an error ribbon ±sd is drawn for variability visualization.
+#' - Supports two modes of display:
+#'   * `"codon"`: collapsing 3-nt to codon units (only for CDS retained region).
+#'   * `"nt"`: nucleotide units.
 #'
-#' When \code{smooth = TRUE}, rolling mean is computed using \code{zoo::rollsum} with user-defined \code{window_size}.
+#' - Multiple transcripts can be plotted together using ggplot2 facetting.
+#' - Annotations (exons and CDS regions) are displayed using `ggside` panel extensions.
 #'
-#' Samples can be grouped by \code{sample_group}, and replicate merging with SD shading is available.
+#' Required packages: `dplyr`, `purrr`, `ggplot2`, `ggside`, `cowplot`, `zoo`, and optionally `ggpp` if signal range labeling is enabled.
 #'
-#' If \code{return_data = TRUE}, returns a data.frame with values including smoothed counts and enrichment ratio.
-#'
-#' @return A \code{ggplot} object showing the enrichment profile plot, or a data.frame when \code{return_data=TRUE}.
-#'
-#' @importFrom dplyr select left_join mutate filter rename group_by summarise
-#' @importFrom purrr map_df
-#' @importFrom ggplot2 ggplot geom_line geom_ribbon geom_hline facet_grid facet_wrap element_blank element_text theme theme_bw xlab ylab aes
-#' @importFrom ggside ggside geom_xsidesegment scale_xsidey_continuous
-#' @importFrom stats sd
-#'
+#' @section Notes:
+#' - Smoothing uses center aligning for better positional accuracy (`align = "center"` in rolling sum).
+#' - If the `zoo` package is missing when `smooth = TRUE`, a warning will be issued.
+#' - Replicate variance visualization is only available when `merge_rep = TRUE`.
 #'
 #' @examples
 #' \dontrun{
-#' # Visualize enrichment with smoothing and signal range label
-#' enrichment_plot2(serp_obj, smooth = TRUE, new_signal_range = TRUE)
+#' # Given a serp object
+#' data(serp_example)
 #'
-#' # Only plot codon positions on CDS without smoothing
-#' enrichment_plot2(serp_obj, smooth = FALSE, retain_cds = TRUE, mode = "codon")
+#' # Basic plot with smoothing
+#' enrichment_plot2(serp_example)
+#'
+#' # Plot without smoothing
+#' enrichment_plot2(serp_example, smooth = FALSE)
+#'
+#' # Merge replicates and plot mean ± SD
+#' enrichment_plot2(serp_example, merge_rep = TRUE)
+#'
+#' # Plot nucleotide positions (including UTRs)
+#' enrichment_plot2(serp_example, mode = "nt", retain_cds = FALSE)
 #'
 #' # Return processed data
-#' data <- enrichment_plot2(serp_obj, return_data = TRUE)
+#' df <- enrichment_plot2(serp_example, return_data = TRUE)
 #' }
 #'
+#' @importFrom stats sd
+#'
+#'
+#' @name enrichment_plot2
+#' @rdname enrichment_plot2
 #' @export
 setGeneric("enrichment_plot2",function(object,...) standardGeneric("enrichment_plot2"))
 
@@ -386,28 +658,45 @@ setMethod("enrichment_plot2",
 
               # structure
               if(mode == "codon"){
-                struc_cds <- data.frame(x = 1,xend = tmp_feature$cds/3)
+                if(retain_cds == TRUE){
+                  struc_cds <- data.frame(x = 1,xend = tmp_feature$cds/3)
 
-                sly2 <- ggside::geom_xsidesegment(data = struc_cds,
-                                                  aes(x = x,xend = xend,y = 0.5,yend = 0.5),
-                                                  inherit.aes = F,
-                                                  linewidth = as.numeric(cds_line[2]),color = cds_line[1])
+                  sly2 <- ggside::geom_xsidesegment(data = struc_cds,
+                                                    aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                    inherit.aes = F,
+                                                    linewidth = as.numeric(cds_line[2]),color = cds_line[1])
 
-                sly1 <- NULL
+                  sly1 <- NULL
+                }else{
+                  stop('mode == "codon" is only used when retain_cds == TRUE!')
+                }
+
               }else{
-                struc_exon <- data.frame(x = 1,xend = tmp_feature$exonlen)
+                if(retain_cds == TRUE){
+                  struc_exon <- data.frame(x = 1,xend = tmp_feature$cds)
 
-                sly1 <- ggside::geom_xsidesegment(data = struc_exon,
-                                                  aes(x = x,xend = xend,y = 0.5,yend = 0.5),
-                                                  inherit.aes = F,
-                                                  linewidth = as.numeric(exon_line[2]),color = exon_line[1])
+                  sly1 <- ggside::geom_xsidesegment(data = struc_exon,
+                                                    aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                    inherit.aes = F,
+                                                    linewidth = as.numeric(cds_line[2]),color = cds_line[1])
 
-                struc_cds <- data.frame(x = tmp_feature$mstart,xend = tmp_feature$mstop)
+                  sly2 <- NULL
+                }else{
+                  struc_exon <- data.frame(x = 1,xend = tmp_feature$exonlen)
 
-                sly2 <- ggside::geom_xsidesegment(data = struc_cds,
-                                                  aes(x = x,xend = xend,y = 0.5,yend = 0.5),
-                                                  inherit.aes = F,
-                                                  linewidth = as.numeric(cds_line[2]),color = cds_line[1])
+                  sly1 <- ggside::geom_xsidesegment(data = struc_exon,
+                                                    aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                    inherit.aes = F,
+                                                    linewidth = as.numeric(exon_line[2]),color = exon_line[1])
+
+                  struc_cds <- data.frame(x = tmp_feature$mstart,xend = tmp_feature$mstop)
+
+                  sly2 <- ggside::geom_xsidesegment(data = struc_cds,
+                                                    aes(x = x,xend = xend,y = 0.5,yend = 0.5),
+                                                    inherit.aes = F,
+                                                    linewidth = as.numeric(cds_line[2]),color = cds_line[1])
+                }
+
               }
 
               # xlabel
@@ -462,6 +751,8 @@ setMethod("enrichment_plot2",
             }
           }
 )
+
+
 
 
 

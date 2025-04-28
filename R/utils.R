@@ -32,23 +32,96 @@ theme_ribo <- function(){
 
 
 
-boot_ci <- function(x, n = 1000, conf = 0.95){
-  stat_fun <- function(data, indices) {
-    mean(data[indices])
-  }
+# boot_ci <- function(x, n = 1000, conf = 0.95){
+#   stat_fun <- function(data, indices) {
+#     mean(data[indices])
+#   }
+#
+#   if (requireNamespace("boot", quietly = TRUE)) {
+#     boot_obj <- boot::boot(data = x, statistic = stat_fun, R = n)
+#     bci <- boot::boot.ci(boot_obj,conf = conf, type = "perc")
+#   } else {
+#     warning("Package 'boot' is needed for this function to work.")
+#   }
+#
+#
+#   ci_low <- bci$percent[4]
+#   ci_high <- bci$percent[5]
+#
+#   return(c(ci_low, ci_high))
+# }
 
-  if (requireNamespace("boot", quietly = TRUE)) {
-    boot_obj <- boot::boot(data = x, statistic = stat_fun, R = n)
-    bci <- boot::boot.ci(boot_obj,conf = conf, type = "perc")
-  } else {
-    warning("Package 'boot' is needed for this function to work.")
-  }
 
 
-  ci_low <- bci$percent[4]
-  ci_high <- bci$percent[5]
 
-  return(c(ci_low, ci_high))
+#' Bootstrap confidence intervals for per-column statistics
+#'
+#' Calculate bootstrap confidence intervals for position-wise summary statistics
+#'
+#' @param mat Numeric matrix of dimension `n_samples` × `n_positions`.
+#'   Each row is one independent sample (e.g. a gene), each column a position.
+#' @param boot_n Integer - number of bootstrap replicates. Defaults to 1000.
+#' @param method Character; one of `"median"`, `"mean"` or `"sum"`.
+#'   Defaults to `"median"`.
+#' @param conf Numeric in (0,1); confidence level. E.g. `0.95` for 95% CIs.
+#'
+#' @return A data frame with three columns:
+#' \describe{
+#'   \item{rel}{Position identifier from column names}
+#'   \item{ci_low}{Lower confidence interval bound}
+#'   \item{ci_high}{Upper confidence interval bound}
+#' }
+#'
+#' @details
+#' The bootstrap procedure works as follows:
+#' 1. Generate `boot_n` bootstrap samples by resampling rows with replacement
+#' 2. Calculate column-wise statistics for each bootstrap sample
+#' 3. Compute quantiles from bootstrap distribution
+#'
+#' @examples
+#' \dontrun{
+#' mat <- matrix(rnorm(1000), nrow = 100, dimnames = list(NULL, 1:10))
+#' do_boot(mat, boot_n = 1000, method = "median")
+#' }
+#'
+#' @export
+#' @importFrom stats quantile
+#' @import Rcpp
+#' @import RcppArmadillo
+do_boot <- function(mat = NULL, boot_n = 1000,
+                    method = c("median","mean","sum"), conf = 0.95) {
+  # Select the requested summary statistic method
+  method <- match.arg(method,choices = c("median","mean","sum"))
+
+  # Number of original samples (rows) and positions (columns)
+  n_samples <- nrow(mat)
+  n_positions <- ncol(mat)
+
+  # Create a vector of length boot_n * n_samples of resampled row-indices
+  boot_indices <- matrix(sample(n_samples, boot_n * n_samples, replace = TRUE), nrow = n_samples)
+  boot_indices <- matrix(as.integer(boot_indices - 1), nrow = n_samples)
+
+  mat <- as.matrix(mat)
+
+  # call C++:
+  boot_results <- boot_stat(mat, boot_indices, method)
+
+  # compute CI
+  probs <- c((1 - conf) / 2, 1 - (1 - conf) / 2)
+  ci <- t(apply(boot_results, 2, function(x) {
+    quantile(x, probs = probs, na.rm = TRUE)
+  }))
+
+
+  # return a data.frame
+  result <- data.frame(
+    rel = as.numeric(colnames(mat)),
+    ci_low = ci[,1],
+    ci_high = ci[,2],
+    stringsAsFactors = FALSE
+  )
+
+  return(result)
 }
 
 

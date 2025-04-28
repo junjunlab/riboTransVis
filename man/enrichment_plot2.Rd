@@ -3,7 +3,7 @@
 \name{enrichment_plot2}
 \alias{enrichment_plot2}
 \alias{enrichment_plot2,serp-method}
-\title{Plot Enrichment Profiles for Target Gene}
+\title{Plot smoothed enrichment ratio (IP/Total) for ribosome profiling}
 \usage{
 enrichment_plot2(object, ...)
 
@@ -30,69 +30,112 @@ enrichment_plot2(object, ...)
 )
 }
 \arguments{
-\item{object}{A \code{serp} object generated and processed by previous analysis steps (must include \code{total_occupancy}, \code{ip_occupancy}, and \code{features}).}
+\item{object}{An object of class \code{serp} containing:
+\itemize{
+\item \verb{@total_occupancy}: total RPM per position
+\item \verb{@ip_occupancy}: IP RPM per position
+\item \verb{@features}: transcript annotation (exons, CDS)
+\item \verb{@library}: library sizes and sample info
+\item \verb{@gene_name}: the gene to plot
+}}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{merge_rep}{Logical; whether to merge biological replicates (sample groups) for plotting. Default is \code{FALSE}.}
+\item{merge_rep}{Logical. If \code{TRUE}, merge biological replicates and plot mean ± SD shading. Default \code{FALSE}.}
 
-\item{var_alpha}{Alpha transparency level for shaded error region (standard deviation) when \code{merge_rep = TRUE}. Default is 0.5.}
+\item{var_alpha}{Numeric. Transparency value for SD error ribbon if \code{merge_rep = TRUE}.}
 
-\item{smooth}{Logical; whether to apply rolling mean smoothing over enrichment signal. Default is \code{TRUE}.}
+\item{smooth}{Logical. Whether to apply rolling mean smoothing (\code{zoo::rollsum}) to RPM profiles. Default \code{TRUE}.}
 
-\item{window_size}{Integer; sliding window size for smoothing (number of nucleotides or codons depending on \code{mode}). Default is 45.}
+\item{window_size}{Integer. Size of the rolling window for smoothing. Default \code{45}.}
 
-\item{retain_cds}{Logical; if \code{TRUE}, restricts plot to CDS (coding sequence) regions of transcripts. Default is \code{TRUE}.}
+\item{retain_cds}{Logical. If \code{TRUE}, restrict analysis to CDS region only; otherwise include UTRs.}
 
-\item{mode}{Character; plotting resolution, either \code{"codon"} (per 3 nt) or \code{"nt"} (single nucleotide). Default is \code{"codon"}.}
+\item{mode}{Character. Units on x-axis: \code{"codon"} for codon positions or \code{"nt"} for nucleotide positions.}
 
-\item{new_signal_range}{Logical; whether to display signal range annotation on the right-top corner of plot. Default is \code{FALSE}.}
+\item{new_signal_range}{Logical. Whether to annotate the maximum signal range on the plot.}
 
-\item{enrich_threshold}{Numeric; add a horizontal dashed line indicating enrichment threshold (useful to visually detect high/low enrichment). Default is \code{1}.}
+\item{enrich_threshold}{Numeric. Threshold line to highlight enrichment level, default \code{1}.}
 
-\item{range_x, range_y}{Coordinates used for positioning signal range label when \code{new_signal_range = TRUE}. Default to \code{0.99}, \code{0.98}.}
+\item{range_x}{Numeric. Positions (npc units) to place the signal range annotation if enabled.}
 
-\item{range_size}{Size of signal range annotation label. Default is \code{4}.}
+\item{range_y}{Numeric. Positions (npc units) to place the signal range annotation if enabled.}
 
-\item{range_digit}{Integer; number of digits to round displayed max enrichment range. Default is \code{1}.}
+\item{range_size}{Numeric. Font size of the signal range annotation.}
 
-\item{exon_line}{A vector specifying color and size (e.g., \code{c("grey", 3)}) for exon structure segments if \code{mode = "nt"}. Default is \code{c("grey", 3)}.}
+\item{range_digit}{Integer. Number of digits to display in the signal range maximum.}
 
-\item{cds_line}{A vector specifying color and size (e.g., \code{c("grey30", 7)}) for CDS structure line. Default is \code{c("grey30", 7)}.}
+\item{exon_line}{A character vector specifying color and thickness for exon structure annotations.}
 
-\item{facet}{A \code{ggplot2} facet specification, default is \code{facet_grid(sample ~ rname, switch = "y")}.}
+\item{cds_line}{A character vector specifying color and thickness for CDS structure annotations.}
 
-\item{nrow, ncol}{Set layout for subplot arrangement when multiple transcripts or samples are included (used in cowplot::plot_grid).}
+\item{facet}{A \code{ggplot2} faceting function, e.g., \code{facet_grid(sample ~ rname, switch = "y")}.}
 
-\item{return_data}{Logical; if \code{TRUE}, return the processed enrichment data (data.frame) used for plotting. Default is \code{FALSE}.}
+\item{nrow}{Integers. Number of rows or columns if plotting multiple transcripts at once.}
+
+\item{ncol}{Integers. Number of rows or columns if plotting multiple transcripts at once.}
+
+\item{return_data}{Logical. If \code{TRUE}, return processed data instead of a plot.}
 }
 \value{
-A \code{ggplot} object showing the enrichment profile plot, or a data.frame when \code{return_data=TRUE}.
+\itemize{
+\item If \code{return_data = FALSE}, returns a \code{ggplot} (possibly combined with \code{cowplot::plot_grid}) showing the enrichment ratio profiles.
+\item If \code{return_data = TRUE}, returns a \code{data.frame} containing:
+\itemize{
+\item \code{rname}, \code{sample}, \code{pos} - position, sample, transcript ID
+\item \code{rpm.x} (total) and \code{rpm.y} (IP) RPM values
+\item \code{sm1}, \code{sm2} - smoothed values (if smoothing is enabled)
+\item \code{smratio} - smoothed ratio of IP/Total
+\item \code{sd} - standard deviation of ratio (if merging replicates)
+}
+}
 }
 \description{
-This function visualizes the enrichment signal (IP RPM / Total RPM) across transcripts
-in a \code{serp} object. It supports sample replication handling, signal smoothing,
-display in codon or nucleotide resolution, and graphical customization.
+\code{enrichment_plot2} generates enrichment plots showing the ratio between IP and Total RNA signals across transcripts using rpm (Reads Per Million) normalized values. It optionally smooths the profile using a sliding window and can merge biological replicates by plotting the mean and standard deviation shading.
 }
 \details{
-The function uses annotation in the \code{serp} object to generate one or more plots showing enrichment (IP/Total) across exons or CDS regions.
-
-When \code{smooth = TRUE}, rolling mean is computed using \code{zoo::rollsum} with user-defined \code{window_size}.
-
-Samples can be grouped by \code{sample_group}, and replicate merging with SD shading is available.
-
-If \code{return_data = TRUE}, returns a data.frame with values including smoothed counts and enrichment ratio.
+\itemize{
+\item The function calculates per-position rpm ratio (IP/Total) and optionally smooths using a centered rolling sum (sliding window) with size \code{window_size}.
+\item When \code{merge_rep = TRUE}, replicates are averaged by \code{sample_group}, and an error ribbon ±sd is drawn for variability visualization.
+\item Supports two modes of display:
+\itemize{
+\item \code{"codon"}: collapsing 3-nt to codon units (only for CDS retained region).
+\item \code{"nt"}: nucleotide units.
 }
+\item Multiple transcripts can be plotted together using ggplot2 facetting.
+\item Annotations (exons and CDS regions) are displayed using \code{ggside} panel extensions.
+}
+
+Required packages: \code{dplyr}, \code{purrr}, \code{ggplot2}, \code{ggside}, \code{cowplot}, \code{zoo}, and optionally \code{ggpp} if signal range labeling is enabled.
+}
+\section{Notes}{
+
+\itemize{
+\item Smoothing uses center aligning for better positional accuracy (\code{align = "center"} in rolling sum).
+\item If the \code{zoo} package is missing when \code{smooth = TRUE}, a warning will be issued.
+\item Replicate variance visualization is only available when \code{merge_rep = TRUE}.
+}
+}
+
 \examples{
 \dontrun{
-# Visualize enrichment with smoothing and signal range label
-enrichment_plot2(serp_obj, smooth = TRUE, new_signal_range = TRUE)
+# Given a serp object
+data(serp_example)
 
-# Only plot codon positions on CDS without smoothing
-enrichment_plot2(serp_obj, smooth = FALSE, retain_cds = TRUE, mode = "codon")
+# Basic plot with smoothing
+enrichment_plot2(serp_example)
+
+# Plot without smoothing
+enrichment_plot2(serp_example, smooth = FALSE)
+
+# Merge replicates and plot mean ± SD
+enrichment_plot2(serp_example, merge_rep = TRUE)
+
+# Plot nucleotide positions (including UTRs)
+enrichment_plot2(serp_example, mode = "nt", retain_cds = FALSE)
 
 # Return processed data
-data <- enrichment_plot2(serp_obj, return_data = TRUE)
+df <- enrichment_plot2(serp_example, return_data = TRUE)
 }
 
 }
