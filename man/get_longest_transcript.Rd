@@ -14,7 +14,7 @@ get_longest_transcript(gtf_file = NULL, genome_file = NULL, output_file = NULL)
 \item{output_file}{Path where the extracted transcript sequences will be saved.}
 }
 \value{
-No return value, but writes the transcript sequences to the specified output file.
+Writes the transcript sequences to the specified output file and longest transcript information.
 }
 \description{
 This function extracts the sequences of the longest transcript for each gene from a GTF file

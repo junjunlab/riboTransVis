@@ -45,7 +45,7 @@ prob2odds <- function(p){p / ( 1 - p )}
 #' the internal functions 'prepareTransInfo' and 'get_transcript_sequence'.
 #'
 #' @return
-#' No return value, but writes the transcript sequences to the specified output file.
+#' Writes the transcript sequences to the specified output file and longest transcript information.
 #'
 #' @examples
 #' \dontrun{
@@ -89,6 +89,8 @@ get_longest_transcript <- function(gtf_file = NULL,
                           output_file = output_file)
 
   message("Extraction has been done!")
+
+  return(features.ft)
 }
 
 
