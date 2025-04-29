@@ -19,6 +19,81 @@ prob2odds <- function(p){p / ( 1 - p )}
 
 
 
+#' Extract sequences of longest transcripts from a GTF file
+#'
+#' @description
+#' This function extracts the sequences of the longest transcript for each gene from a GTF file
+#' using a reference genome. It first loads the GTF file, selects the longest transcript for each gene
+#' based on CDS and transcript length, and then extracts the corresponding sequences from the genome file.
+#'
+#' @param gtf_file Path to a GTF annotation file.
+#' @param genome_file Path to a reference genome file or BSgenome object .
+#' @param output_file Path where the extracted transcript sequences will be saved.
+#'
+#' @details
+#' The function follows these steps:
+#' \enumerate{
+#'   \item Loads the GTF file using rtracklayer
+#'   \item Processes transcript information using prepareTransInfo()
+#'   \item For each gene, selects the longest transcript prioritizing CDS length first, then total transcript length
+#'   \item Filters the GTF to keep only the selected transcripts
+#'   \item Extracts sequences for the selected transcripts from the reference genome
+#' }
+#'
+#' @note
+#' This function requires the 'rtracklayer' package for importing GTF files and uses
+#' the internal functions 'prepareTransInfo' and 'get_transcript_sequence'.
+#'
+#' @return
+#' No return value, but writes the transcript sequences to the specified output file.
+#'
+#' @examples
+#' \dontrun{
+#' # Extract longest transcript sequences and save to output file
+#' get_longest_transcript(
+#'   gtf_file = "path/to/annotation.gtf",
+#'   genome_file = "path/to/genome.fa",
+#'   output_file = "path/to/output/longest_transcripts.fa"
+#' )
+#' }
+#'
+#'
+#' @importFrom fastplyr f_group_by f_arrange f_slice_head
+#'
+#' @export
+get_longest_transcript <- function(gtf_file = NULL,
+                                   genome_file = NULL,
+                                   output_file = NULL){
+  # load gtf
+  if (requireNamespace("rtracklayer", quietly = TRUE)) {
+    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf")
+  } else {
+    warning("Package 'rtracklayer' is needed for this function to work.")
+  }
+
+
+  # transcriptome features
+  features <- prepareTransInfo(gtf_file = gtf_file)
+
+  # select longest trans
+  features.ft <- features %>%
+    fastplyr::f_group_by(gene) %>%
+    fastplyr::f_arrange(cds, translen,.by_group = T,.descending = T) %>%
+    fastplyr::f_slice_head(n = 1,keep_order = T)
+
+  gtf.ft <- gtf[gtf$transcript_id %in% features.ft$transcript_id]
+
+  # extract sequence
+  get_transcript_sequence(genome_file = genome_file,
+                          gtf_file = gtf.ft,
+                          output_file = output_file)
+
+  message("Extraction has been done!")
+}
+
+
+
+
 
 #' Theme for plot
 #' @export

@@ -18,7 +18,7 @@ get_transcript_sequence(
 \arguments{
 \item{genome_file}{Either a \code{BSgenome} object or the path to an uncompressed genome FASTA file (with accompanying \code{.fai} index or it will be generated).}
 
-\item{gtf_file}{Path to a GTF annotation file containing gene models (required).}
+\item{gtf_file}{Path to a GTF annotation file containing gene models (required) or Granges format file from gtf data.}
 
 \item{feature}{Feature type to extract sequences for (Default: "exon"). Could be "exon", "CDS", etc.}
 

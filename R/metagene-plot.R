@@ -200,14 +200,14 @@ setMethod("metagene_plot",
               lapply(seq_along(sp),function(x){
                 tmp <- subset(pltdf.tmp, sample == sp[x])
 
-                if (requireNamespace("tidyr", quietly = TRUE)) {
+                if (requireNamespace(c("tidyr","tibble"), quietly = TRUE)) {
                   mat <- tmp %>%
                     fastplyr::f_group_by(rname,rel) %>%
                     fastplyr::f_summarise(norm = sum(norm)) %>%
                     tidyr::pivot_wider(names_from = rel, values_from = norm, values_fill = NA) %>%
                     tibble::column_to_rownames(var = "rname")
                 } else {
-                  warning("Package 'tidyr' is needed for this function to work.")
+                  warning("Package 'tidyr' and 'tibble' are needed for this function to work.")
                 }
 
 
@@ -221,9 +221,13 @@ setMethod("metagene_plot",
                   stat.df <- apply(mat, 2, sum, na.rm = T)
                 }
 
-                stat.df <- data.frame(stat.df) %>%
-                  tibble::rownames_to_column(var = "rel") %>%
-                  dplyr::mutate(rel = as.numeric(rel))
+                if (requireNamespace("tibble", quietly = TRUE)) {
+                  stat.df <- data.frame(stat.df) %>%
+                    tibble::rownames_to_column(var = "rel") %>%
+                    dplyr::mutate(rel = as.numeric(rel))
+                } else {
+                  warning("Package 'tibble' is needed for this function to work.")
+                }
 
                 colnames(stat.df) <- c("rel","normsm")
 

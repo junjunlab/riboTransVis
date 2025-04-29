@@ -109,7 +109,7 @@ prepareTransInfo <- function(gtf_file = NULL){
 #' It also supports optional region extension upstream/downstream, and can output extended coordinates or the final transcript FASTA.
 #'
 #' @param genome_file Either a \code{BSgenome} object or the path to an uncompressed genome FASTA file (with accompanying \code{.fai} index or it will be generated).
-#' @param gtf_file Path to a GTF annotation file containing gene models (required).
+#' @param gtf_file Path to a GTF annotation file containing gene models (required) or Granges format file from gtf data.
 #' @param feature Feature type to extract sequences for (Default: "exon"). Could be "exon", "CDS", etc.
 #' @param extend Logical; whether to extend the first and last exons per transcript (Default: \code{FALSE}).
 #' @param extend_upstream Integer; number of bases to extend upstream of the first exon (Default: \code{0}).
@@ -184,11 +184,16 @@ get_transcript_sequence <- function(genome_file = NULL,
   }
 
   # load gtf file
-  if (requireNamespace("rtracklayer", quietly = TRUE)) {
-    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>% data.frame()
-  } else {
-    warning("Package 'rtracklayer' is needed for this function to work.")
+  if(inherits(gtf_file,"GRanges")){
+    gtf <- gtf_file %>% data.frame()
+  }else if(is.character(gtf_file)){
+    if (requireNamespace("rtracklayer", quietly = TRUE)) {
+      gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>% data.frame()
+    } else {
+      warning("Package 'rtracklayer' is needed for this function to work.")
+    }
   }
+
 
   # ============================================================================
   # prepare info to extract
