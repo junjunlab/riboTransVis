@@ -3,69 +3,89 @@
 \name{get_normalized_reads}
 \alias{get_normalized_reads}
 \alias{get_normalized_reads,ribotrans-method}
-\title{Get Normalized Read Counts (TPM) and Translation Efficiency}
+\title{Get normalized reads from ribotrans object}
 \usage{
 get_normalized_reads(object, ...)
 
-\S4method{get_normalized_reads}{ribotrans}(object, type = c("rna", "ribo", "te"))
+\S4method{get_normalized_reads}{ribotrans}(
+  object,
+  norm_type = c("tpm", "rpkm"),
+  type = c("rna", "ribo", "te")
+)
 }
 \arguments{
-\item{object}{An S4 object of class \code{ribotrans}, which stores:
-• \code{object@counts}: a list containing read count matrices for RNA-seq (\code{object@counts$rna})
-and Ribo-seq (\code{object@counts$rpf}).
-• \code{object@features}: a data frame or tibble that holds transcript or gene length information
-for "transcriptome" mapping mode.
-• \code{object@mapping_type}: a character string, either \code{"genome"} or \code{"transcriptome"}.}
+\item{object}{A \code{ribotrans} object containing RNA and ribosome profiling data}
 
-\item{...}{Additional arguments (currently unused).}
+\item{...}{Additional arguments (currently not used)}
 
-\item{type}{A character vector specifying which data to process. Can be any combination of
-\code{c("rna","ribo","te")}.
-• "rna": compute TPM for RNA-seq.
-• "ribo": compute TPM for Ribo-seq.
-• "te": compute translation efficiency = ribo_TPM / rna_TPM.}
+\item{norm_type}{Character string specifying the normalization method.
+Options are "tpm" (Transcripts Per Million) or "rpkm" (Reads Per Kilobase Million).
+Default is "tpm".}
+
+\item{type}{Character vector specifying which data types to extract.
+Options include "rna" (RNA-seq data), "ribo" (ribosome profiling data),
+and/or "te" (translation efficiency). Default is all three types.}
 }
 \value{
-A named list with up to three elements (depending on the \code{type} input):
-• \code{$tpm.rna}: A data frame of TPM values for RNA-seq genes (genome mapping) or transcripts (transcriptome mapping).
-• \code{$tpm.ribo}: A data frame of TPM values for Ribo-seq.
-• \code{$te}: A data frame of translation efficiency, computed only when both RNA and Ribo data are available and "te" is included in \code{type}.
+A list containing normalized data based on the specified \code{type} parameter:
+\describe{
+\item{tpm.rna/rpkm.rna}{Data frame with normalized RNA-seq counts and gene annotations}
+\item{tpm.ribo/rpkm.ribo}{Data frame with normalized ribosome profiling counts and gene annotations}
+\item{te}{Data frame with translation efficiency values (ribosome/RNA ratios) and gene annotations}
+}
 }
 \description{
-This function calculates TPM (Transcripts Per Million) values for RNA-seq and/or Ribo-seq data
-(depending on the chosen type), then computes translation efficiency (TE) when both are requested.
-It returns a list with elements tpm.rna, tpm.ribo, and te (depending on user input).
+This function extracts and calculates normalized read counts (TPM or RPKM)
+from a ribotrans object for RNA-seq, ribosome profiling, and translation
+efficiency data.
 }
 \details{
+The function performs normalization accounting for both gene length and sequencing depth:
+
+\strong{TPM (Transcripts Per Million):}
 \enumerate{
-\item If "rna" is selected in the argument \code{type}, the function extracts the counts from
-\code{object@counts$rna} and calculates TPM for RNA-seq data.
-\item If "ribo" is selected in \code{type}, the function extracts counts from
-\code{object@counts$rpf} (ribosome-protected fragments) to calculate TPM for Ribo-seq data.
-\item If "te" (translation efficiency) is selected, the function will intersect the rownames
-of the RNA and Ribo TPM matrices to compute TE as tpm.ribo / tpm.rna for the matched genes.
+\item Calculate RPK (Reads Per Kilobase): count/gene_length_kb
+\item Calculate TPM: RPK/sum(RPK) * 10^6
 }
 
-The function handles two potential mapping types:
-• "genome": Genomic annotation is used (e.g., from \code{ribo_info$annotation}, \code{rna_info$annotation}).
-• "transcriptome": Transcript-based annotation, where \code{object@features} provides transcript lengths
-in \code{translen} and gene IDs/annotations.
+\strong{RPKM (Reads Per Kilobase Million):}
+\enumerate{
+\item Normalize by sequencing depth: count/total_reads * 10^6
+\item Normalize by gene length: result/gene_length_kb
+}
+
+Translation efficiency (TE) is calculated as the ratio of normalized
+ribosome profiling reads to normalized RNA-seq reads for each gene.
+
+For genome-based mapping, gene lengths are extracted from annotation data.
+For transcript-based mapping, average transcript lengths are calculated
+from the features data.
+}
+\note{
+\itemize{
+\item When calculating TE, only genes present in both RNA and ribosome data are included
+\item Sample column order is automatically matched between RNA and ribosome data for TE calculation
+\item Gene annotations are added based on the mapping type (genome vs transcript)
+}
 }
 \examples{
 \dontrun{
-  # Suppose we have a 'ribotrans' object named 'ribo_obj'
-  # that contains counts for RNA-seq (ribo_obj@counts$rna)
-  # and Ribo-seq (ribo_obj@counts$rpf).
+# Get TPM normalized data for all types
+normalized_data <- get_normalized_reads(ribotrans_obj,
+                                       norm_type = "tpm",
+                                       type = c("rna", "ribo", "te"))
 
-  # Calculate only RNA TPM:
-  res_rna <- get_normalized_reads(ribo_obj, type = "rna")
-  head(res_rna$tpm.rna)
+# Get only RPKM normalized RNA data
+rna_rpkm <- get_normalized_reads(ribotrans_obj,
+                                norm_type = "rpkm",
+                                type = "rna")
 
-  # Calculate RNA and Ribo TPM plus TE:
-  res_te <- get_normalized_reads(ribo_obj, type = c("rna","ribo","te"))
-  head(res_te$tpm.rna)
-  head(res_te$tpm.ribo)
-  head(res_te$te)
+# Access specific results
+rna_tpm <- normalized_data$tpm.rna
+translation_efficiency <- normalized_data$te
 }
 
+}
+\seealso{
+\code{\link[=ribotrans-class]{ribotrans}} for the ribotrans class structure
 }
