@@ -264,8 +264,8 @@ construct_ribotrans <- function(genome_file = NULL,
   # whether select longest transcript
   if(choose_longest_trans == TRUE){
     features <- features %>%
-      fastplyr::f_group_by(gene) %>%
-      fastplyr::f_arrange(cds, translen,.by_group = T,.descending = T) %>%
+      dplyr::group_by(gene) %>%
+      dplyr::arrange(dplyr::desc(cds), dplyr::desc(translen),.by_group = T) %>%
       fastplyr::f_slice_head(n = 1,keep_order = T)
   }
 
