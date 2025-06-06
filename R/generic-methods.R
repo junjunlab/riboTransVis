@@ -266,6 +266,7 @@ setMethod("get_coverage",
                                    total_reads = totalreads[x])
               }
 
+
               # add sample name
               tmp$sample <- sp[x]
               tmp$sample_group <- gp[x]

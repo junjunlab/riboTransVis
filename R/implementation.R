@@ -549,6 +549,13 @@ getOccupancy <- function(bam_file = NULL,
     return(tmp)
   })
 
+  # check data
+  if(nrow(tmpdf) == 0){
+    tmpdf <- data.frame(seqnames = gene.ft$idnew, pos = 1, count = 0)
+  }
+
+  colnames(tmpdf)[1] <- "rname"
+
   # total mapped reads
   # total_reads <- sum(Rsamtools::idxstatsBam(bam_file)$mapped)
 
