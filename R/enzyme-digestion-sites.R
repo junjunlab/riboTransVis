@@ -99,14 +99,14 @@ setMethod("digestion_site_plot",
                 fastplyr::f_select(sample, rname, pos5st, pos5sp, pos3st, pos3sp, translen,frame)
             }else{
               sry <- sry %>%
-                dplyr::mutate(pos3st = pos - digest_site_range[2], pos3sp = pos + digest_site_range[1],
+                dplyr::mutate(pos3st = pos - digest_site_range[1], pos3sp = pos + digest_site_range[2],
                               pos5st = pos - qwidth + 1 - digest_site_range[1], pos5sp = pos - qwidth + 1 + digest_site_range[2]) %>%
                 fastplyr::f_select(sample, rname, pos5st, pos5sp, pos3st, pos3sp, translen,frame)
             }
 
             sry.ft <- sry %>%
-              fastplyr::f_filter(pos5st > 0 & pos3st > 0) %>%
-              fastplyr::f_filter(pos5sp <= translen & pos3sp <= translen)
+              fastplyr::f_filter(pos5st > 0 & pos3st > 0 & pos5sp > 0 & pos3sp > 0) %>%
+              fastplyr::f_filter(pos5sp <= translen - 3 & pos3sp <= translen - 3)
 
             # ==================================================================
             # extract cut site sequence
@@ -130,12 +130,12 @@ setMethod("digestion_site_plot",
                   if(type == "end5"){
                     gr <- GenomicRanges::GRanges(
                       seqnames = tmp2$rname,
-                      ranges = IRanges(start = tmp2$pos5st, end = tmp2$pos5sp)
+                      ranges = IRanges::IRanges(start = tmp2$pos5st, end = tmp2$pos5sp)
                     )
                   }else{
                     gr <- GenomicRanges::GRanges(
                       seqnames = tmp2$rname,
-                      ranges = IRanges(start = tmp2$pos3st, end = tmp2$pos3sp)
+                      ranges = IRanges::IRanges(start = tmp2$pos3st, end = tmp2$pos3sp)
                     )
                   }
 
@@ -152,12 +152,12 @@ setMethod("digestion_site_plot",
                 if(type == "end5"){
                   gr <- GenomicRanges::GRanges(
                     seqnames = tmp$rname,
-                    ranges = IRanges(start = tmp$pos5st, end = tmp$pos5sp)
+                    ranges = IRanges::IRanges(start = tmp$pos5st, end = tmp$pos5sp)
                   )
                 }else{
                   gr <- GenomicRanges::GRanges(
                     seqnames = tmp$rname,
-                    ranges = IRanges(start = tmp$pos3st, end = tmp$pos3sp)
+                    ranges = IRanges::IRanges(start = tmp$pos3st, end = tmp$pos3sp)
                   )
                 }
 
