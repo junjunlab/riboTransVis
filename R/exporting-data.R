@@ -144,7 +144,7 @@ setMethod("export_genome_occupancy",
               # to GRanges
               adjusted <- adjusted %>%
                 fastplyr::f_group_by(sample,rname,pos) %>%
-                fastplyr::f_summarise(count = sum(count),rpm = sum(rpm), .groups = "drop") %>%
+                fastplyr::f_summarise(count = sum(count),rpm = sum(rpm)) %>%
                 fastplyr::f_select(rname,pos,rpm) %>%
                 dplyr::rename(seqnames = rname, start = pos,score = rpm) %>%
                 dplyr::mutate(end = start,.after = "start") %>%

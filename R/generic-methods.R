@@ -55,6 +55,7 @@ setMethod("generate_summary",
                    exp_type = c("ribo", "rna", "total", "ip"),
                    load_local = FALSE,
                    nThreads = 1){
+            options(fastplyr.inform = FALSE)
             # exp_type <- match.arg(exp_type, c("ribo", "rna", "total", "ip"))
 
             bams <- subset(object@library, type %in% exp_type)
