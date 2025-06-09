@@ -95,7 +95,7 @@ setMethod("digestion_site_plot",
             if(object@assignment_mode == "end5"){
               sry <- sry %>%
                 dplyr::mutate(pos5st = pos - digest_site_range[1], pos5sp = pos + digest_site_range[2],
-                              pos3st = pos + qwidth - 1 - digest_site_range[2], pos3sp = pos + qwidth - 1 + digest_site_range[1]) %>%
+                              pos3st = pos + qwidth - 1 - digest_site_range[1], pos3sp = pos + qwidth - 1 + digest_site_range[2]) %>%
                 fastplyr::f_select(sample, rname, pos5st, pos5sp, pos3st, pos3sp, translen,frame)
             }else{
               sry <- sry %>%

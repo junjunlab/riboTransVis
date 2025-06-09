@@ -99,7 +99,7 @@ setMethod("generate_summary",
 
                   tinfo.gr <- tinfo %>%
                     fastplyr::f_group_by(rname,pos,qwidth) %>%
-                    fastplyr::f_summarise(count = dplyr::n(),.groups = "drop") %>%
+                    fastplyr::f_summarise(count = dplyr::n()) %>%
                     dplyr::rename(seqnames = rname, start = pos) %>%
                     dplyr::mutate(end = start,.after = "start")
 
