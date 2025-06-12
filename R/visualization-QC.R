@@ -900,6 +900,9 @@ setGeneric("relative_heatmap_plot",function(object,...) standardGeneric("relativ
 #'  \code{"rel2stop"} to plot relative to stop codon. Default is \code{"rel2start"}.
 #' @param read_length A numeric vector of length 2 specifying the range of read lengths to include in the plot. Default is \code{c(20, 35)}.
 #' @param rel_dist A numeric vector of length 2 specifying the range of relative distances to plot. Default is \code{c(-100, 100)}.
+#' @param facet A ggplot2 faceting specification, e.g.
+#'   \code{ggplot2::facet_wrap(~sample, scales = "free")}.
+#'   Default is \code{ggplot2::facet_wrap(~sample, scales = "free")}.
 #' @param log_scale A logical value indicating whether to apply a logarithmic transformation to counts. Default is \code{FALSE}.
 #' @param return_data A logical value determining the return type. If \code{TRUE}, the summarized data is returned; if \code{FALSE}, the plot object is returned. Default is \code{FALSE}.
 #'
@@ -925,6 +928,7 @@ setMethod("relative_heatmap_plot",
                    type = c("rel2start","rel2stop"),
                    read_length = c(20,35),
                    rel_dist = c(-100,100),
+                   facet = ggplot2::facet_wrap(~sample,scales = "free"),
                    log_scale = FALSE,
                    return_data = FALSE){
 
@@ -976,7 +980,7 @@ setMethod("relative_heatmap_plot",
             p <-
               ggplot(summary.info) +
               layer +
-              facet_wrap(~sample,scales = "free") +
+              facet +
               theme(axis.text = element_text(colour = "black"),
                     panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",size = rel(1),face = "bold")) +
