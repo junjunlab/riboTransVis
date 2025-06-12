@@ -12,6 +12,7 @@ frame_plot(object, ...)
   read_length = c(20, 35),
   merge_rep = FALSE,
   text_size = 3,
+  facet = ggplot2::facet_wrap(~sample, scales = "free"),
   add_periodicity_label = TRUE,
   return_data = FALSE
 )
@@ -27,6 +28,10 @@ used in analysis (default: \code{c(20, 35)}).}
 \item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
 
 \item{text_size}{Numeric, size of the text labels showing periodicity percentages (default: 3).}
+
+\item{facet}{A ggplot2 faceting specification, e.g.
+\code{ggplot2::facet_wrap(~sample, scales = "free")}.
+Default is \code{ggplot2::facet_wrap(~sample, scales = "free")}.}
 
 \item{add_periodicity_label}{Logical, whether to annotate each frame with periodicity
 (percentage of total reads per sample) (default: \code{TRUE}).}

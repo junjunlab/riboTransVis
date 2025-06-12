@@ -12,6 +12,9 @@
 #'   used in analysis (default: \code{c(20, 35)}).
 #' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
 #' @param text_size Numeric, size of the text labels showing periodicity percentages (default: 3).
+#' @param facet A ggplot2 faceting specification, e.g.
+#'   \code{ggplot2::facet_wrap(~sample, scales = "free")}.
+#'   Default is \code{ggplot2::facet_wrap(~sample, scales = "free")}.
 #' @param add_periodicity_label Logical, whether to annotate each frame with periodicity
 #'   (percentage of total reads per sample) (default: \code{TRUE}).
 #' @param return_data Logical, if \code{TRUE}, return data frame used to build the plot instead of a plot (default: \code{FALSE}).
@@ -53,6 +56,7 @@ setMethod("frame_plot",
                    read_length = c(20,35),
                    merge_rep = FALSE,
                    text_size = 3,
+                   facet = ggplot2::facet_wrap(~sample,scales = "free"),
                    add_periodicity_label = TRUE,
                    return_data = FALSE){
             pltdf <- object@summary_info %>%
@@ -102,7 +106,7 @@ setMethod("frame_plot",
               theme(panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
-              facet_wrap(~sample,scales = "free") +
+              facet +
               scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
               xlab("Read length (nt)") + ylab("Number of reads") +
               scale_fill_brewer(direction = -1,name = "Frame")
@@ -483,6 +487,9 @@ setMethod("length_plot",
 #'
 #' @param object A `ribotrans` object that contains summary read information.
 #' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
+#' @param facet A ggplot2 faceting specification, e.g.
+#'   \code{ggplot2::facet_wrap(~sample, scales = "free")}.
+#'   Default is \code{ggplot2::facet_wrap(~sample, scales = "free")}.
 #' @param return_data A logical value indicating whether to return the processed
 #' summary data instead of the plot. Default is `FALSE` (returns a `ggplot` object).
 #' @param ... Additional arguments (currently unused).
@@ -515,7 +522,9 @@ setGeneric("feature_plot",function(object,...) standardGeneric("feature_plot"))
 #' @export
 setMethod("feature_plot",
           signature(object = "ribotrans"),
-          function(object,merge_rep = FALSE,return_data = FALSE){
+          function(object,merge_rep = FALSE,
+                   facet = ggplot2::facet_wrap(~sample,scales = "free_y"),
+                   return_data = FALSE){
             # assign features
             sry <- object@summary_info %>%
               fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
@@ -541,7 +550,7 @@ setMethod("feature_plot",
             p <-
               ggplot(sry) +
               geom_col(aes(x = type,y = counts,fill = type),width = 0.6,show.legend = F) +
-              facet_wrap(~sample,scales = "free_y")+
+              facet +
               theme(panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +

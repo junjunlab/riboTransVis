@@ -7,7 +7,12 @@
 \usage{
 feature_plot(object, ...)
 
-\S4method{feature_plot}{ribotrans}(object, merge_rep = FALSE, return_data = FALSE)
+\S4method{feature_plot}{ribotrans}(
+  object,
+  merge_rep = FALSE,
+  facet = ggplot2::facet_wrap(~sample, scales = "free_y"),
+  return_data = FALSE
+)
 }
 \arguments{
 \item{object}{A \code{ribotrans} object that contains summary read information.}
@@ -15,6 +20,10 @@ feature_plot(object, ...)
 \item{...}{Additional arguments (currently unused).}
 
 \item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
+
+\item{facet}{A ggplot2 faceting specification, e.g.
+\code{ggplot2::facet_wrap(~sample, scales = "free")}.
+Default is \code{ggplot2::facet_wrap(~sample, scales = "free")}.}
 
 \item{return_data}{A logical value indicating whether to return the processed
 summary data instead of the plot. Default is \code{FALSE} (returns a \code{ggplot} object).}
