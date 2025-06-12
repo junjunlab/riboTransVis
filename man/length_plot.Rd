@@ -3,7 +3,7 @@
 \name{length_plot}
 \alias{length_plot}
 \alias{length_plot,ribotrans-method}
-\title{Generate Length Distribution Plot}
+\title{Plot Read Length Distribution or Frame Periodicity for ribotrans Objects}
 \usage{
 length_plot(object, ...)
 
@@ -12,72 +12,80 @@ length_plot(object, ...)
   read_length = c(20, 35),
   merge_rep = FALSE,
   text_size = 4,
+  col_width = 0.9,
+  col_color = "grey30",
   add_periodicity_label = TRUE,
   labely_extend = 0.05,
+  facet = ggplot2::facet_wrap(~sample, scales = "free"),
   return_data = FALSE,
   type = c("length", "frame_length")
 )
 }
 \arguments{
-\item{object}{A \code{ribotrans} object that contains summary read count information.}
+\item{object}{A \code{ribotrans} object. It must contain a \code{summary_info}
+slot/data.frame with columns \code{sample}, \code{sample_group}, \code{qwidth},
+\code{count}, \code{pos}, \code{mstart}, and \code{mstop}.}
 
-\item{...}{Additional arguments passed to class-specific methods.}
+\item{...}{Additional arguments (currently unused).}
 
-\item{read_length}{A numeric vector of length 2 (default: \code{c(20, 35)}). Defines the range of read lengths to visualize.}
+\item{read_length}{Numeric vector of length two. Read length range
+(inclusive) to include in the plot. Default is \code{c(20, 35)}.}
 
-\item{merge_rep}{Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.}
+\item{merge_rep}{Logical. If \code{TRUE}, replicates (same \code{sample_group})
+are aggregated by mean counts. Default is \code{FALSE}.}
 
-\item{text_size}{Numeric (default: \code{4}). Specifies the font size for periodicity labels, applicable when \code{type = "frame_length"}.}
+\item{text_size}{Numeric. Text size for periodicity labels. Default is 4.}
 
-\item{add_periodicity_label}{Logical (default: \code{TRUE}). If \code{TRUE}, adds periodicity percentage labels to the plot (only for \code{type = "frame_length"}).}
+\item{col_width}{Numeric. Width of the bars in the plot. Default is 0.9.}
 
-\item{labely_extend}{A numeric proportion to extend the y-position of periodicity labels above bars
-(default: 0.05).}
+\item{col_color}{Character. Fill color of bars when \code{type = "length"}.
+Default is \code{"grey30"}.}
 
-\item{return_data}{Logical (default: \code{FALSE}). If \code{TRUE}, returns the processed data frame instead of a plot.}
+\item{add_periodicity_label}{Logical. If \code{TRUE} and
+\code{type = "frame_length"}, adds the percentage of reads in the dominant
+frame as text labels. Default is \code{TRUE}.}
 
-\item{type}{Character string, either \code{"length"} (default) or \code{"frame_length"}.
-\itemize{
-\item \code{"length"}: Displays a bar plot showing the distribution of read lengths.
-\item \code{"frame_length"}: Displays a bar plot with frame-periodicity information, highlighting the reading frame (0, 1, 2).
-}}
+\item{labely_extend}{Numeric. Proportion by which to extend the y-coordinate
+of periodicity labels above the top of their bars. Default is 0.05.}
+
+\item{facet}{A ggplot2 faceting specification, e.g.
+\code{ggplot2::facet_wrap(~sample, scales = "free")}.
+Default is \code{ggplot2::facet_wrap(~sample, scales = "free")}.}
+
+\item{return_data}{Logical. If \code{FALSE} (default), returns a \code{ggplot}
+object. If \code{TRUE}, returns the processed data.frame used for plotting.}
+
+\item{type}{Character string specifying the plot type.
+\code{"length"} for read length distribution,
+\code{"frame_length"} for frame-resolved counts.
+Default is \code{c("length", "frame_length")}.}
 }
 \value{
-A ggplot object representing the length distribution of reads.
-
-A \code{ggplot2} object showing the read length distribution or a processed data frame if \code{return_data = TRUE}.
+If \code{return_data = FALSE}, a \code{ggplot} object. If
+\code{return_data = TRUE}, a data.frame with columns corresponding to
+the selected \code{type} and grouping variables.
 }
 \description{
-This generic function generates a length distribution plot for sequencing reads.
-
-The \code{length_plot} function visualizes the distribution of read lengths in a Ribo-seq dataset.
-It can either show the total counts of different read lengths (\code{type = "length"})
-or display frame-periodicity information (\code{type = "frame_length"}).
-}
-\details{
-\itemize{
-\item If \code{type = "length"}, the function summarizes read counts by length.
-\item If \code{type = "frame_length"}, the function calculates frame-periodicity and shows the proportion of reads mapped to each frame.
-\item Frame-periodicity is computed as: \emph{\strong{percentage of reads in frame-0 relative to all frames}}.
-\item Reads outside annotated coding regions (\code{mstart !=0} or \code{mstop !=0}) are analyzed for periodicity.
-}
+This function generates a ggplot visualization of read length distribution
+or frame-specific read counts (with optional periodicity labels) from a
+\code{ribotrans} object. It can also aggregate replicates and/or return the
+underlying summary data.
 }
 \examples{
 \dontrun{
-data(ribo_obj)  # Assume ribo_obj is a 'ribotrans' object
+## Assuming rt is a valid ribotrans object:
+# Simple length distribution plot
+length_plot(rt)
 
-# Plot read length distribution
-length_plot(ribo_obj, read_length = c(25, 30), type = "length")
-
-# Plot frame-periodicity with periodicity labels
-length_plot(ribo_obj, type = "frame_length", add_periodicity_label = TRUE)
-
-# Retrieve processed data
-df <- length_plot(ribo_obj, return_data = TRUE, type = "frame_length")
-head(df)
+# Frame-resolved plot, merging replicates and returning data
+df <- length_plot(rt,
+type = "frame_length",
+merge_rep = TRUE,
+return_data = TRUE)
 }
 
 }
 \seealso{
-\code{\link[ggplot2:geom_bar]{ggplot2::geom_col()}}, \code{\link[ggplot2:facet_wrap]{ggplot2::facet_wrap()}}, \code{\link[dplyr:mutate]{dplyr::mutate()}}, \code{\link[scales:label_log]{scales::label_log()}}
+\code{\link[ggplot2]{ggplot}}, \code{\link[dplyr]{group_by}},
+\code{\link[fastplyr]{f_summarise}}, \code{\link[methods]{setGeneric}}
 }

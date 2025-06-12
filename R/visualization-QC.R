@@ -296,79 +296,85 @@ setMethod("period_plot",
 # function for length plot
 # ==============================================================================
 
-#' Generate Length Distribution Plot
+#' Plot Read Length Distribution or Frame Periodicity for ribotrans Objects
 #'
-#' @description This generic function generates a length distribution plot for sequencing reads.
+#' This function generates a ggplot visualization of read length distribution
+#' or frame-specific read counts (with optional periodicity labels) from a
+#' \code{ribotrans} object. It can also aggregate replicates and/or return the
+#' underlying summary data.
 #'
-#' @param object An object containing experimental data.
-#' @param ... Additional arguments passed to class-specific methods.
+#' @param object A \code{ribotrans} object. It must contain a \code{summary_info}
+#' slot/data.frame with columns \code{sample}, \code{sample_group}, \code{qwidth},
+#' \code{count}, \code{pos}, \code{mstart}, and \code{mstop}.
+#' @param read_length Numeric vector of length two. Read length range
+#' (inclusive) to include in the plot. Default is \code{c(20, 35)}.
+#' @param merge_rep Logical. If \code{TRUE}, replicates (same \code{sample_group})
+#' are aggregated by mean counts. Default is \code{FALSE}.
+#' @param text_size Numeric. Text size for periodicity labels. Default is 4.
+#' @param col_width Numeric. Width of the bars in the plot. Default is 0.9.
+#' @param col_color Character. Fill color of bars when \code{type = "length"}.
+#' Default is \code{"grey30"}.
+#' @param add_periodicity_label Logical. If \code{TRUE} and
+#' \code{type = "frame_length"}, adds the percentage of reads in the dominant
+#' frame as text labels. Default is \code{TRUE}.
+#' @param labely_extend Numeric. Proportion by which to extend the y-coordinate
+#' of periodicity labels above the top of their bars. Default is 0.05.
+#' @param facet A ggplot2 faceting specification, e.g.
+#'   \code{ggplot2::facet_wrap(~sample, scales = "free")}.
+#'   Default is \code{ggplot2::facet_wrap(~sample, scales = "free")}.
+#' @param return_data Logical. If \code{FALSE} (default), returns a \code{ggplot}
+#' object. If \code{TRUE}, returns the processed data.frame used for plotting.
+#' @param type Character string specifying the plot type.
+#' \code{"length"} for read length distribution,
+#' \code{"frame_length"} for frame-resolved counts.
+#' Default is \code{c("length", "frame_length")}.
+#' @param ... Additional arguments (currently unused).
 #'
-#' @return A ggplot object representing the length distribution of reads.
 #'
+#' @return If \code{return_data = FALSE}, a \code{ggplot} object. If
+#' \code{return_data = TRUE}, a data.frame with columns corresponding to
+#' the selected \code{type} and grouping variables.
+#'
+#' @seealso \code{\link[ggplot2]{ggplot}}, \code{\link[dplyr]{group_by}},
+#' \code{\link[fastplyr]{f_summarise}}, \code{\link[methods]{setGeneric}}
+#'
+#' @examples
+#' \dontrun{
+#' ## Assuming rt is a valid ribotrans object:
+#' # Simple length distribution plot
+#' length_plot(rt)
+#'
+#' # Frame-resolved plot, merging replicates and returning data
+#' df <- length_plot(rt,
+#' type = "frame_length",
+#' merge_rep = TRUE,
+#' return_data = TRUE)
+#' }
+#'
+#' @import ggplot2
+#' @importFrom scales label_log
+#' @importFrom dplyr group_by summarise rename filter left_join slice_max mutate
+#' @importFrom fastplyr f_group_by f_summarise f_filter
+#' @import methods
 #' @export
 #' @rdname length_plot
 setGeneric("length_plot",function(object,...) standardGeneric("length_plot"))
 
 
 
-#' @title Length Distribution Plot for Ribo-seq Reads
-#' @description The `length_plot` function visualizes the distribution of read lengths in a Ribo-seq dataset.
-#' It can either show the total counts of different read lengths (`type = "length"`)
-#' or display frame-periodicity information (`type = "frame_length"`).
-#'
-#' @param object A `ribotrans` object that contains summary read count information.
-#' @param read_length A numeric vector of length 2 (default: `c(20, 35)`). Defines the range of read lengths to visualize.
-#' @param merge_rep Logical. Whether to merge replicate samples by \code{sample_group}. Default is \code{FALSE}.
-#' @param text_size Numeric (default: `4`). Specifies the font size for periodicity labels, applicable when `type = "frame_length"`.
-#' @param add_periodicity_label Logical (default: `TRUE`). If `TRUE`, adds periodicity percentage labels to the plot (only for `type = "frame_length"`).
-#' @param labely_extend A numeric proportion to extend the y-position of periodicity labels above bars
-#'   (default: 0.05).
-#' @param return_data Logical (default: `FALSE`). If `TRUE`, returns the processed data frame instead of a plot.
-#' @param type Character string, either `"length"` (default) or `"frame_length"`.
-#'   - `"length"`: Displays a bar plot showing the distribution of read lengths.
-#'   - `"frame_length"`: Displays a bar plot with frame-periodicity information, highlighting the reading frame (0, 1, 2).
-#'
-#' @return A `ggplot2` object showing the read length distribution or a processed data frame if `return_data = TRUE`.
-#'
-#' @details
-#' - If `type = "length"`, the function summarizes read counts by length.
-#' - If `type = "frame_length"`, the function calculates frame-periodicity and shows the proportion of reads mapped to each frame.
-#' - Frame-periodicity is computed as: ***percentage of reads in frame-0 relative to all frames***.
-#' - Reads outside annotated coding regions (`mstart !=0` or `mstop !=0`) are analyzed for periodicity.
-#'
-#' @examples
-#' \dontrun{
-#' data(ribo_obj)  # Assume ribo_obj is a 'ribotrans' object
-#'
-#' # Plot read length distribution
-#' length_plot(ribo_obj, read_length = c(25, 30), type = "length")
-#'
-#' # Plot frame-periodicity with periodicity labels
-#' length_plot(ribo_obj, type = "frame_length", add_periodicity_label = TRUE)
-#'
-#' # Retrieve processed data
-#' df <- length_plot(ribo_obj, return_data = TRUE, type = "frame_length")
-#' head(df)
-#' }
-#'
-#' @seealso [ggplot2::geom_col()], [ggplot2::facet_wrap()], [dplyr::mutate()], [scales::label_log()]
-#'
-#'
-#' @importFrom ggplot2 ggplot geom_col scale_y_continuous facet_wrap
-#' @importFrom ggplot2 theme element_text element_blank position_dodge2
-#' @importFrom scales label_log
-#' @importFrom fastplyr f_group_by f_summarise f_filter f_select
-#'
-#' @export
 #' @rdname length_plot
+#' @export
 setMethod("length_plot",
           signature(object = "ribotrans"),
           function(object,
                    read_length = c(20,35),
                    merge_rep = FALSE,
                    text_size = 4,
+                   col_width = 0.9,
+                   col_color = "grey30",
                    add_periodicity_label = TRUE,
                    labely_extend = 0.05,
+                   facet = ggplot2::facet_wrap(~sample,scales = "free"),
                    return_data = FALSE,
                    type = c("length","frame_length")){
             type <- match.arg(type, choices = c("length","frame_length"))
@@ -388,7 +394,7 @@ setMethod("length_plot",
                   dplyr::rename(sample = sample_group)
               }
 
-              ptlayer <- geom_col(aes(x = qwidth, y = counts),width = 0.9,fill = "grey30")
+              ptlayer <- geom_col(aes(x = qwidth, y = counts),width = col_width,fill = col_color)
               periodicity.layer <- NULL
               col <- NULL
             }else{
@@ -419,7 +425,7 @@ setMethod("length_plot",
               }
 
               ptlayer <- geom_col(aes(x = qwidth, y = counts, fill = factor(frame)),
-                                  width = 0.9, position = position_dodge2())
+                                  width = col_width, position = position_dodge2())
 
               # whether add periodicity info
               if(add_periodicity_label == TRUE){
@@ -452,7 +458,7 @@ setMethod("length_plot",
               theme(panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
-              facet_wrap(~sample,scales = "free") +
+              facet +
               scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
               xlab("Read length (nt)") + ylab("Number of reads")
 
