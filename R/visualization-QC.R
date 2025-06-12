@@ -971,9 +971,9 @@ setMethod("relative_heatmap_plot",
 
             # check log_scale
             if(log_scale == TRUE){
-              layer <- geom_tile(aes(x = rel_pos,y = qwidth, fill = log2(counts)))
+              layer <- geom_tile(aes(x = rel_pos,y = qwidth, fill = log2(counts)),color = NA)
             }else{
-              layer <- geom_tile(aes(x = rel_pos,y = qwidth, fill = counts))
+              layer <- geom_tile(aes(x = rel_pos,y = qwidth, fill = counts),color = NA)
             }
 
             # plot
