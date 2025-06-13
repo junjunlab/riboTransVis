@@ -9,6 +9,7 @@
   selected_id = NULL,
   type = c("ribo", "rna", "ribo_rna", "scaled_ribo"),
   layer = c("line", "col"),
+  col_alpha = 1,
   sample_order = NULL,
   facet_layer = ggplot2::facet_grid(sample ~ rname, switch = "y"),
   sep_mer_sample = FALSE,
@@ -35,6 +36,9 @@
 \item{type}{Character. The type of signal to plot: one of \code{"ribo"}, \code{"rna"}, \code{"ribo_rna"}, or \code{"scaled_ribo"}. Default: \code{"ribo"}.}
 
 \item{layer}{Layer geometry: \code{"line"} (default) for \code{geom_path()} curves, or \code{"col"} for \code{geom_col()} bar charts.}
+
+\item{col_alpha}{Numeric in c(0,1), transparency for the bars when
+\code{layer = "col"}. Default: \code{1}.}
 
 \item{sample_order}{Character vector. Optional. The desired order of samples in the facet display.}
 

@@ -10,6 +10,7 @@ get_coverage(object, ...)
 \S4method{get_coverage}{ribotrans}(
   object,
   gene_name = NULL,
+  exp = c("rna", "ribo"),
   smooth = FALSE,
   coordinate_to_trans = FALSE,
   merge_rep = FALSE,
@@ -22,6 +23,9 @@ get_coverage(object, ...)
 \item{...}{Additional arguments (currently unused).}
 
 \item{gene_name}{Character. A gene symbol present in \code{object@features$gene}. Coverage will be extracted for this gene.}
+
+\item{exp}{Character, either "rna" (default) or "ribo", indicating
+which experiment type to use.}
 
 \item{smooth}{Logical. Whether to smooth coverage values using a sliding window (especially useful for visualization). Default is \code{FALSE}.}
 

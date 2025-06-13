@@ -3,7 +3,7 @@
 \name{genome_trans_plot}
 \alias{genome_trans_plot}
 \alias{genome_trans_plot,ribotrans-method}
-\title{Generic function for genome transcript plotting}
+\title{Plot Transcript-level Ribosome and RNA Coverage with Gene Structure}
 \usage{
 genome_trans_plot(object, ...)
 
@@ -12,6 +12,7 @@ genome_trans_plot(object, ...)
   selected_id = NULL,
   type = c("ribo", "rna", "ribo_rna"),
   layer = c("col", "line"),
+  col_alpha = 1,
   sample_order = NULL,
   facet_layer = ggplot2::facet_grid(sample ~ rname, switch = "y"),
   sep_mer_sample = FALSE,
@@ -31,76 +32,93 @@ genome_trans_plot(object, ...)
 )
 }
 \arguments{
-\item{object}{An object of class \code{ribotrans} containing the necessary data for plotting.}
+\item{object}{A \code{ribotrans} object. Must contain the results of
+\code{get_occupancy()} for ribosome data and/or \code{get_coverage()}
+for RNA data, as well as the GTF annotation for the target gene stored
+in \code{@gtf_data}.}
 
-\item{...}{Additional arguments passed to specific methods.}
+\item{...}{Additional arguments (currently unused).}
 
-\item{selected_id}{(optional) A specific transcript id for the gene of interest. Default is NULL.}
+\item{selected_id}{Character vector of transcript IDs to include in the plot.
+Default: \code{NULL}, in which case all transcripts for the gene are shown.}
 
-\item{type}{A character string indicating the type of data to plot. Choices are "ribo" for
-ribosomal occupancy, "rna" for RNA coverage, or "ribo_rna" for both. Default is "ribo".}
+\item{type}{Character; one of \code{"ribo"}, \code{"rna"} or
+\code{"ribo_rna"}. Specifies whether to plot only ribosome occupancy,
+only RNA coverage, or both. Default: \code{c("ribo", "rna", "ribo_rna")}
+(i.e. \code{"ribo"}).}
 
-\item{layer}{A character string indicating the plot layer type, either "col" for \code{geom_col} plots
-or "line" for \code{geom_path} plots. Default is "col".}
+\item{layer}{Character; one of \code{"col"} or \code{"line"}. Use bar plots
+(\code{"col"}) or line plots (\code{"line"}) for the signal.
+Default: \code{c("col", "line")} (i.e. \code{"col"}).}
 
-\item{sample_order}{(optional) A character vector specifying the order in which samples should be
-displayed in the plot. Default is NULL.}
+\item{col_alpha}{Numeric in c(0,1), transparency for the bars when
+\code{layer = "col"}. Default: \code{1}.}
 
-\item{facet_layer}{A facet layer for ggplot, default is \code{ggplot2::facet_grid(sample~rname,switch = "y")}.}
+\item{sample_order}{Optional character vector specifying the desired order
+of samples in the facets. If \code{NULL}, the original order in the data
+is retained. Default: \code{NULL}.}
 
-\item{sep_mer_sample}{A boolean indicating whether to separate merged and individual samples. Default is FALSE.}
+\item{facet_layer}{A \code{ggplot2} facet specification (e.g.
+\code{ggplot2::facet_grid}). Default:
+\code{ggplot2::facet_grid(sample ~ rname, switch = "y")}.}
 
-\item{new_signal_range}{A boolean indicating whether to show the new signal range on the plot. Default is FALSE.}
+\item{sep_mer_sample}{Logical; if \code{TRUE}, displays both the merged
+signal and individual samples side by side. Default: \code{FALSE}.}
 
-\item{collapse_structure}{A boolean indicating whether to collapse the structures of transcripts and exons into a single line in the plot. Default is FALSE.}
+\item{new_signal_range}{Logical; if \code{TRUE}, annotates a text label
+showing the range of the plotted signal at position (\code{range_x},
+\code{range_y}). Default: \code{FALSE}.}
 
-\item{range_x}{A numeric value specifying the position adjustment for the range label on the x-axis. Default is 0.9.}
+\item{collapse_structure}{Logical; if \code{TRUE}, collapses all transcript
+structures into a single line. Otherwise each transcript is plotted on
+its own horizontal line. Default: \code{FALSE}.}
 
-\item{range_y}{A numeric value specifying the position adjustment for the range label on the y-axis. Default is 0.9.}
+\item{range_x}{Numeric in c(0,1), x‐coordinate (in NPC units) of the range
+annotation. Default: \code{0.9}.}
 
-\item{range_size}{A numeric value specifying the font size for the range label. Default is 4.}
+\item{range_y}{Numeric in c(0,1), y‐coordinate (in NPC units) of the range
+annotation. Default: \code{0.9}.}
 
-\item{range_digit}{An integer indicating the number of digits to round the range label. Default is 1.}
+\item{range_size}{Numeric, text size of the range annotation. Default:
+\code{4}.}
 
-\item{scale_factor}{A scaling factor to adjust RNA coverage values for better visualization. Default is 1.}
+\item{range_digit}{Integer, number of digits to round the maximum signal
+value for the label. Default: \code{1}.}
 
-\item{utr_width}{A numeric value to specify the width of the UTR segments in the plot. Default is 1.}
+\item{scale_factor}{Numeric factor to scale the RNA coverage when
+\code{type = "ribo_rna"}. Default: \code{1}.}
 
-\item{cds_width}{A numeric value to specify the width of the CDS segments in the plot. Default is 3.}
+\item{utr_width}{Numeric, relative width of UTR segments (currently unused).
+Default: \code{1}.}
 
-\item{background_line}{A vector defining the color and linewidth for the background line structure. Default is \code{c("black", 0.25)}.}
+\item{cds_width}{Numeric, relative width of CDS segments (currently unused).
+Default: \code{3}.}
 
-\item{exon_line}{A vector defining the color and linewidth for the exon line structure. Default is \code{c("#003399", 1)}.}
+\item{background_line}{A length-2 vector \code{c(color, size)} controlling
+the color and line width of the transcript backbone.
+Default: \code{c("black", 0.25)}.}
 
-\item{cds_line}{A vector defining the color and linewidth for the CDS line structure. Default is \code{c("#003399", 3)}.}
+\item{exon_line}{A length-2 vector \code{c(color, size)} controlling exon
+segment styling. Default: \code{c("#003399", 1)}.}
 
-\item{structure_panel_height}{A numeric value specifying the height of the structure panel in the plot. Default is 0.2.}
+\item{cds_line}{A length-2 vector \code{c(color, size)} controlling CDS
+segment styling. Default: \code{c("#003399", 3)}.}
+
+\item{structure_panel_height}{Numeric, relative height of the side panel
+showing gene structure. Default: \code{0.2}.}
 }
 \value{
-A ggplot object or other relevant output depending on the method used.
-
-A ggplot object displaying the genomic transcripts along with ribosome occupancy or RNA coverage data.
+A \code{ggplot} object displaying the requested signal(s) along
+the genomic coordinates, faceted by sample (and optionally merged
+sample) and transcript region, with gene structure drawn at the side panel.
 }
 \description{
-This generic function serves as an interface for plotting genomic transcripts.
-It allows specific methods to be applied depending on the class of the object provided.
-
-This method generates genomic plots for ribosomal occupancy and RNA reads coverage
-based on the specified parameters for objects of class \code{ribotrans}.
+This function visualizes ribosome footprint occupancy and/or RNA read
+coverage along transcripts for a given gene, together with the underlying
+transcript structure (exons, CDS, UTRs). It returns a \code{ggplot} object
+that can be further customized.
 }
-\details{
-The function uses ggplot2 for visualization and requires specific data to be pre-calculated (e.g., ribosome occupancy or RNA coverage). Users must ensure that the appropriate methods (such as \code{get_occupancy} or \code{get_coverage}) have been executed prior to plotting.
-}
-\examples{
-\dontrun{
-# Assuming 'ribotrans_obj' is a pre-defined ribotrans object
-genome_trans_plot(
-  object = ribotrans_obj,
-  type = "ribo",
-  layer = "col",
-  sample_order = c("sample1", "sample2", "merged_sample"),
-  collapse_structure = TRUE
-)
-}
-
+\seealso{
+\code{\link{get_occupancy}}, \code{\link{get_coverage}} for preprocessing;
+\code{ggplot2::facet_grid}, \code{ggside} for panel layout.
 }

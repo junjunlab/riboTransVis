@@ -181,6 +181,8 @@ setMethod("generate_summary",
 #'
 #' @param object A \code{ribotrans} S4 object containing RNA-seq BAM file information, sample annotations, and transcript models.
 #' @param gene_name Character. A gene symbol present in \code{object@features$gene}. Coverage will be extracted for this gene.
+#' @param exp Character, either "rna" (default) or "ribo", indicating
+#' which experiment type to use.
 #' @param smooth Logical. Whether to smooth coverage values using a sliding window (especially useful for visualization). Default is \code{FALSE}.
 #' @param coordinate_to_trans Logical. If \code{TRUE} and genome mapping is used, convert genomic coordinates to transcript coordinates. Default is \code{FALSE}.
 #' @param merge_rep Logical. If \code{TRUE}, biological replicates in the same \code{sample_group} are merged (mean coverage). Default is \code{FALSE}.
@@ -231,10 +233,13 @@ setGeneric("get_coverage",function(object,...) standardGeneric("get_coverage"))
 setMethod("get_coverage",
           signature(object = "ribotrans"),
           function(object, gene_name = NULL,
+                   exp = c("rna","ribo"),
                    smooth = FALSE,
                    coordinate_to_trans = FALSE,
                    merge_rep = FALSE,
                    slide_window = 30){
+            exp <- match.arg(exp,choices = c("rna","ribo"))
+
             # check gene name
             if(!(gene_name %in% object@features$gene)){
               stop("Can't find this gene symbol, please have a check!")
@@ -242,30 +247,73 @@ setMethod("get_coverage",
 
             # smooth <- match.arg(smooth, c(FALSE, TRUE))
 
-            bf <- subset(object@bam_file, type == "rna")
-            rnabams <- bf$bam
-            sp <- bf$sample
-            gp <- bf$sample_group
+            if(exp == "ribo"){
+              bf <- subset(object@bam_file, type == "ribo")
+              bams <- bf$bam
+              sp <- bf$sample
+              gp <- bf$sample_group
 
-            lib <- subset(object@library, type == "rna")
-            lib <- lib[match(rnabams, lib$bam),]
-            totalreads <- lib$mappped_reads
+              lib <- subset(object@library, type == "ribo")
+              lib <- lib[match(bams, lib$bam),]
+              totalreads <- lib$mappped_reads
+            }else{
+              bf <- subset(object@bam_file, type == "rna")
+              bams <- bf$bam
+              sp <- bf$sample
+              gp <- bf$sample_group
+
+              lib <- subset(object@library, type == "rna")
+              lib <- lib[match(bams, lib$bam),]
+              totalreads <- lib$mappped_reads
+            }
+
 
             # loop for each sample
-            purrr::map_df(seq_along(rnabams),function(x){
+            purrr::map_df(seq_along(bams),function(x){
               # check mapping type
               if(object@mapping_type == "genome"){
-                tmp <- getCoverageGenome(bam_file = rnabams[x],
+                tmp <- getCoverageGenome(bam_file = bams[x],
                                          gene_name = gene_name,
                                          features = object@genome_trans_features,
                                          total_reads = totalreads[x],
                                          coordinate_to_trans = coordinate_to_trans)
+
+
+                # check tmp
+                if(nrow(tmp) == 0){
+                  if(coordinate_to_trans == TRUE){
+                    gn <- gene_name
+                    gf <- subset(object@features, gene == gn)
+
+                    tmp <- data.frame(rname = gf$idnew[1], pos = 1,
+                                      count = 0, rpm = 0)
+                  }else{
+                    gn <- gene_name
+                    gf <- subset(object@genome_trans_features, gene_name == gn)
+
+                    tmp <- data.frame(rname = gf$seqnames[1], pos = gf$start,
+                                      count = 0, rpm = 0)
+                  }
+
+                }
+
               }else{
-                tmp <- getCoverage(bam_file = rnabams[x],
+                tmp <- getCoverage(bam_file = bams[x],
                                    gene_name = gene_name,
                                    features = object@features,
                                    total_reads = totalreads[x])
+
+                # check tmp
+                if(nrow(tmp) == 0){
+                  gn <- gene_name
+                  gf <- subset(object@features, gene == gn)
+
+                  tmp <- data.frame(rname = gf$idnew[1], pos = 1,
+                                    count = 0, rpm = 0)
+
+                }
               }
+
 
 
               # add sample name
@@ -298,13 +346,24 @@ setMethod("get_coverage",
               sm.df <- rna.df
             }
 
-            if(smooth == TRUE){
-              object@RNA_coverage <- sm.df
-              object@RNA.smoothed <- "TRUE"
+            if(exp == "ribo"){
+              if(smooth == TRUE){
+                object@ribo_occupancy <- sm.df
+                object@ribo.smoothed <- "TRUE"
+              }else{
+                sm.df$smooth <- sm.df$rpm
+                object@ribo_occupancy <- sm.df
+                object@ribo.smoothed <- "FALSE"
+              }
             }else{
-              sm.df$smooth <- sm.df$rpm
-              object@RNA_coverage <- sm.df
-              object@RNA.smoothed <- "FALSE"
+              if(smooth == TRUE){
+                object@RNA_coverage <- sm.df
+                object@RNA.smoothed <- "TRUE"
+              }else{
+                sm.df$smooth <- sm.df$rpm
+                object@RNA_coverage <- sm.df
+                object@RNA.smoothed <- "FALSE"
+              }
             }
 
             object@gene_name <- gene_name
@@ -312,6 +371,7 @@ setMethod("get_coverage",
             return(object)
           }
 )
+
 
 
 
@@ -413,11 +473,41 @@ setMethod("get_occupancy",
                                           total_reads = totalreads[x],
                                           assignment_mode = assignment_mode,
                                           coordinate_to_trans = coordinate_to_trans)
+
+                # check tmp
+                if(nrow(tmp) == 0){
+                  if(coordinate_to_trans == TRUE){
+                    gn <- gene_name
+                    gf <- subset(object@features, gene == gn)
+
+                    tmp <- data.frame(rname = gf$idnew[1], pos = 1,
+                                      strand = "+", qwidth = 29,
+                                      count = 0, rpm = 0)
+                  }else{
+                    gn <- gene_name
+                    gf <- subset(object@genome_trans_features, gene_name == gn)
+
+                    tmp <- data.frame(rname = gf$seqnames[1], pos = gf$start,
+                                      strand = gf$strand, qwidth = 29,
+                                      count = 0, rpm = 0)
+                  }
+                }
               }else{
                 tmp <- getOccupancy(bam_file = ribobams[x],
                                     gene_name = gene_name,
                                     features = object@features,
                                     total_reads = totalreads[x])
+
+                # check tmp
+                if(nrow(tmp) == 0){
+                  gn <- gene_name
+                  gf <- subset(object@features, gene == gn)
+
+                  tmp <- data.frame(rname = gf$idnew[1], pos = 1,
+                                    strand = "+", qwidth = 29,
+                                    count = 0, rpm = 0)
+
+                }
               }
 
               # add sample name
