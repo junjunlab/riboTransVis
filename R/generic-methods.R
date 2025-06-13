@@ -111,7 +111,7 @@ setMethod("generate_summary",
                   trans_rg <- GenomicRanges::GRanges(object@genome_trans_features)
 
                   # genomic position to transcriptome position
-                  ov <- IRanges::findOverlaps(query = tinfo.gr,subject = trans_rg)
+                  ov <- IRanges::findOverlaps(query = tinfo.gr,subject = trans_rg, ignore.strand = TRUE)
 
                   # get overlap data
                   if (requireNamespace("S4Vectors", quietly = TRUE)) {

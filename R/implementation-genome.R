@@ -196,7 +196,7 @@ getOccupancyGenome <- function(bam_file = NULL,
 
 
     # genomic position to transcriptome position
-    ov <- IRanges::findOverlaps(query = bminfo.rg,subject = trans_rg)
+    ov <- IRanges::findOverlaps(query = bminfo.rg,subject = trans_rg, ignore.strand = TRUE)
 
     # get overlap data
     if (requireNamespace("S4Vectors", quietly = TRUE)) {
@@ -317,7 +317,7 @@ getCoverageGenome <- function(bam_file = NULL,
 
 
     # genomic position to transcriptome position
-    ov <- IRanges::findOverlaps(query = pileinfo.rg,subject = trans_rg)
+    ov <- IRanges::findOverlaps(query = pileinfo.rg,subject = trans_rg, ignore.strand = TRUE)
 
     # get overlap data
     if (requireNamespace("S4Vectors", quietly = TRUE)) {
