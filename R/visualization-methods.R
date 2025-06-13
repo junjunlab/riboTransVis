@@ -273,6 +273,12 @@ setMethod("trans_plot",
 
               }
 
+              # order
+              if(type == "ribo_rna"){
+                tmp.df <- tmp.df[order(tmp.df$exp=="ribo"), ]
+              }
+
+
               # plot
               p <-
                 ggplot(tmp.df) +
