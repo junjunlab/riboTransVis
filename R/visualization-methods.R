@@ -152,12 +152,12 @@ setMethod("trans_plot",
 
               if(layer == "line"){
                 player <- geom_path(aes(x = pos,y = smooth,color = exp))
-                col <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey"))
+                col <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey"), name = "")
                 col1 <- NULL
               }else{
                 player <- geom_col(aes(x = pos,y = smooth,fill = exp,color = exp),width = 1, alpha = col_alpha)
-                col <- scale_fill_manual(values = c("ribo" = "red", "rna" = "grey"))
-                col1 <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey"))
+                col <- scale_fill_manual(values = c("ribo" = "red", "rna" = "grey"), name = "")
+                col1 <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey"), name = "")
               }
 
             }else if(type == "scaled_ribo"){
@@ -440,7 +440,7 @@ setMethod("genome_trans_plot",
               if(layer == "line"){
                 player <- geom_path(aes(x = pos,y = smooth,color = sample))
               }else{
-                player <- geom_col(aes(x = pos,y = smooth,fill = sample),width = 1)
+                player <- geom_col(aes(x = pos,y = smooth,fill = sample,color = sample),width = 1)
               }
 
               col <- NULL
@@ -457,7 +457,7 @@ setMethod("genome_trans_plot",
               if(layer == "line"){
                 player <- geom_path(aes(x = pos,y = smooth,color = sample))
               }else{
-                player <- geom_col(aes(x = pos,y = smooth,fill = sample),width = 1)
+                player <- geom_col(aes(x = pos,y = smooth,fill = sample,color = sample),width = 1)
               }
 
               col <- NULL
@@ -486,12 +486,12 @@ setMethod("genome_trans_plot",
 
               if(layer == "line"){
                 player <- geom_path(aes(x = pos,y = smooth,color = exp))
-                col <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey50"))
+                col <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey50"), name = "")
                 col1 <- NULL
               }else{
                 player <- geom_col(aes(x = pos,y = smooth,fill = exp,color = exp),width = 1,alpha = col_alpha)
-                col <- scale_fill_manual(values = c("ribo" = "red", "rna" = "grey50"))
-                col1 <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey50"))
+                col <- scale_fill_manual(values = c("ribo" = "red", "rna" = "grey50"), name = "")
+                col1 <- scale_color_manual(values = c("ribo" = "red", "rna" = "grey50"), name = "")
               }
 
             }
