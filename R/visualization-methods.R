@@ -2,7 +2,6 @@
 # visualization
 # ==============================================================================
 
-
 #' Plot RNA-seq and Ribosome Occupancy along Transcripts
 #'
 #' @description
@@ -30,6 +29,8 @@
 #' @param cds_col Colors used to annotate CDS in \code{ggside} alignment strip. Default: \code{"grey30"}.
 #' @param nrow Number of rows in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.
 #' @param ncol Number of columns in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.
+#' @param ... Additional arguments (currently unused).
+#'
 #'
 #' @details
 #' This method supports four types of data display:
@@ -66,6 +67,12 @@
 #' trans_plot(ribotrans_obj, type = "ribo_rna", position_mode = "codon", scale_factor = 0.3)
 #' }
 #'
+#' @export
+setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
+
+
+
+#' @rdname trans_plot
 #' @export
 setMethod("trans_plot",
           signature(object = "ribotrans"),

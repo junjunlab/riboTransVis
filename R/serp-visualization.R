@@ -763,22 +763,6 @@ setMethod("enrichment_plot2",
 # ==============================================================================
 
 
-#' Plot translation profiles
-#'
-#' @description
-#' This is a generic function for plotting translation-related profiles (such as
-#' ribosome occupancy or enrichment signals) for different types of transcriptome data.
-#'
-#' @param object An object of class \code{serp} or \code{ribotrans}, containing necessary data for plotting.
-#' @param ... Additional arguments passed to the specific method.
-#'
-#' @return A plot, typically a ggplot2 object.
-#'
-#' @export
-setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
-
-
-
 
 #' Plot Ribosome density Across Transcripts
 #'
@@ -805,6 +789,7 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #' @param nrow Number of rows in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.
 #' @param ncol Number of columns in the final layout when multiple transcripts are plotted. Passed to \code{cowplot::plot_grid()}.
 #' @param return_data Logical. If \code{TRUE}, return the underlying processed data instead of plot. Default: \code{FALSE}.
+#' @param ... Additional arguments (currently unused).
 #'
 #'
 #' @details
@@ -832,16 +817,22 @@ setGeneric("trans_plot",function(object,...) standardGeneric("trans_plot"))
 #' @examples
 #' \dontrun{
 #' # Plot ribosome and total signal at codon resolution
-#' trans_plot(serp_obj, mode = "codon")
+#' trans_plot2(serp_obj, mode = "codon")
 #'
 #' # Merge replicates and plot with standard deviation shading
-#' trans_plot(serp_obj, merge_rep = TRUE)
+#' trans_plot2(serp_obj, merge_rep = TRUE)
 #'
 #' # Return processed data without plotting
-#' data <- trans_plot(serp_obj, return_data = TRUE)
+#' data <- trans_plot2(serp_obj, return_data = TRUE)
 #' }
 #' @export
-setMethod("trans_plot",
+setGeneric("trans_plot2",function(object,...) standardGeneric("trans_plot2"))
+
+
+
+#' @rdname trans_plot2
+#' @export
+setMethod("trans_plot2",
           signature(object = "serp"),
           function(object,
                    merge_rep = FALSE,
