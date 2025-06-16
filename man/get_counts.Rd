@@ -11,7 +11,9 @@ get_counts(object, ...)
   object,
   GTF_attrType.extra = c("gene_name", "gene_biotype"),
   rna_feature = "exon",
+  rna_PairedEnd = FALSE,
   ribo_feature = "CDS",
+  ribo_PairedEnd = FALSE,
   nThreads = 1
 )
 }
@@ -26,8 +28,12 @@ to be included from the GTF file. Typically \code{c("gene_name","gene_biotype")}
 \item{rna_feature}{The annotation feature type to use for counting RNA-seq reads
 (e.g. \code{"exon"}). Only used if \code{object@mapping_type} is \code{"genome"}.}
 
+\item{rna_PairedEnd}{A logical indicating if the RNA reads are paired-end (default is FALSE).}
+
 \item{ribo_feature}{The annotation feature type to use for counting Ribo-seq reads
 (e.g. \code{"CDS"}). Only used if \code{object@mapping_type} is \code{"genome"}.}
+
+\item{ribo_PairedEnd}{A logical indicating if the ribo reads are paired-end (default is FALSE).}
 
 \item{nThreads}{Number of threads for parallel processing (default is 1).}
 }

@@ -7,13 +7,4 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-```{r, include = FALSE}
-knitr::opts_chunk$set(
-  collapse = TRUE,
-  comment = "#>"
-)
-```
-
-```{r setup}
-library(riboTransVis)
-```
+Please go to <https://junjunlab.github.io/riboTransVis-manual/> for the full vignette.

@@ -36,8 +36,10 @@
 #'   to be included from the GTF file. Typically \code{c("gene_name","gene_biotype")}.
 #' @param rna_feature The annotation feature type to use for counting RNA-seq reads
 #'   (e.g. \code{"exon"}). Only used if \code{object@mapping_type} is \code{"genome"}.
+#' @param rna_PairedEnd A logical indicating if the RNA reads are paired-end (default is FALSE).
 #' @param ribo_feature The annotation feature type to use for counting Ribo-seq reads
 #'   (e.g. \code{"CDS"}). Only used if \code{object@mapping_type} is \code{"genome"}.
+#' @param ribo_PairedEnd A logical indicating if the ribo reads are paired-end (default is FALSE).
 #' @param nThreads Number of threads for parallel processing (default is 1).
 #' @param ... Additional arguments (currently unused).
 #'
@@ -84,7 +86,9 @@ setMethod("get_counts",
           function(object,
                    GTF_attrType.extra = c("gene_name","gene_biotype"),
                    rna_feature = "exon",
+                   rna_PairedEnd = FALSE,
                    ribo_feature = "CDS",
+                   ribo_PairedEnd = FALSE,
                    nThreads = 1){
             lib <- object@library
             rnainfo <- subset(lib, type == "rna")
@@ -100,6 +104,7 @@ setMethod("get_counts",
                 if (requireNamespace("Rsubread", quietly = TRUE)) {
                   rna <- Rsubread::featureCounts(files = rnainfo$bam,
                                                  isGTFAnnotationFile = TRUE,
+                                                 isPairedEnd = rna_PairedEnd,
                                                  GTF.featureType = rna_feature,
                                                  annot.ext = object@gtf_path,
                                                  GTF.attrType = "gene_id",
@@ -121,6 +126,7 @@ setMethod("get_counts",
                 if (requireNamespace("Rsubread", quietly = TRUE)) {
                   rpf <- Rsubread::featureCounts(files = riboinfo$bam,
                                                  isGTFAnnotationFile = TRUE,
+                                                 isPairedEnd = ribo_PairedEnd,
                                                  GTF.featureType = ribo_feature,
                                                  annot.ext = object@gtf_path,
                                                  GTF.attrType = "gene_id",
@@ -296,6 +302,12 @@ setMethod("gene_differential_analysis",
                    lo2FC = c(-1,1),
                    pval = 0.05){
             type <- match.arg(type,choices = c("rna","ribo"))
+
+            # check counts data
+            if(length(object@counts) == 0){
+              stop("Please run `get_counts` first!")
+            }
+
             # ==================================================================
             # get counts info
             if(type == "rna"){
@@ -463,6 +475,12 @@ setMethod("get_normalized_reads",
                    type = c("rna","ribo","te")){
             feature <- object@features
             norm_type <- match.arg(norm_type,choices = c("tpm","rpkm"))
+
+            # check counts data
+            if(length(object@counts) == 0){
+              stop("Please run `get_counts` first!")
+            }
+
             # ==================================================================
             # get rna tpm
             if("rna" %in% type){
@@ -701,6 +719,12 @@ setMethod("TE_differential_analysis",
                    pval = 0.05){
             method <- match.arg(method,choices = c("DESeq2","edgeR","edgeRD","Voom"))
             pkg <- match.arg(pkg, c("riborex","xtail"))
+
+            # check counts data
+            if(length(object@counts) == 0){
+              stop("Please run `get_counts` first!")
+            }
+
             # ==================================================================
             # get counts info
             if(object@mapping_type == "genome"){
