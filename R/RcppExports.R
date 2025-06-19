@@ -2,6 +2,6 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 boot_stat <- function(mat, boot_indices, method) {
-    .Call('_riboTransVis_boot_stat', PACKAGE = 'riboTransVis', mat, boot_indices, method)
+    .Call(`_riboTransVis_boot_stat`, mat, boot_indices, method)
 }
 

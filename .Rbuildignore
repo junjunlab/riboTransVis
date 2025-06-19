@@ -1,3 +1,6 @@
 ^riboTransVis_0\.0\.1\.Rproj$
 ^\.Rproj\.user$
 ^LICENSE\.md$
+^\.github$
+^.*\.Rproj$
+^\.Rproj\.user$
