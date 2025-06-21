@@ -11,7 +11,7 @@ globalVariables(c(".", ".I", "enrich", "exonlen", "gene", "gene_name", "idnew","
                   "sample_group","sum_pi","counts.y", "periodicity.x","codons","log2FoldChange","Amplitude",
                   "Period","mapped", "pvalue", "seq_type","ccdf","pos3sp", "pos3st", "pos5sp", "pos5st",
                   "sm1", "sm2", "smratio","bin", "nmft", "winstart","ci_high", "ci_low","norm.x","norm.y",
-                  "above", "background_mean", "group", "ip", "tt"))
+                  "above", "background_mean", "group", "ip", "tt","gene_biotype"))
 
 
 #' ribotrans Class

@@ -58,7 +58,8 @@ Suggests:
     stringr,
     Logolas,
     ggrepel,
-    tidyr
+    tidyr,
+    ggpubr
 Remotes:
     smithlabcode/riborex,
     kkdey/Logolas

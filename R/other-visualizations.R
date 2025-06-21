@@ -164,3 +164,206 @@ vocalno_plot <- function(diff_data = NULL,
   }
 
 }
+
+
+
+
+#' Create ECDF Plot with Optional Boxplot Insert
+#'
+#' This function creates an empirical cumulative distribution function (ECDF) plot
+#' for RNA-seq, Ribosome profiling, or Translation Efficiency (TE) data. It can
+#' optionally include an inserted boxplot and performs statistical comparisons
+#' between samples.
+#'
+#' @param normed_data A list containing normalized data with elements:
+#'   \itemize{
+#'     \item \code{tpm.rna}: TPM values for RNA-seq data
+#'     \item \code{tpm.ribo}: TPM values for Ribosome profiling data
+#'     \item \code{te}: Translation efficiency values
+#'   }
+#'   Each element should be a data frame with columns: gene_id, gene_name,
+#'   gene_biotype, and sample columns.
+#' @param type Character string specifying data type. One of "rna", "ribo", or "te".
+#'   Default is c("rna", "ribo", "te").
+#' @param samples_selected Character vector of sample names to include in the plot.
+#'   If NULL, all samples will be used.
+#' @param ref_group Character string specifying the reference group for statistical
+#'   comparisons. Should match one of the sample names.
+#' @param colors Named character vector of colors for each sample. If NULL,
+#'   default ggplot2 colors will be used.
+#' @param ecdf_xlim Numeric vector of length 2 specifying x-axis limits for the
+#'   ECDF plot. If NULL, automatic limits will be used.
+#' @param box_ylim Numeric vector of length 2 specifying y-axis limits for the
+#'   boxplot insert. If NULL, automatic limits will be used.
+#' @param insert_box Logical indicating whether to insert a boxplot. Default is FALSE.
+#' @param x_pos Numeric value specifying the x position of the boxplot insert
+#'   (as proportion of plot width). Default is 0.45.
+#' @param y_pos Numeric value specifying the y position of the boxplot insert
+#'   (as proportion of plot height). Default is 0.4.
+#' @param width Numeric value specifying the width of the boxplot insert
+#'   (as proportion of plot width). Default is 0.2.
+#' @param height Numeric value specifying the height of the boxplot insert
+#'   (as proportion of plot height). Default is 0.65.
+#'
+#' @return A list containing:
+#'   \itemize{
+#'     \item \code{plot}: A ggplot2 object containing the ECDF plot (with optional boxplot insert)
+#'     \item \code{statistics}: A data frame with statistical comparison results from Wilcoxon tests
+#'   }
+#'
+#' @details
+#' The function performs the following steps:
+#' \enumerate{
+#'   \item Selects the appropriate data based on the \code{type} parameter
+#'   \item Converts data from wide to long format
+#'   \item Filters out NA and infinite values
+#'   \item Performs pairwise Wilcoxon tests using the specified reference group
+#'   \item Creates an ECDF plot with log2-transformed values
+#'   \item Optionally adds a boxplot insert using cowplot
+#' }
+#'
+#' @note
+#' This function requires the following packages:
+#' \itemize{
+#'   \item \code{ggplot2}
+#'   \item \code{reshape2}
+#'   \item \code{dplyr}
+#'   \item \code{ggpubr}
+#'   \item \code{cowplot} (only if \code{insert_box = TRUE})
+#' }
+#'
+#' @examples
+#' \dontrun{
+#' # Basic ECDF plot for TE data
+#' result <- ecdf_plot(normed_data = my_data,
+#'                     type = "te",
+#'                     samples_selected = c("sample1", "sample2", "sample3"),
+#'                     ref_group = "sample1")
+#'
+#' # ECDF plot with boxplot insert and custom colors
+#' result <- ecdf_plot(normed_data = my_data,
+#'                     type = "te",
+#'                     samples_selected = c("sample1", "sample2", "sample3"),
+#'                     ref_group = "sample1",
+#'                     colors = c("sample1" = "blue", "sample2" = "red", "sample3" = "green"),
+#'                     insert_box = TRUE,
+#'                     x_pos = 0.5, y_pos = 0.3)
+#'
+#' # Access the plot and statistics
+#' print(result$plot)
+#' print(result$statistics)
+#' }
+#'
+#' @seealso
+#' \code{\link[ggplot2]{stat_ecdf}}, \code{\link[ggpubr]{compare_means}},
+#' \code{\link[cowplot]{ggdraw}}
+#'
+#' @export
+ecdf_plot <- function(normed_data = NULL,
+                      type = c("rna", "ribo", "te"),
+                      samples_selected = NULL,
+                      ref_group = NULL,
+                      colors = NULL,
+                      ecdf_xlim = NULL,
+                      box_ylim = NULL,
+                      insert_box = FALSE,
+                      x_pos = 0.45, y_pos = 0.4,
+                      width = 0.2, height = 0.65){
+  # check data
+  if(type == "rna"){
+    df <- normed_data$tpm.rna
+  }else if(type == "ribo"){
+    df <- normed_data$tpm.ribo
+  }else{
+    df <- normed_data$te
+  }
+
+  #wide format to long
+  df.long <- tidyr::pivot_longer(cols = -c(gene_id, gene_name, gene_biotype),
+                                 names_to = "sample",
+                                 values_to = "value") %>%
+    stats::na.omit() %>%
+    dplyr::filter(!is.infinite(value))
+
+  # filter samples
+  df.long <- subset(df.long, sample %in% samples_selected)
+
+  # ===========================================================================
+  # stastics
+  if (!requireNamespace("ggpubr", quietly = TRUE)) {
+    stop("Package 'ggpubr' is required. Please install it.")
+  }
+
+  stcs <- ggpubr::compare_means(data = df.long,
+                                formula = value ~ sample,
+                                ref.group = ref_group,
+                                method = "wilcox.test")
+
+  # ===========================================================================
+  # plot
+
+  if(is.null(colors)){
+    cols <- NULL
+    cols2 <- NULL
+  }else{
+    cols <- scale_color_manual(values = colors,name = "")
+    cols2 <- scale_fill_manual(values = colors,name = "")
+  }
+
+  if(is.null(ecdf_xlim)){
+    xlims <- NULL
+  }else{
+    xlims <- xlim(ecdf_xlim)
+  }
+
+  if(is.null(box_ylim)){
+    ylims <- NULL
+  }else{
+    ylims <- ylim(box_ylim)
+  }
+
+  ecdf <-
+    ggplot(df.long) +
+    stat_ecdf(aes(x = log2(value), color = sample),linewidth = 0.3) +
+    theme_bw() +
+    theme(panel.grid = element_blank(),
+          aspect.ratio = 1,
+          strip.text = element_text(face = "bold",size = rel(1)),
+          axis.text = element_text(colour = "black")) +
+    cols + xlims +
+    ylab("Cumulative Fraction") +
+    xlab("log2(Translation efficiency)")
+
+  # ============================================================================
+  # insert boxplot
+  if(insert_box == TRUE){
+    ecdf.box <-
+      ggplot(df.long) +
+      geom_boxplot(aes(x = sample,y = log2(value),fill = sample),
+                   width = 0.6,notch = T,
+                   outliers = F,show.legend = F) +
+      theme_bw() +
+      theme(panel.grid = element_blank(),
+            axis.text = element_blank(),
+            plot.background = element_blank(),
+            axis.ticks = element_blank(),
+            strip.text = element_text(face = "bold",size = rel(1))) +
+      cols2 + ylims +
+      xlab("") + ylab("log2(TE)")
+
+    # INSERT
+    if (!requireNamespace("cowplot", quietly = TRUE)) {
+      stop("Package 'cowplot' is required. Please install it.")
+    }
+
+    p <- cowplot::ggdraw(ecdf) +
+      cowplot::draw_plot(plot = ecdf.box,
+                         x = x_pos,y = y_pos,
+                         width = width,height = height,
+                         vjust = 0.5,hjust = 0)
+
+    return(list(plot = p,statistics = stcs))
+  }else{
+    return(list(plot = ecdf,statistics = stcs))
+  }
+}
