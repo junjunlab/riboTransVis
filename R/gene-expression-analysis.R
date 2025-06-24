@@ -555,7 +555,7 @@ setMethod("get_normalized_reads",
                   tibble::rownames_to_column(var = "gene") %>%
                   fastplyr::f_left_join(y = feature, by = "gene") %>%
                   fastplyr::f_group_by(gene) %>%
-                  fastplyr::f_summarise(len = mean(translen))
+                  fastplyr::f_summarise(len = mean(cds))
 
                 kb <- tmpf$len/1000
                 rpk <- count_ribo/kb

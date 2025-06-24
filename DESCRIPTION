@@ -67,7 +67,8 @@ biocViews: DESeq2,rtracklayer,Rsamtools,GenomicFeatures,GenomicRanges,Biostrings
            clusterProfiler,GenomeInfoDb,txdbmaker,S4Vectors
 VignetteBuilder: knitr
 Depends: 
-    methods
+    methods,
+    R (>= 4.1.0)
 LinkingTo: 
     Rcpp,
     RcppArmadillo
