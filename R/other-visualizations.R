@@ -287,7 +287,10 @@ ecdf_plot <- function(normed_data = NULL,
     dplyr::filter(!is.infinite(value))
 
   # filter samples
-  df.long <- subset(df.long, sample %in% samples_selected)
+  if(!is.null(samples_selected)){
+    df.long <- subset(df.long, sample %in% samples_selected)
+  }
+
 
   # ===========================================================================
   # stastics
