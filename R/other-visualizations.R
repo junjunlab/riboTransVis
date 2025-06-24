@@ -279,7 +279,8 @@ ecdf_plot <- function(normed_data = NULL,
   }
 
   #wide format to long
-  df.long <- tidyr::pivot_longer(cols = -c(gene_id, gene_name, gene_biotype),
+  df.long <- df %>%
+    tidyr::pivot_longer(cols = -c(gene_id, gene_name, gene_biotype),
                                  names_to = "sample",
                                  values_to = "value") %>%
     stats::na.omit() %>%
