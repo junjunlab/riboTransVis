@@ -8,6 +8,7 @@ ecdf_plot(
   normed_data = NULL,
   type = c("rna", "ribo", "te"),
   samples_selected = NULL,
+  un_selected_cols = c("gene_id", "gene_name", "gene_biotype"),
   ref_group = NULL,
   colors = NULL,
   ecdf_xlim = NULL,
@@ -34,6 +35,10 @@ Default is c("rna", "ribo", "te").}
 
 \item{samples_selected}{Character vector of sample names to include in the plot.
 If NULL, all samples will be used.}
+
+\item{un_selected_cols}{Character vector of column names to exclude from
+pivoting (typically gene annotation columns like gene_id, gene_name).
+Default: c("gene_id", "gene_name", "gene_biotype").}
 
 \item{ref_group}{Character string specifying the reference group for statistical
 comparisons. Should match one of the sample names.}
