@@ -187,6 +187,9 @@ vocalno_plot <- function(diff_data = NULL,
 #'   Default is c("rna", "ribo", "te").
 #' @param samples_selected Character vector of sample names to include in the plot.
 #'   If NULL, all samples will be used.
+#' @param un_selected_cols Character vector of column names to exclude from
+#'   pivoting (typically gene annotation columns like gene_id, gene_name).
+#'   Default: c("gene_id", "gene_name", "gene_biotype").
 #' @param ref_group Character string specifying the reference group for statistical
 #'   comparisons. Should match one of the sample names.
 #' @param colors Named character vector of colors for each sample. If NULL,
@@ -262,6 +265,7 @@ vocalno_plot <- function(diff_data = NULL,
 ecdf_plot <- function(normed_data = NULL,
                       type = c("rna", "ribo", "te"),
                       samples_selected = NULL,
+                      un_selected_cols = c("gene_id", "gene_name", "gene_biotype"),
                       ref_group = NULL,
                       colors = NULL,
                       ecdf_xlim = NULL,
@@ -280,9 +284,9 @@ ecdf_plot <- function(normed_data = NULL,
 
   #wide format to long
   df.long <- df %>%
-    tidyr::pivot_longer(cols = -c(gene_id, gene_name, gene_biotype),
-                                 names_to = "sample",
-                                 values_to = "value") %>%
+    tidyr::pivot_longer(cols = -dplyr::all_of(un_selected_cols),
+                        names_to = "sample",
+                        values_to = "value") %>%
     stats::na.omit() %>%
     dplyr::filter(!is.infinite(value))
 
