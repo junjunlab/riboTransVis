@@ -276,10 +276,13 @@ ecdf_plot <- function(normed_data = NULL,
   # check data
   if(type == "rna"){
     df <- normed_data$tpm.rna
+    xlabel <- "log2(RNA abundence)"
   }else if(type == "ribo"){
     df <- normed_data$tpm.ribo
+    xlabel <- "log2(RPF abundence)"
   }else{
     df <- normed_data$te
+    xlabel <- "log2(Translation efficiency)"
   }
 
   #wide format to long
@@ -340,7 +343,7 @@ ecdf_plot <- function(normed_data = NULL,
           axis.text = element_text(colour = "black")) +
     cols + xlims +
     ylab("Cumulative Fraction") +
-    xlab("log2(Translation efficiency)")
+    xlab(xlabel)
 
   # ============================================================================
   # insert boxplot
