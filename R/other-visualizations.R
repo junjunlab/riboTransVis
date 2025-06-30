@@ -64,6 +64,7 @@ cor_plot <- function(data = NULL,
 #' @param gene_number_size Numeric. Text size for displaying significant gene counts. Default is `4`.
 #' @param gene_number_label_pos Numeric vector of length 2. Position (npc coordinates) to place gene count labels. Default is `c(0.95, 0.95)`.
 #' @param gene_label_size Numeric. Text size for gene name labels. Default is `3`.
+#' @param point_size Numeric. Point size for scatters. Default is `1`.
 #' @param color Character vector of length 3. Colors used for sigUp, nonSig, and sigDown categories. Default is `c("#AF1740", "grey", "#074799")`.
 #'
 #' @details
@@ -91,6 +92,7 @@ vocalno_plot <- function(diff_data = NULL,
                          gene_number_size = 4,
                          gene_number_label_pos = c(0.95,0.95),
                          gene_label_size = 3,
+                         point_size = 1,
                          color = c("#AF1740", "grey", "#074799")){
   # ============================================================================
   if(is.null(marker_gene)){
@@ -120,7 +122,7 @@ vocalno_plot <- function(diff_data = NULL,
   # plot
   p <-
     ggplot(diff_data) +
-    geom_point(aes(x = .data[[log2FC]],y = -log10(.data[[pval]]), color = type)) +
+    geom_point(aes(x = .data[[log2FC]],y = -log10(.data[[pval]]), color = type), size = point_size) +
     geom_hline(yintercept = -log10(0.05),lty = "dashed") +
     geom_vline(xintercept = log2FC_threshold,lty = "dashed") +
     theme_bw() +

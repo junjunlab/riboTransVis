@@ -14,6 +14,7 @@ vocalno_plot(
   gene_number_size = 4,
   gene_number_label_pos = c(0.95, 0.95),
   gene_label_size = 3,
+  point_size = 1,
   color = c("#AF1740", "grey", "#074799")
 )
 }
@@ -35,6 +36,8 @@ vocalno_plot(
 \item{gene_number_label_pos}{Numeric vector of length 2. Position (npc coordinates) to place gene count labels. Default is \code{c(0.95, 0.95)}.}
 
 \item{gene_label_size}{Numeric. Text size for gene name labels. Default is \code{3}.}
+
+\item{point_size}{Numeric. Point size for scatters. Default is \code{1}.}
 
 \item{color}{Character vector of length 3. Colors used for sigUp, nonSig, and sigDown categories. Default is \code{c("#AF1740", "grey", "#074799")}.}
 }
