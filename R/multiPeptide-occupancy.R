@@ -186,7 +186,9 @@ setMethod("multi_peptide_occupancy",
               pepdf <- data.frame(rname = names(tmp),rel = 1:length(interval),pep_seq = seqs)
 
               return(pepdf)
-            }) %>% do.call("rbind",.) %>% data.frame() -> peptide_info
+            }) %>% do.call("rbind",.) %>%
+              data.frame() %>%
+              dplyr::add_count(pep_seq, name = "occurrence") -> peptide_info
 
             # ==================================================================
             # calculate total density for peptide
@@ -201,9 +203,10 @@ setMethod("multi_peptide_occupancy",
                 dplyr::mutate(rel = 1:dplyr::n()) %>%
                 # merge with multi-peptide info
                 fastplyr::f_inner_join(y = peptide_info,by = c("rname","rel")) %>%
-                fastplyr::f_group_by(sample,pep_seq) %>%
-                fastplyr::f_summarise(pause_score = sum(tripep_val),
-                                      occurrence = dplyr::n()) %>%
+                fastplyr::f_group_by(sample,pep_seq,occurrence) %>%
+                # fastplyr::f_summarise(pause_score = sum(tripep_val),
+                #                       occurrence = dplyr::n()) %>%
+                fastplyr::f_summarise(pause_score = sum(tripep_val)) %>%
                 dplyr::mutate(pause_score = ifelse(pause_score < 1e-10, 0, pause_score)) %>%
                 fastplyr::f_filter(occurrence > peptide_occurrence) %>%
                 # calculate relative density

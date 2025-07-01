@@ -3,7 +3,7 @@
 \name{motif_occupancy}
 \alias{motif_occupancy}
 \alias{motif_occupancy,ribotrans-method}
-\title{Analyze Codon or Amino Acid Motif Occupancy from Ribosome Profiling Data}
+\title{Calculate motif occupancy from ribosome profiling data}
 \usage{
 motif_occupancy(object, ...)
 
@@ -17,60 +17,172 @@ motif_occupancy(object, ...)
   exclude_length = c(45, 45),
   min_counts = 64,
   motif_pattern = "PPP",
+  ref_group = NULL,
   insert_box = TRUE,
+  box_width = 0.25,
+  error_bar_width = 0.3,
   box_pos = c(0.99, 0.5),
   box_width_height = c(0.3, 0.8),
   return_data = FALSE
 )
 }
 \arguments{
-\item{object}{A \code{ribotrans} object containing preprocessed ribosome profiling data with corresponding annotations in \code{@features} and positional read density in \code{@summary_info}.}
+\item{object}{A \code{ribotrans} object containing ribosome profiling data}
 
 \item{...}{Additional arguments (currently unused).}
 
-\item{merge_rep}{Logical. If \code{TRUE}, replicates from the same \code{sample_group} will be averaged before visualization. Default is \code{FALSE}.}
+\item{merge_rep}{Logical. Whether to merge biological replicates by averaging
+their occupancy values. Default is \code{FALSE}.}
 
-\item{cds_fa}{Path to the CDS fasta file with transcript nucleotide sequences.}
+\item{cds_fa}{Character. Path to the CDS (Coding DNA Sequence) FASTA file
+required for sequence analysis. Must be provided for motif searching.}
 
-\item{do_offset_correct}{Logical. If \code{TRUE}, perform read offset correction using \code{do_offset_correction()}. Default is \code{FALSE}.}
+\item{do_offset_correct}{Logical. Whether to apply P-site offset correction
+to account for the distance between the 5' end of ribosome footprints and
+the ribosome P-site. Default is \code{FALSE}.}
 
-\item{position_shift}{Integer. Number of nucleotides used to correct P-site position. Default is 0.}
+\item{position_shift}{Numeric. Additional position shift to apply when
+\code{do_offset_correct = TRUE}. Default is \code{0}.}
 
-\item{search_type}{Search level: "amino" (default) or "codon". Determines whether the motif is searched at the amino acid or codon sequence level.}
+\item{search_type}{Character. Type of motif search to perform:
+\itemize{
+\item \code{"amino"}: Search for amino acid motifs in translated sequences
+\item \code{"codon"}: Search for codon motifs in DNA sequences
+}
+Default is \code{"amino"}.}
 
-\item{exclude_length}{Integer vector of length 2. Number of codons to exclude from the start and end of CDS. Default is \code{c(45, 45)}.}
+\item{exclude_length}{Numeric vector of length 2. Number of codons to exclude
+from the start and end of CDS regions \code{c(start_exclude, end_exclude)}
+to avoid edge effects. Default is \code{c(45, 45)}.}
 
-\item{min_counts}{Integer. Minimum read count per transcript to include for analysis. Default is 64.}
+\item{min_counts}{Numeric. Minimum total read counts required per transcript
+for inclusion in analysis. Transcripts with fewer reads are filtered out.
+Default is \code{64}.}
 
-\item{motif_pattern}{Character vector. Motif(s) (amino acids or nucleotides) to search for. Default is "PPP".}
+\item{motif_pattern}{Character vector. The motif pattern(s) to search for.
+Can be amino acid codes (e.g., \code{"PPP"} for proline repeats) or codon
+sequences (e.g., \code{c("CCC", "CCG")} for proline codons).
+Default is \code{"PPP"}.}
 
-\item{insert_box}{Logical. Whether to include an inset boxplot in ECDF plots. Default is \code{TRUE}.}
+\item{ref_group}{Character. Reference group for statistical comparisons.
+If \code{NULL}, all pairwise comparisons are performed.}
 
-\item{box_pos}{Numeric vector of length 2. The relative position (npc coordinates) of the inset box. Default is \code{c(0.99, 0.5)}.}
+\item{insert_box}{Logical. Whether to insert a boxplot into the main
+cumulative distribution plot. Default is \code{TRUE}.}
 
-\item{box_width_height}{Numeric vector of length 2. Absolute width and height of the inset box. Default is \code{c(0.3, 0.8)}.}
+\item{box_width}{Numeric. Width of the boxplot error bars.
+Default is \code{0.25}.}
 
-\item{return_data}{Logical. If \code{TRUE}, return data frame instead of plotting. Default is \code{FALSE}.}
+\item{error_bar_width}{Numeric. Line width of the boxplot error bars.
+Default is \code{0.3}.}
+
+\item{box_pos}{Numeric vector of length 2. Position of the inset boxplot
+as \code{c(x, y)} coordinates in normalized plot coordinates (0-1).
+Default is \code{c(0.99, 0.5)}.}
+
+\item{box_width_height}{Numeric vector of length 2. Width and height of
+the inset boxplot as \code{c(width, height)} in normalized coordinates.
+Default is \code{c(0.3, 0.8)}.}
+
+\item{return_data}{Logical. If \code{TRUE}, returns the processed data frame
+instead of plots and statistics. Useful for custom downstream analysis.
+Default is \code{FALSE}.}
 }
 \value{
-If \code{return_data = FALSE}, returns a \code{ggplot2} object with motif occupancy plots. Otherwise returns a data frame of motif positions and relative occupancy values.
+The return value depends on the \code{return_data} parameter:
+\itemize{
+\item If \code{return_data = FALSE} (default): A list containing:
+\describe{
+\item{\code{plot}}{A combined plot showing cumulative distribution
+functions of motif occupancy, optionally with inset boxplots}
+\item{\code{statistics}}{A data frame with statistical test results
+from pairwise comparisons between sample groups}
+}
+\item If \code{return_data = TRUE}: A data frame with columns:
+\describe{
+\item{\code{sample}}{Sample identifier}
+\item{\code{sample_group}}{Sample group identifier}
+\item{\code{rname}}{Transcript name}
+\item{\code{rel}}{Relative codon position}
+\item{\code{codon_seq}}{Motif sequence}
+\item{\code{value}}{Normalized occupancy value}
+\item{\code{freq}}{Frequency of the motif across transcripts}
+}
+}
 }
 \description{
-This function calculates and visualizes motif-level translational occupancy from a \code{ribotrans} object, assessing motif-specific ribosome densities at codon or amino acid resolution. It provides options for offset correction, motif searching, replicate merging, and boxplot insets.
+This method calculates the occupancy of specific amino acid or codon motifs
+from ribosome profiling (Ribo-seq) data. It normalizes ribosome footprint
+counts to identify positions with high occupancy, which typically indicate
+slower translation or ribosome pausing sites.
 }
 \details{
-This function determines transcript positions matching specified motifs (on codon or amino acid level) and evaluates their normalized ribosome occupancy. Occupancy is calculated as read density normalized by transcript average. Plots display the distribution of log2 occupancy for each motif using ECDF curves. Optionally, inset boxplots illustrate sample-wise distributions.
+The method performs several key steps:
+\enumerate{
+\item Optionally applies offset correction to ribosome footprint positions
+\item Filters transcripts based on read counts and length criteria
+\item Calculates normalized occupancy values relative to transcript-specific
+average coverage
+\item Searches for specified motifs in either amino acid or codon sequences
+\item Generates statistical comparisons and visualizations
+}
 
-The analysis includes CDS filtering, motif location extraction, optional offset correction, normalization of read counts, and final plotting with optional replicate merging.
+The occupancy calculation uses the formula:
+\code{Normalized_Occupancy = (Position_Count / Transcript_Average_Count)}
 
-Requires packages: \code{Biostrings}, \code{fastplyr}, \code{data.table}, \code{ggplot2}, \code{cowplot}, and optionally \code{ggpp}.
+Higher occupancy values indicate slower ribosome movement, potentially due to:
+\itemize{
+\item Rare codons with limited tRNA availability
+\item Secondary structure formation
+\item Regulatory pausing sites
+\item Co-translational folding events
+}
 }
 \examples{
 \dontrun{
-motif_occupancy(object = ribo_obj,
-cds_fa = "cds.fa",
-motif_pattern = c("PPP", "GGG"),
-search_type = "amino")
+# Basic amino acid motif analysis
+result <- motif_occupancy(
+  object = ribo_data,
+  cds_fa = "path/to/cds_sequences.fa",
+  motif_pattern = "PPP",
+  search_type = "amino"
+)
+
+# View the plot
+result$plot
+
+# Check statistical results
+result$statistics
+
+# Codon-based analysis with multiple motifs
+codon_result <- motif_occupancy(
+  object = ribo_data,
+  cds_fa = "path/to/cds_sequences.fa",
+  motif_pattern = c("CCC", "CCG", "CCA", "CCT"),
+  search_type = "codon",
+  min_counts = 100,
+  exclude_length = c(30, 30)
+)
+
+# Return raw data for custom analysis
+raw_data <- motif_occupancy(
+  object = ribo_data,
+  cds_fa = "path/to/cds_sequences.fa",
+  motif_pattern = "KKK",
+  return_data = TRUE
+)
+
+# Analysis with offset correction
+corrected_result <- motif_occupancy(
+  object = ribo_data,
+  cds_fa = "path/to/cds_sequences.fa",
+  motif_pattern = "DDD",
+  do_offset_correct = TRUE,
+  position_shift = -1
+)
 }
 
+}
+\seealso{
+\code{\link{do_offset_correction}} for P-site offset correction methods
 }

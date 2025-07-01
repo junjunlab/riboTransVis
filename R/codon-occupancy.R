@@ -130,17 +130,19 @@ setMethod("codon_occupancy_plot",
               seqs <- stringr::str_sub_all(tmp,start = interval, end = interval + 2)[[1]]
 
               data.frame(rname = names(tmp),rel = 1:(cdslen/3),codon_seq = seqs)
-            }) %>% do.call("rbind",.) %>% data.frame() -> codon_info
+            }) %>% do.call("rbind",.) %>%
+              data.frame() %>%
+              dplyr::add_count(codon_seq, name = "freq") -> codon_info
 
 
             # ==================================================================
 
-
             # merge with occupancy
             pltdf2 <- pltdf %>%
               fastplyr::f_inner_join(y = codon_info,by = c("rname", "rel")) %>%
-              fastplyr::f_group_by(sample,sample_group,codon_seq) %>%
-              fastplyr::f_summarise(occup = sum(value),freq = dplyr::n()) %>%
+              fastplyr::f_group_by(sample,sample_group,codon_seq,freq) %>%
+              # fastplyr::f_summarise(occup = sum(value),freq = dplyr::n()) %>%
+              fastplyr::f_summarise(occup = sum(value)) %>%
               dplyr::mutate(reloccup = occup/freq) %>% na.omit()
 
 
