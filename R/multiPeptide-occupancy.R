@@ -149,7 +149,9 @@ setMethod("multi_peptide_occupancy",
               dplyr::mutate(codons = cds / 3 + 1)
 
             # make codon index
-            idfull <- tidyr::uncount(anno, weights = codons) %>%
+            idfull <- anno %>%
+              dplyr::filter(codons %% 1 == 0) %>%
+              tidyr::uncount(weights = codons) %>%
               dplyr::group_by(idnew) %>%
               dplyr::mutate(rel = dplyr::row_number()) %>%
               dplyr::ungroup() %>%
@@ -255,12 +257,18 @@ setMethod("multi_peptide_occupancy",
 #' @param x A character string specifying the column name for the **X-axis condition**.
 #' @param y A character string specifying the column name for the **Y-axis condition**.
 #' @param color A string defining the **scatter color** (default: `"#003366"`).
+#' @param point_size A numeric value specifying the size of the scatter points.
+#'   Default is 0.5.
 #' @param label_size A numeric value controlling the labeled peptide text size
 #'   (default: `3`).
 #' @param hjust A numeric value specifying horizontal justification for the labels. The default is `1.2`.
 #' @param vjust A numeric value specifying vertical justification for the labels. The default is `1.2`.
 #' @param top_motif An integer specifying the number of top peptides to highlight based
 #'   on **highest fold-change (`y / x`)** (default: `20`).
+#' @param mark_motif A character vector of specific peptide sequences to label.
+#'   If NULL, the function will label the top motifs based on ratio values.
+#'   Default is NULL.
+#'
 #'
 #' @return A **ggplot2 scatter plot** comparing `x` vs. `y` peptide density values.
 #'   The top `top_motif` peptides with **largest fold-change** are labeled.
@@ -282,15 +290,27 @@ setMethod("multi_peptide_occupancy",
 peptide_scatter_plot <- function(data = NULL,
                                  x = NULL,y = NULL,
                                  color = "#003366",
+                                 point_size = 0.5,
                                  label_size = 3,
                                  hjust = 1.2,vjust = 1.2,
-                                 top_motif = 20){
+                                 top_motif = 20,
+                                 mark_motif = NULL){
 
   # get ratio
-  label_df <- data[,c("pep_seq",x,y)]
-  label_df$ratio <- label_df[,3]/label_df[,2]
-  label_df <- label_df %>% dplyr::arrange(dplyr::desc(ratio)) %>%
-    dplyr::slice_max(order_by = ratio,n = top_motif)
+  label_df <- data.frame(data,check.names = F)
+  label_df$ratio <- as.numeric(label_df[,3])/as.numeric(label_df[,2])
+  label_df <- label_df %>%
+    dplyr::mutate(ratio = dplyr::if_else(is.infinite(ratio) | is.na(ratio),0,ratio))
+
+  # filter motifs
+  if(is.null(mark_motif)){
+    label_df.ft <- label_df %>% dplyr::arrange(dplyr::desc(ratio)) %>%
+      dplyr::slice_max(order_by = ratio,n = top_motif)
+  }else{
+    label_df.ft <- label_df %>%
+      dplyr::filter(pep_seq %in% mark_motif)
+  }
+
 
   if (requireNamespace("grDevices", quietly = TRUE)) {
     xlims <- grDevices::extendrange(data[,2:ncol(data)],f = 0.1)[2]
@@ -300,11 +320,12 @@ peptide_scatter_plot <- function(data = NULL,
 
 
   # plot
-  ggplot(data) +
-    geom_point(aes(x = get(x),y = get(y)),color = color) +
-    geom_text(data = label_df,
-              aes(x = get(x), y = get(y), label = pep_seq),
-              hjust = hjust, vjust = vjust, size = label_size, check_overlap = TRUE) +
+  ggplot(data = data) +
+    geom_point(aes(x = get(x),y = get(y)),color = color,size = point_size) +
+    ggrepel::geom_text_repel(data = label_df.ft,
+                             aes(x = get(x), y = get(y), label = pep_seq),
+                             nudge_x  = hjust, nudge_y  = vjust, size = label_size,
+                             min.segment.length = 0.01, max.overlaps = 1000) +
     geom_abline(slope = 1,intercept = 0,lty = "dashed", color = "grey40") +
     theme(panel.grid = element_blank(),
           axis.text = element_text(colour = "black")) +
@@ -313,3 +334,6 @@ peptide_scatter_plot <- function(data = NULL,
     xlim(0, xlims) +
     ylim(0, xlims)
 }
+
+
+

@@ -9,10 +9,12 @@ peptide_scatter_plot(
   x = NULL,
   y = NULL,
   color = "#003366",
+  point_size = 0.5,
   label_size = 3,
   hjust = 1.2,
   vjust = 1.2,
-  top_motif = 20
+  top_motif = 20,
+  mark_motif = NULL
 )
 }
 \arguments{
@@ -25,6 +27,9 @@ in different sample conditions.}
 
 \item{color}{A string defining the \strong{scatter color} (default: \code{"#003366"}).}
 
+\item{point_size}{A numeric value specifying the size of the scatter points.
+Default is 0.5.}
+
 \item{label_size}{A numeric value controlling the labeled peptide text size
 (default: \code{3}).}
 
@@ -34,6 +39,10 @@ in different sample conditions.}
 
 \item{top_motif}{An integer specifying the number of top peptides to highlight based
 on \strong{highest fold-change (\code{y / x})} (default: \code{20}).}
+
+\item{mark_motif}{A character vector of specific peptide sequences to label.
+If NULL, the function will label the top motifs based on ratio values.
+Default is NULL.}
 }
 \value{
 A \strong{ggplot2 scatter plot} comparing \code{x} vs. \code{y} peptide density values.
