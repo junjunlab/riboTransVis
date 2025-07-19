@@ -1,6 +1,6 @@
 Package: riboTransVis
 Title: Visualize Transcript-Specific Ribosome Profiling and RNA-Seq Data
-Version: 0.99.0
+Version: 1.0.0
 Author: Jun Zhang
 Maintainer: Jun Zhang <3219030654@stu.cpu.edu.cn>
 Description: The `riboTransVis` package provides tools for creating transcript-level analysis and 
@@ -59,7 +59,8 @@ Suggests:
     Logolas,
     ggrepel,
     tidyr,
-    ggpubr
+    ggpubr,
+    Rfastp
 Remotes:
     smithlabcode/riborex,
     kkdey/Logolas
