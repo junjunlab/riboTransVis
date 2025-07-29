@@ -313,7 +313,7 @@ peptide_scatter_plot <- function(data = NULL,
 
 
   if (requireNamespace("grDevices", quietly = TRUE)) {
-    xlims <- grDevices::extendrange(data[,2:ncol(data)],f = 0.1)[2]
+    xlims <- grDevices::extendrange(data[,c(x,y)],f = 0.1)[2]
   } else {
     warning("Package 'grDevices' is needed for this function to work.")
   }
