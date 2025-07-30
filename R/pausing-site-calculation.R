@@ -253,6 +253,8 @@ setMethod("get_pausing_sites",
 
 
 # ==============================================================================
+
+
 Rcpp::cppFunction('
 NumericVector rolling_window_sum(NumericVector positions, NumericVector expressions,
                                 double window, String type) {
