@@ -5,3 +5,7 @@ boot_stat <- function(mat, boot_indices, method) {
     .Call(`_riboTransVis_boot_stat`, mat, boot_indices, method)
 }
 
+rolling_window_sum <- function(positions, expressions, window, type) {
+    .Call(`_riboTransVis_rolling_window_sum`, positions, expressions, window, type)
+}
+

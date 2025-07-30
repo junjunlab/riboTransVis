@@ -24,9 +24,24 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// rolling_window_sum
+NumericVector rolling_window_sum(NumericVector positions, NumericVector expressions, double window, String type);
+RcppExport SEXP _riboTransVis_rolling_window_sum(SEXP positionsSEXP, SEXP expressionsSEXP, SEXP windowSEXP, SEXP typeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< NumericVector >::type positions(positionsSEXP);
+    Rcpp::traits::input_parameter< NumericVector >::type expressions(expressionsSEXP);
+    Rcpp::traits::input_parameter< double >::type window(windowSEXP);
+    Rcpp::traits::input_parameter< String >::type type(typeSEXP);
+    rcpp_result_gen = Rcpp::wrap(rolling_window_sum(positions, expressions, window, type));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_riboTransVis_boot_stat", (DL_FUNC) &_riboTransVis_boot_stat, 3},
+    {"_riboTransVis_rolling_window_sum", (DL_FUNC) &_riboTransVis_rolling_window_sum, 4},
     {NULL, NULL, 0}
 };
 
