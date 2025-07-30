@@ -54,8 +54,6 @@
 #' )
 #' }
 #'
-#' @seealso
-#' \code{\link[Rfastp]{rfastp}} for the underlying trimming function
 #'
 #' @export
 trim_adaptors <- function(read1 = NULL,

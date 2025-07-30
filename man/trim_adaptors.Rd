@@ -85,7 +85,5 @@ trim_adaptors(
 )
 }
 
-}
-\seealso{
-\code{\link[Rfastp]{rfastp}} for the underlying trimming function
+
 }
