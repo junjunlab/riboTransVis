@@ -297,7 +297,7 @@ peptide_scatter_plot <- function(data = NULL,
                                  mark_motif = NULL){
 
   # get ratio
-  label_df <- data.frame(data,check.names = F)
+  label_df <- data.frame(data,check.names = F)[,c("pep_seq",x,y)]
   label_df$ratio <- as.numeric(label_df[,3])/as.numeric(label_df[,2])
   label_df <- label_df %>%
     dplyr::mutate(ratio = dplyr::if_else(is.infinite(ratio) | is.na(ratio),0,ratio))
