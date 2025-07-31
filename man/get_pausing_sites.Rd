@@ -64,6 +64,7 @@ A data.table containing pausing site information with the following columns:
 \item{max_sum}{Maximum of sum_1 and sum_2}
 \item{balance_score}{Balance score (min_sum / total_sum) for quality control}
 \item{imbalance_ratio}{Ratio of max_sum to min_sum for quality assessment}
+\item{z_score}{Z-score of pause score relative to the gene}
 }
 }
 \description{

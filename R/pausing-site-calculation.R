@@ -42,6 +42,7 @@
 #'   \item{max_sum}{Maximum of sum_1 and sum_2}
 #'   \item{balance_score}{Balance score (min_sum / total_sum) for quality control}
 #'   \item{imbalance_ratio}{Ratio of max_sum to min_sum for quality assessment}
+#'   \item{z_score}{Z-score of pause score relative to the gene}
 #' }
 #'
 #' @details
@@ -188,14 +189,14 @@ setMethod("get_pausing_sites",
               fastplyr::f_filter(counts > min_counts) %>%
               dplyr::mutate(norm = count/avg_ct) %>%
               fastplyr::f_group_by(sample,sample_group,rname,relst) %>%
-              fastplyr::f_summarise(normsm = sum(norm))
+              fastplyr::f_summarise(normsm = sum(norm),total_counts = sum(counts))
 
 
             # whether aggregate replicates
             if(merge_rep == TRUE){
               density.tt <- density.tt %>%
                 fastplyr::f_group_by(sample_group,rname,relst) %>%
-                fastplyr::f_summarise(value = mean(value)) %>%
+                fastplyr::f_summarise(normsm = mean(normsm),total_counts = mean(total_counts)) %>%
                 dplyr::rename(sample = sample_group)
             }else{
               density.tt <- density.tt %>% dplyr::select(-sample_group)
@@ -246,6 +247,14 @@ setMethod("get_pausing_sites",
                             max_sum = pmax(sum_1, sum_2),
                             balance_score = ifelse(total_sum == 0, 0, min_sum / total_sum),
                             imbalance_ratio = ifelse(min_sum == 0, Inf, max_sum / min_sum))
+
+            # add zscore
+            dt <- dt %>%
+              dplyr::group_by(rname, sample) %>%
+              dplyr::mutate(pause_mean = mean(pause_score, na.rm = TRUE),
+                            pause_sd = sd(pause_score, na.rm = TRUE),
+                            z_score = ifelse(pause_sd == 0, 0, (pause_score - pause_mean) / pause_sd))
+
             return(dt)
 
           }
