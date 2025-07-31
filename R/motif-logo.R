@@ -66,6 +66,7 @@ logo_plot <- function(foreground_seqs = NULL,
                       return_data = FALSE){
   method <- match.arg(method, choices = c("bits","prob","EDLogo","enrich"))
   seq_type <- match.arg(seq_type, choices = c("aa", "dna", "rna"))
+  type <- match.arg(type, choices = c("merge","sep"))
   # ============================================================================
   # check method
   if(method %in% c("bits","prob")){

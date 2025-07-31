@@ -296,3 +296,128 @@ setMethod("get_pausing_sites",
 #   return result;
 # }
 # ')
+
+# ==============================================================================
+
+#' @title Extract local codon or amino acid sequences around pause sites
+#'
+#' @description
+#' This function retrieves amino acid sequences surrounding detected ribosome stalling or pausing positions.
+#' It uses the codon-relative position in CDS to extract windows of amino acids centered on pausing sites.
+#'
+#' The function reads CDS transcript sequences from a FASTA file, translates them into amino acids,
+#' and for each pause site stored in the global object \code{ps.wd.ft}, identifies the corresponding codon index.
+#' A window of amino acids \code{left_extend} codons upstream and \code{right_extend} codons downstream are extracted.
+#' Sites near transcript ends (where window is incomplete) are automatically removed.
+#'
+#' @param object A \code{ribotrans} object containing CDS annotations.
+#' @param pause_data A data.frame containing pausing site positions.
+#' typically the output of \code{\link{get_pausing_sites}}.
+#' @param cds_fa A file path to the FASTA file containing CDS nucleotide sequences,
+#'               whose transcript names must match \code{object@features$idnew}.
+#' @param left_extend Number of codons to include to the left (upstream) of the central site. Default: 5.
+#' @param right_extend Number of codons to include to the right (downstream) of the central site. Default: 5.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A data.frame with the following columns:
+#' \describe{
+#'   \item{rname}{Transcript ID}
+#'   \item{codon_pos}{Codon index (1-based) within CDS}
+#'   \item{lp}{Start codon index of the extracted window (codon_pos - left_extend)}
+#'   \item{rp}{End codon index of the window (codon_pos + right_extend)}
+#'   \item{len}{Total codon length of the translated CDS}
+#'   \item{seqs}{Amino acid sequence for the window (length = left + right + 1)}
+#' }
+#'
+#' @details
+#' This method helps to extract amino acid sequences surrounding ribosome pausing events, useful for motif analysis.
+#' Transcripts containing ambiguous bases (e.g., N) in their CDS will be excluded automatically.
+#' Sites near CDS boundaries that do not allow for full window extraction will also be excluded.
+#'
+#' The pause site data must be from \code{\link{get_pausing_sites}}, which assigns \code{relst}
+#' as the coordinate relative to CDS start. The codon index is computed with \code{(relst %/% 3) + 1}.
+#'
+#' The returned data can be directly used for motif enrichment or amino acid logo analysis.
+#'
+#' @seealso \code{\link{get_pausing_sites}}
+#'
+#' @examples
+#' \dontrun{
+#' # Load a ribotrans object and get pausing sites
+#' ps <- get_pausing_sites(ribo_obj)
+#'
+#' # Extract amino acid context around pause sites
+#' aa_context <- get_codon_from_site(
+#'   object = ribo_obj,
+#'   pause_data = ps,
+#'   cds_fa = "path/to/CDS.fasta",
+#'   left_extend = 5,
+#'   right_extend = 5
+#' )
+#'
+#' head(aa_context)
+#' }
+#'
+#' @export
+#' @rdname get_codon_from_site
+setGeneric("get_codon_from_site",function(object,...) standardGeneric("get_codon_from_site"))
+
+
+
+
+
+#' @rdname get_codon_from_site
+#' @export
+setMethod("get_codon_from_site",
+          signature(object = "ribotrans"),
+          function(object,
+                   pause_data = NULL,
+                   cds_fa = NULL,
+                   left_extend = 5,
+                   right_extend = 5){
+            # ==================================================================
+            # filter coding gene and get peptide seqs
+            features <- object@features %>%
+              dplyr::filter(cds > 0)
+
+            cds <- Biostrings::readDNAStringSet(cds_fa)
+
+            # remove transcript contains Ns in sequence
+            valid_cds <- cds[!grepl("[^ACGTacgt]", as.character(cds))]
+
+            # translate codon to amino acid
+            aa <- Biostrings::translate(x = valid_cds,genetic.code = Biostrings::GENETIC_CODE)
+
+            ids_retain <- intersect(features$idnew,names(aa))
+            aa <- aa[ids_retain]
+
+            aa.info <- data.frame(rname = names(aa),len = Biostrings::width(aa))
+
+            # ==================================================================
+            # add codon pos
+            cdp <- pause_data %>%
+              dplyr::mutate(codon_pos = (relst %/% 3) + 1) %>%
+              dplyr::select(rname, codon_pos) %>% unique() %>%
+              dplyr::mutate(lp = codon_pos - 5,
+                            rp = codon_pos + 5) %>%
+              dplyr::left_join(y = aa.info, by = "rname") %>%
+              dplyr::filter(lp > 0 & rp <= len)
+
+            # ==================================================================
+            # loop get sequence
+            ft <- unique(cdp$rname)
+
+            # x = 1
+            lapply(seq_along(ft), function(x){
+              tmp <- subset(cdp, rname == ft[x])
+
+              seqs <- stringr::str_sub_all(string = aa[ft[x]],start = tmp$lp,end = tmp$rp)[[1]]
+
+              tmp$seqs <- seqs
+
+              return(tmp)
+            }) %>% do.call("rbind",.) %>% data.frame() -> pep.df
+
+            return(pep.df)
+          }
+)
