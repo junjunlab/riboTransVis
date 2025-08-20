@@ -573,6 +573,9 @@ setMethod("get_normalized_reads",
             # get te
             if("te" %in% type){
               if(object@mapping_type == "genome"){
+                rna_info <- object@counts$rna
+                ribo_info <- object@counts$rpf
+
                 gene_info <- rbind(rna_info$annotation,ribo_info$annotation)
                 gene_info <- gene_info[,c("GeneID","gene_name","gene_biotype")] %>% unique()
               }
