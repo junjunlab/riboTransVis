@@ -29,7 +29,7 @@ remotes::install_github("junjunlab/riboTransVis")
 
 ## Documentation
 
-A detailed documentation is at **[https://junjunlab.github.io/riboTransVis-manual/](https://junjunlab.github.io/riboTransVis-manual/)**
+A detailed documentation is at **[https://junjunlab.github.io/riboTransVis-documentation/](https://junjunlab.github.io/riboTransVis-documentation/)**
 
 ## Citation
 
