@@ -158,7 +158,7 @@ setMethod("enrichment_metagene_plot",
               sry <- object@summary_info
             }
 
-            sry <- as.data.table(sry)
+            sry <- data.table::as.data.table(sry)
 
             sry <- sry[(mstart != 0 | mstop != 0) &
                          qwidth >= read_length[1] & qwidth <= read_length[2]]
@@ -212,20 +212,21 @@ setMethod("enrichment_metagene_plot",
 
 
             # check whether do bootstraps
+
+            # check method
+            sp <- unique(pltdf.tmp$sample)
+
+            lib <- object@library
+            tt_sp <- subset(lib, type == "total")[,c("type", "sample", "sample_group")]
+
+            ip_sp <- subset(lib, type == "ip")[,c("type", "sample", "sample_group")]
+
+            sp_mr <- tt_sp %>% dplyr::left_join(y = ip_sp,by = "sample")
+
+            sp.tt <- paste(sp_mr$sample,sp_mr$type.x,sep = "-")
+            sp.ip <- paste(sp_mr$sample,sp_mr$type.y,sep = "-")
+
             if(do_bootstrap == TRUE){
-              # check method
-              sp <- unique(pltdf.tmp$sample)
-
-              lib <- object@library
-              tt_sp <- subset(lib, type == "total")[,c("type", "sample", "sample_group")]
-
-              ip_sp <- subset(lib, type == "ip")[,c("type", "sample", "sample_group")]
-
-              sp_mr <- tt_sp %>% dplyr::left_join(y = ip_sp,by = "sample")
-
-              sp.tt <- paste(sp_mr$sample,sp_mr$type.x,sep = "-")
-              sp.ip <- paste(sp_mr$sample,sp_mr$type.y,sep = "-")
-
               # x = 1
               lapply(seq_along(sp.tt),function(x){
                 tmp.tt <- subset(pltdf.tmp, sample == sp.tt[x])
