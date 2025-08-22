@@ -234,6 +234,9 @@ construct_ribotrans <- function(genome_file = NULL,
                                 Ribo_sample_name = NULL,
                                 Ribo_sample_group = NULL,
                                 choose_longest_trans = FALSE){
+  options(fastplyr.inform = FALSE)
+  options(fastplyr.optimise = FALSE)
+
   mapping_type <- match.arg(mapping_type, choices = c("transcriptome", "genome"))
   assignment_mode <- match.arg(assignment_mode, choices = c("end5", "end3"))
 
@@ -267,7 +270,8 @@ construct_ribotrans <- function(genome_file = NULL,
     features <- features %>%
       dplyr::group_by(gene) %>%
       dplyr::arrange(dplyr::desc(cds), dplyr::desc(translen),.by_group = T) %>%
-      fastplyr::f_slice_head(n = 1,keep_order = T)
+      fastplyr::f_slice_head(n = 1,keep_order = T) %>%
+      data.frame()
   }
 
   # check mapping_type
@@ -464,6 +468,9 @@ construct_serp <- function(genome_file = NULL,
                            IP_sample_name = NULL,
                            IP_sample_group = NULL,
                            choose_longest_trans = FALSE){
+  options(fastplyr.inform = FALSE)
+  options(fastplyr.optimise = FALSE)
+
   mapping_type <- match.arg(mapping_type, choices = c("transcriptome", "genome"))
   assignment_mode <- match.arg(assignment_mode, choices = c("end5", "end3"))
 
@@ -497,7 +504,8 @@ construct_serp <- function(genome_file = NULL,
     features <- features %>%
       fastplyr::f_group_by(gene) %>%
       fastplyr::f_arrange(cds, translen,.by_group = T,.descending = T) %>%
-      fastplyr::f_slice_head(n = 1,keep_order = T)
+      fastplyr::f_slice_head(n = 1,keep_order = T) %>%
+      data.frame()
   }
 
   # check mapping_type
