@@ -108,7 +108,7 @@ setMethod("frame_plot",
                     axis.text = element_text(colour = "black")) +
               facet +
               scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
-              xlab("Read length (nt)") + ylab("Number of reads") +
+              xlab("Read frame") + ylab("Number of reads") +
               scale_fill_brewer(direction = -1,name = "Frame")
 
             # return
