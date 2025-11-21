@@ -573,7 +573,7 @@ setMethod("get_normalized_reads",
                   if(norm_by_totalMappedReads == TRUE){
                     tpm_ribo <- t(t(rpk)/riboinfo$mappped_reads*10^6)
                   }else{
-                    tpm_ribo <- t(t(rpk)/colSums(count_ribo)*10^6)
+                    tpm_ribo <- t(t(rpk)/colSums(rpk)*10^6)
                   }
                 }else{
                   if(ribo_count_feature == "cds"){
@@ -620,7 +620,7 @@ setMethod("get_normalized_reads",
                   if(norm_by_totalMappedReads == TRUE){
                     tpm_ribo <- t(t(rpk)/riboinfo$mappped_reads*10^6)
                   }else{
-                    tpm_ribo <- t(t(rpk)/colSums(count_ribo)*10^6)
+                    tpm_ribo <- t(t(rpk)/colSums(rpk)*10^6)
                   }
 
                 }else{
