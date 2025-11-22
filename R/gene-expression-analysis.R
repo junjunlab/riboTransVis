@@ -249,6 +249,11 @@ setMethod("get_counts",
 #' @param lo2FC A numeric vector of length two specifying lower and upper thresholds for log2 fold change.
 #' Default is \code{c(-1, 1)}, meaning fold changes below -1 or above 1 are considered significant.
 #' @param pval Numeric. P-value threshold for statistical significance. Default is \code{0.05}.
+#' @param norm_by_totalMappedReads A logical value. If `FALSE` (default), the
+#'   "per million" scaling factor is derived from the sum of counts assigned to
+#'   features in the current analysis (the standard way for TPM). If `TRUE`, the
+#'   scaling factor is the total number of mapped reads stored in the library
+#'   metadata (`object@library$mappped_reads`).
 #' @param ... Additional arguments (currently unused).
 #'
 #'
@@ -300,7 +305,8 @@ setMethod("gene_differential_analysis",
                    control_samples = NULL,
                    treat_samples = NULL,
                    lo2FC = c(-1,1),
-                   pval = 0.05){
+                   pval = 0.05,
+                   norm_by_totalMappedReads = FALSE){
             type <- match.arg(type,choices = c("rna","ribo"))
 
             # check counts data
@@ -319,6 +325,7 @@ setMethod("gene_differential_analysis",
                 count_mtx <- object@counts$rna
               }
 
+              lib <- subset(object@library, type == "rna" & sample %in% c(control_samples,treat_samples))
             }else{
               if(object@mapping_type == "genome"){
                 counts_info <- object@counts$rpf
@@ -328,6 +335,7 @@ setMethod("gene_differential_analysis",
                 count_mtx <- object@counts$rpf
               }
 
+              lib <- subset(object@library, type == "ribo" & sample %in% c(control_samples,treat_samples))
             }
 
             # ==================================================================
@@ -348,6 +356,16 @@ setMethod("gene_differential_analysis",
             if (requireNamespace("DESeq2", quietly = TRUE)) {
               # DESeqDataSet
               dds <- DESeq2::DESeqDataSetFromMatrix(countData = count_mtx, colData = coldata, design= ~condition)
+
+              # check lib size factors
+              if(norm_by_totalMappedReads == TRUE){
+                total_mapped_reads <- lib$mappped_reads
+                geo_mean <- exp(mean(log(total_mapped_reads)))
+                manual_size_factors <- total_mapped_reads / geo_mean
+
+                DESeq2::sizeFactors(dds) <- manual_size_factors
+              }
+
 
               # diff
               dds <- DESeq2::DESeq(dds)
@@ -382,6 +400,7 @@ setMethod("gene_differential_analysis",
             return(res_all_anno)
           }
 )
+
 
 
 
@@ -930,4 +949,186 @@ setMethod("TE_differential_analysis",
 
 
 
+#' @title Perform Differential Translation Efficiency (TE) Analysis
+#' @description This function conducts a differential translation efficiency analysis
+#' using RNA-seq and Ribo-seq data stored within a `ribotrans` object. It leverages
+#' the DESeq2 package with an interaction model to distinguish changes in
+#' translation efficiency from changes in transcription.
+#'
+#' @details The core of the analysis is a DESeq2 generalized linear model (GLM)
+#' with the design `~ type + condition + type:condition`. In this model:
+#' \itemize{
+#'   \item `type` distinguishes between RNA-seq and Ribo-seq.
+#'   \item `condition` models the main effect of the treatment on transcription.
+#'   \item `type:condition` is the interaction term, which specifically models the
+#'     change in Ribo-seq counts that is not explained by the change in RNA-seq
+#'     counts. This term represents the change in translation efficiency (TE).
+#' }
+#' The function extracts the results for the interaction term `typeRiboseq.conditiontreated`.
+#'
+#' @param object A `ribotrans` object that has already been processed by `get_counts`.
+#' @param control_samples A character vector of sample names to be used as the control group.
+#' @param treat_samples A character vector of sample names to be used as the treatment group.
+#' @param lo2FC A numeric vector of length two specifying the lower and upper
+#'   log2 fold change thresholds for classifying significant genes.
+#'   Default is `c(-1, 1)`, corresponding to a 2-fold change.
+#' @param pval A numeric value specifying the p-value (not adjusted p-value) cutoff
+#'   for classifying significant genes. Default is `0.05`.
+#' @param norm_by_totalMappedReads A logical value. If `TRUE`, the function will use
+#'   the total mapped reads from the object's library information to calculate and
+#'   set custom size factors for DESeq2 normalization. This is highly recommended
+#'   if global changes in transcription or translation are expected. If `FALSE` (default),
+#'   DESeq2's standard median of ratios method will be used.
+#' @param ... Additional arguments (currently unused).
+#'
+#' @return A data.frame containing the results of the differential TE analysis.
+#'   The data.frame includes columns for base mean, log2 fold change (of TE),
+#'   p-value, adjusted p-value (`padj`), and gene annotations. An additional `type`
+#'   column classifies genes into "sigUp", "sigDown", or "nonSig" based on the
+#'   provided `lo2FC` and `pval` thresholds.
+#'
+#' @export
+#'
+#'
+#' @examples
+#' \dontrun{
+#' # Assuming `my_ribo_object` is a valid 'ribotrans' object
+#' # after running `get_counts`.
+#'
+#' # Define control and treatment samples
+#' control_samps <- c("WT_rep1", "WT_rep2", "WT_rep3")
+#' treat_samps <- c("KO_rep1", "KO_rep2", "KO_rep3")
+#'
+#' # Run TE analysis using default DESeq2 normalization
+#' te_results <- TE_analysis(object = my_ribo_object,
+#'                           control_samples = control_samps,
+#'                           treat_samples = treat_samps)
+#'
+#' # View the top results
+#' head(te_results)
+#'
+#' # Run TE analysis using normalization by total mapped reads
+#' # This is recommended for experiments with expected global shifts
+#' te_results_custom_norm <- TE_analysis(object = my_ribo_object,
+#'                                       control_samples = control_samps,
+#'                                       treat_samples = treat_samps,
+#'                                       norm_by_totalMappedReads = TRUE,
+#'                                       lo2FC = c(-0.58, 0.58), # 1.5-fold change
+#'                                       pval = 0.05)
+#'
+#' # Count number of significantly up/down-regulated genes in TE
+#' table(te_results_custom_norm$type)
+#' }
+setGeneric("TE_analysis",function(object,...) standardGeneric("TE_analysis"))
 
+
+
+
+
+#' @rdname TE_analysis
+#' @export
+setMethod("TE_analysis",
+          signature(object = "ribotrans"),
+          function(object,
+                   control_samples = NULL,
+                   treat_samples = NULL,
+                   lo2FC = c(-1,1),
+                   pval = 0.05,
+                   norm_by_totalMappedReads = FALSE){
+
+            # check counts data
+            if(length(object@counts) == 0){
+              stop("Please run `get_counts` first!")
+            }
+
+            # ==================================================================
+            # get counts info
+            if(object@mapping_type == "genome"){
+              rna_info <- object@counts$rna
+              rna_mtx <- rna_info$counts[,c(control_samples,treat_samples)]
+
+              ribo_info <- object@counts$rpf
+              ribo_mtx <- ribo_info$counts[,c(control_samples,treat_samples)]
+
+              gene_info <- rbind(rna_info$annotation,ribo_info$annotation)
+              gene_info <- gene_info[,c("GeneID","gene_name","gene_biotype")] %>% unique()
+              colnames(gene_info)[1] <- "gene_id"
+            }else{
+              rna_mtx <- object@counts$rna
+              ribo_mtx <- object@counts$rpf
+            }
+
+
+            # make row order to be same
+            ids <- intersect(rownames(rna_mtx),rownames(ribo_mtx))
+
+            rna_mtx <- rna_mtx[ids,]
+            ribo_mtx <- ribo_mtx[ids,]
+
+            colnames(rna_mtx) <- paste0(colnames(rna_mtx), "_rna")
+            colnames(ribo_mtx) <- paste0(colnames(ribo_mtx), "_ribo")
+
+            # combine
+            countData <- cbind(rna_mtx, ribo_mtx)
+
+            # ==================================================================
+            # diff analysis
+            # make groups
+            rnaCond <- c(rep("control",length(control_samples)), rep("treated",length(treat_samples)))
+            riboCond <- c(rep("control",length(control_samples)), rep("treated",length(treat_samples)))
+
+            colData <- data.frame(
+              row.names = colnames(countData),
+              condition = factor(c(rnaCond,riboCond)),
+              type = factor(rep(c("RNAseq", "Riboseq"), each = 4))
+            )
+
+            colData$condition <- stats::relevel(colData$condition, ref = "control")
+            colData$type <- stats::relevel(colData$type, ref = "RNAseq")
+
+
+
+            # diff test
+            dds <- DESeq2::DESeqDataSetFromMatrix(countData = countData,
+                                                  colData = colData,
+                                                  design = ~ type + condition + type:condition)
+
+            # check norm
+            if(norm_by_totalMappedReads == TRUE){
+              lib <- rbind(subset(object@library, type == "rna" & sample %in% c(control_samples,treat_samples)),
+                           subset(object@library, type == "ribo" & sample %in% c(control_samples,treat_samples)))
+
+              size_factors <- lib$mappped_reads / exp(mean(log(lib$mappped_reads)))
+              names(size_factors) <- rownames(colData)
+
+              DESeq2::sizeFactors(dds) <- size_factors
+            }
+
+            dds <- DESeq2::DESeq(dds)
+            res_TE <- DESeq2::results(dds, name = "typeRiboseq.conditiontreated")
+
+            # ==================================================================
+
+            # filter NA
+            res_all <- as.data.frame(res_TE) %>% dplyr::filter(log2FoldChange != 'NA')
+
+            # add annotation
+            if(object@mapping_type == "genome"){
+              res_all$gene_id <- rownames(res_all)
+              res_all_anno <- res_all %>%
+                dplyr::left_join(y = gene_anno,by = 'gene_id')
+            }else{
+              res_all$gene_name <- rownames(res_all)
+              res_all_anno <- res_all
+            }
+
+
+            # add sig type
+            res_all_anno <- res_all_anno |>
+              dplyr::mutate(type = dplyr::case_when(log2FoldChange >= lo2FC[2] & pvalue < pval ~ "sigUp",
+                                                    log2FoldChange <= lo2FC[1] & pvalue < pval ~ "sigDown",
+                                                    .default = "nonSig"))
+
+            return(res_all_anno)
+          }
+)

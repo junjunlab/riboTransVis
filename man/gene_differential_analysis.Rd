@@ -13,7 +13,8 @@ gene_differential_analysis(object, ...)
   control_samples = NULL,
   treat_samples = NULL,
   lo2FC = c(-1, 1),
-  pval = 0.05
+  pval = 0.05,
+  norm_by_totalMappedReads = FALSE
 )
 }
 \arguments{
@@ -31,6 +32,12 @@ gene_differential_analysis(object, ...)
 Default is \code{c(-1, 1)}, meaning fold changes below -1 or above 1 are considered significant.}
 
 \item{pval}{Numeric. P-value threshold for statistical significance. Default is \code{0.05}.}
+
+\item{norm_by_totalMappedReads}{A logical value. If \code{FALSE} (default), the
+"per million" scaling factor is derived from the sum of counts assigned to
+features in the current analysis (the standard way for TPM). If \code{TRUE}, the
+scaling factor is the total number of mapped reads stored in the library
+metadata (\code{object@library$mappped_reads}).}
 }
 \value{
 A \code{data.frame} containing differential expression results, including:
