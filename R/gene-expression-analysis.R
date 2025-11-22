@@ -1116,7 +1116,7 @@ setMethod("TE_analysis",
             if(object@mapping_type == "genome"){
               res_all$gene_id <- rownames(res_all)
               res_all_anno <- res_all %>%
-                dplyr::left_join(y = gene_anno,by = 'gene_id')
+                dplyr::left_join(y = gene_info,by = 'gene_id')
             }else{
               res_all$gene_name <- rownames(res_all)
               res_all_anno <- res_all
