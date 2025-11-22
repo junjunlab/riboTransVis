@@ -129,7 +129,9 @@ vocalno_plot <- function(diff_data = NULL,
     theme(panel.grid = element_blank(),
           axis.text = element_text(colour = "black")) +
     guides(color = guide_legend(override.aes = list(size = 4))) +
-    scale_color_manual(values = c(sigUp = color[1],nonSig = color[2],sigDown = color[3]))
+    scale_color_manual(values = c(sigUp = color[1],nonSig = color[2],sigDown = color[3])) +
+    labs(x = bquote(Log[2]~"fold change"),
+         y = bquote(-Log[10]~italic(P)*"-value"))
 
   if(requireNamespace(c("ggrepel","ggpp"), quietly = TRUE)){
     p +
