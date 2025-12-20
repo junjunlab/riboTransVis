@@ -6,7 +6,23 @@
 #' Extracts transcript features from a GTF file, including exon length, CDS length,
 #' and UTR lengths, and returns a processed data frame.
 #'
-#' @param gtf_file A `character` string specifying the path to a GTF annotation file.
+#' @param gtf_file A `character` string specifying the path to a GTF annotation file,
+#'   or a `data.frame` that has already been loaded from a GTF.
+#' @param type_cds A `character` string for the feature type of coding sequences in the
+#'   GTF file's 3rd column. Default is `"CDS"`.
+#' @param type_utr5 A `character` string for the feature type of 5' UTRs.
+#'   Default is `"five_prime_utr"`.
+#' @param type_utr3 A `character` string for the feature type of 3' UTRs.
+#'   Default is `"three_prime_utr"`.
+#' @param type_exon A `character` string for the feature type of exons.
+#'   Default is `"exon"`.
+#' @param type_transcript A `character` string for the feature type of transcripts.
+#'   Default is `"transcript"`.
+#' @param transcript_attribute A `character` string specifying the attribute name for
+#'   transcript identifiers in the GTF's 9th column. Common values are `"transcript_id"`
+#'   (default for Gencode/Ensembl) or `"transcript_name"`.
+#' @param gene_attribute A `character` string specifying the attribute name for gene
+#'   identifiers. Common values are `"gene_name"` (default) or `"gene_id"`.
 #'
 #' @details
 #' This function reads a GTF file and extracts relevant transcript features:
@@ -37,51 +53,73 @@
 #' @importFrom dplyr filter group_by summarise mutate select left_join
 #' @importFrom stats na.omit
 #' @export
-prepareTransInfo <- function(gtf_file = NULL){
+prepareTransInfo <- function(gtf_file = NULL,
+                             type_cds = "CDS",
+                             type_utr5 = "five_prime_utr",
+                             type_utr3 = "three_prime_utr",
+                             type_exon = "exon",
+                             type_transcript = "transcript",
+                             transcript_attribute = "transcript_id",
+                             gene_attribute = "gene_name"){
   # load gtf
-  if (requireNamespace("rtracklayer", quietly = TRUE)) {
-    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>%
-      data.frame()
-  } else {
-    warning("Package 'rtracklayer' is needed for this function to work.")
+  if(is.character(gtf_file)){
+    if (requireNamespace("rtracklayer", quietly = TRUE)) {
+      gtf <- rtracklayer::import.gff(gtf_file,format = "gtf") %>%
+        data.frame()
+    } else {
+      warning("Package 'rtracklayer' is needed for this function to work.")
+    }
+  }else if(inherits(gtf_file,"data.frame")){
+    gtf <- gtf_file
+  }else {
+    stop("'gtf_file' must be a file path or a data frame.")
   }
 
-  # filter type
+  # Check if specified attributes exist
+  if (!transcript_attribute %in% names(gtf)) {
+    stop(paste("Transcript attribute '", transcript_attribute, "' not found in GTF columns.", sep=""))
+  }
+  if (!gene_attribute %in% names(gtf)) {
+    stop(paste("Gene attribute '", gene_attribute, "' not found in GTF columns.", sep=""))
+  }
+
+  # Use modern dplyr with .data pronoun for programming with variable names
   exon <- gtf %>%
-    dplyr::filter(type == "exon") %>%
-    dplyr::group_by(transcript_id) %>%
+    dplyr::filter(type == type_exon) %>%
+    dplyr::group_by(.data[[transcript_attribute]]) %>%
     dplyr::summarise(exonlen = sum(width))
 
   st <- gtf %>%
-    dplyr::filter(type == "five_prime_utr") %>%
-    dplyr::group_by(transcript_id) %>%
+    dplyr::filter(type == type_utr5) %>%
+    dplyr::group_by(.data[[transcript_attribute]]) %>%
     dplyr::summarise(utr5 = sum(width))
 
   cds <- gtf %>%
-    dplyr::filter(type == "CDS") %>%
-    dplyr::group_by(transcript_id) %>%
+    dplyr::filter(type == type_cds) %>%
+    dplyr::group_by(.data[[transcript_attribute]]) %>%
     dplyr::summarise(cds = sum(width))
 
   sp <- gtf %>%
-    dplyr::filter(type == "three_prime_utr") %>%
-    dplyr::group_by(transcript_id) %>%
+    dplyr::filter(type == type_utr3) %>%
+    dplyr::group_by(.data[[transcript_attribute]]) %>%
     dplyr::summarise(utr3 = sum(width))
 
   idtran <- gtf %>%
-    dplyr::filter(type == "transcript") %>%
+    dplyr::filter(type == type_transcript) %>%
     # deal with no gene name symbol with  transcript_id
-    dplyr::mutate(gene_name = ifelse(is.na(gene_name),transcript_id,gene_name)) %>%
-    dplyr::mutate(idnew = paste(transcript_id,gene_name,sep = "|")) %>%
-    dplyr::select(transcript_id,idnew) %>% unique() %>% na.omit()
+    dplyr::mutate(gene_name = ifelse(is.na(.data[[gene_attribute]]),
+                  .data[[transcript_attribute]],.data[[gene_attribute]])) %>%
+    dplyr::mutate(idnew = paste(.data[[transcript_attribute]],.data[[gene_attribute]],sep = "|")) %>%
+    dplyr::select(.data[[transcript_attribute]],idnew) %>% unique() %>% na.omit()
 
 
   # combine info
   all_trans <- idtran %>%
-    dplyr::left_join(y = st,by = "transcript_id") %>%
+    dplyr::left_join(y = st,by = transcript_attribute) %>%
     dplyr::mutate(utr5 = ifelse(is.na(utr5),0,utr5)) %>%
-    dplyr::left_join(y = cds,by = "transcript_id") %>%
-    dplyr::left_join(y = sp,by = "transcript_id") %>%
-    dplyr::left_join(y = exon,by = "transcript_id") %>%
+    dplyr::left_join(y = cds,by = transcript_attribute) %>%
+    dplyr::left_join(y = sp,by = transcript_attribute) %>%
+    dplyr::left_join(y = exon,by = transcript_attribute) %>%
     dplyr::mutate(utr3 = ifelse(is.na(utr3),0,utr3)) %>%
     # na.omit() %>%
     dplyr::mutate(translen = ifelse(is.na(cds),exonlen,utr5 + cds + utr3 + 3),
@@ -535,15 +573,17 @@ getOccupancy <- function(bam_file = NULL,
   # get position
   bam_data <- Rsamtools::scanBam(file = bam_file,
                                  nThreads = parallel::detectCores(),
-                                 param = Rsamtools::ScanBamParam(what = c("rname", "pos", "qwidth"),
+                                 param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
                                                                  which = region,
-                                                                 flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE))
+                                                                 flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE,
+                                                                                               isSecondaryAlignment = FALSE,
+                                                                                               isDuplicate = FALSE))
   )
 
   # list to data frame
   tmpdf <- purrr::map_df(seq_along(bam_data),function(x){
     tmp <- data.frame(bam_data[[x]]) %>%
-      dplyr::group_by(rname,pos,qwidth) %>%
+      dplyr::group_by(rname,pos,qwidth,strand) %>%
       dplyr::summarise(count = dplyr::n(),.groups = "drop")
 
     return(tmp)

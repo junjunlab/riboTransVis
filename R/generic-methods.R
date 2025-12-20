@@ -80,8 +80,11 @@ setMethod("generate_summary",
                 # get position
                 bam_data <- Rsamtools::scanBam(file = bfn[x],
                                                nThreads = nThreads,
-                                               param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
-                                                                               flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE))
+                                               param = Rsamtools::ScanBamParam(
+                                                 what = c("rname", "pos", "strand", "qwidth"),
+                                                 flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE,
+                                                                               isSecondaryAlignment = FALSE,
+                                                                               isDuplicate = FALSE))
                 )
 
                 tinfo <- data.frame(bam_data[[1]])
@@ -99,7 +102,7 @@ setMethod("generate_summary",
                   }
 
                   tinfo.gr <- tinfo %>%
-                    fastplyr::f_group_by(rname,pos,qwidth) %>%
+                    fastplyr::f_group_by(rname,pos,qwidth,strand) %>%
                     fastplyr::f_summarise(count = dplyr::n()) %>%
                     dplyr::rename(seqnames = rname, start = pos) %>%
                     dplyr::mutate(end = start,.after = "start")
@@ -127,8 +130,10 @@ setMethod("generate_summary",
 
                   # calculate transcript position
                   tinfo <- lo %>%
-                    dplyr::mutate(pos = dplyr::case_when(strand.1 == "+" ~ tx_len - abs(end.1 - start),
-                                                         strand.1 == "-" ~ tx_len - abs(start - start.1)),
+                    dplyr::mutate(pos = dplyr::case_when(strand == "+" & strand.1 == "+" ~ tx_len - abs(end.1 - start),
+                                                         strand == "-" & strand.1 == "+" ~ tx_len - abs(end.1 - (start - qwidth + 1)),
+                                                         strand == "-" & strand.1 == "-" ~ tx_len - abs(start - start.1),
+                                                         strand == "+" & strand.1 == "-" ~ tx_len - abs(start - (start + qwidth - 1))),
                                   rname = paste(transcript_id,gene_name,sep = "|")) %>%
                     fastplyr::f_select(rname,pos,qwidth,count)
 

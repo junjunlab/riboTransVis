@@ -4,10 +4,42 @@
 \alias{prepareTransInfo}
 \title{Process GTF File for Transcript Annotations}
 \usage{
-prepareTransInfo(gtf_file = NULL)
+prepareTransInfo(
+  gtf_file = NULL,
+  type_cds = "CDS",
+  type_utr5 = "five_prime_utr",
+  type_utr3 = "three_prime_utr",
+  type_exon = "exon",
+  type_transcript = "transcript",
+  transcript_attribute = "transcript_id",
+  gene_attribute = "gene_name"
+)
 }
 \arguments{
-\item{gtf_file}{A \code{character} string specifying the path to a GTF annotation file.}
+\item{gtf_file}{A \code{character} string specifying the path to a GTF annotation file,
+or a \code{data.frame} that has already been loaded from a GTF.}
+
+\item{type_cds}{A \code{character} string for the feature type of coding sequences in the
+GTF file's 3rd column. Default is \code{"CDS"}.}
+
+\item{type_utr5}{A \code{character} string for the feature type of 5' UTRs.
+Default is \code{"five_prime_utr"}.}
+
+\item{type_utr3}{A \code{character} string for the feature type of 3' UTRs.
+Default is \code{"three_prime_utr"}.}
+
+\item{type_exon}{A \code{character} string for the feature type of exons.
+Default is \code{"exon"}.}
+
+\item{type_transcript}{A \code{character} string for the feature type of transcripts.
+Default is \code{"transcript"}.}
+
+\item{transcript_attribute}{A \code{character} string specifying the attribute name for
+transcript identifiers in the GTF's 9th column. Common values are \code{"transcript_id"}
+(default for Gencode/Ensembl) or \code{"transcript_name"}.}
+
+\item{gene_attribute}{A \code{character} string specifying the attribute name for gene
+identifiers. Common values are \code{"gene_name"} (default) or \code{"gene_id"}.}
 }
 \value{
 A \code{data.frame} with the following columns:

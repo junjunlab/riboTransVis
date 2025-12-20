@@ -152,7 +152,9 @@ getOccupancyGenome <- function(bam_file = NULL,
                                    nThreads = parallel::detectCores(),
                                    param = Rsamtools::ScanBamParam(what = c("rname", "pos", "strand", "qwidth"),
                                                                    which = query_region,
-                                                                   flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE)))
+                                                                   flag = Rsamtools::scanBamFlag(isUnmappedQuery = FALSE,
+                                                                                                 isSecondaryAlignment = FALSE,
+                                                                                                 isDuplicate = FALSE)))
 
   }
 
@@ -213,8 +215,10 @@ getOccupancyGenome <- function(bam_file = NULL,
     # calculate transcript position
     tgene <- gene_name
     lo <- lo %>%
-      dplyr::mutate(pos = dplyr::case_when(strand.1 == "+" ~ tx_len - abs(end.1 - start),
-                                           strand.1 == "-" ~ tx_len - abs(start - start.1)),
+      dplyr::mutate(pos = dplyr::case_when(strand == "+" & strand.1 == "+" ~ tx_len - abs(end.1 - start),
+                                           strand == "-" & strand.1 == "+" ~ tx_len - abs(end.1 - (start - qwidth + 1)),
+                                           strand == "-" & strand.1 == "-" ~ tx_len - abs(start - start.1),
+                                           strand == "+" & strand.1 == "-" ~ tx_len - abs(start - (start + qwidth - 1))),
                     rname = paste(transcript_id,gene_name,sep = "|")) %>%
       dplyr::filter(gene_name == tgene)
 
