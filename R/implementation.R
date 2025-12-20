@@ -70,6 +70,11 @@ prepareTransInfo <- function(gtf_file = NULL,
       warning("Package 'rtracklayer' is needed for this function to work.")
     }
   }else if(inherits(gtf_file,"data.frame")){
+    # check gene_name column
+    if(!("gene_name" %in% colnames(gtf_file))){
+      gtf_file$gene_name <- gtf_file$gene_id
+    }
+
     gtf <- gtf_file
   }else {
     stop("'gtf_file' must be a file path or a data frame.")

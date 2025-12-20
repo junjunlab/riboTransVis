@@ -173,6 +173,11 @@ construct_ribotrans <- function(genome_file = NULL,
       warning("Package 'rtracklayer' is needed for this function to work.")
     }
   }else if(inherits(gtf_file,"data.frame")){
+    # check gene_name column
+    if(!("gene_name" %in% colnames(gtf_file))){
+      gtf_file$gene_name <- gtf_file$gene_id
+    }
+
     gtf <- GenomicRanges::GRanges(gtf_file)
   }else {
     stop("'gtf_file' must be a file path or a data frame.")
@@ -418,14 +423,14 @@ construct_serp <- function(genome_file = NULL,
       warning("Package 'rtracklayer' is needed for this function to work.")
     }
   }else if(inherits(gtf_file,"data.frame")){
+    # check gene_name column
+    if(!("gene_name" %in% colnames(gtf_file))){
+      gtf_file$gene_name <- gtf_file$gene_id
+    }
+
     gtf <- GenomicRanges::GRanges(gtf_file)
   }else {
     stop("'gtf_file' must be a file path or a data frame.")
-  }
-
-  # check gene_name column
-  if(!("gene_name" %in% colnames(gtf))){
-    gtf$gene_name <- gtf$gene_id
   }
 
   # transcriptome features
