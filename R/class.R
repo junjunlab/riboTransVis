@@ -354,6 +354,7 @@ serp <- setClass("serp",
 #' for each gene. If TRUE, only the longest transcript (based on CDS and transcript length)
 #' will be kept for each gene. This is useful to reduce redundancy when multiple transcript
 #' isoforms exist for a gene. If FALSE (default), all transcripts will be retained.
+#' @param prepareTransInfo_params A list parameters to prepareTransInfo function.
 #' @return An object of class 'serp' containing the processed data.
 #'
 #' @details
@@ -403,7 +404,8 @@ construct_serp <- function(genome_file = NULL,
                            IP_bam_file = NULL,
                            IP_sample_name = NULL,
                            IP_sample_group = NULL,
-                           choose_longest_trans = FALSE){
+                           choose_longest_trans = FALSE,
+                           prepareTransInfo_params = list()){
   options(fastplyr.inform = FALSE)
   options(fastplyr.optimise = FALSE)
 
@@ -414,15 +416,27 @@ construct_serp <- function(genome_file = NULL,
   # prepare trans info
   # ============================================================================
   # load gtf
-  if (requireNamespace("rtracklayer", quietly = TRUE)) {
-    gtf <- rtracklayer::import.gff(gtf_file,format = "gtf")
-  } else {
-    warning("Package 'rtracklayer' is needed for this function to work.")
+  if(is.character(gtf_file)){
+    if (requireNamespace("rtracklayer", quietly = TRUE)) {
+      gtf <- rtracklayer::import.gff(gtf_file,format = "gtf")
+    } else {
+      warning("Package 'rtracklayer' is needed for this function to work.")
+    }
+  }else if(inherits(gtf_file,"data.frame")){
+    gtf <- gtf_file
+  }else {
+    stop("'gtf_file' must be a file path or a data frame.")
   }
 
+  # check gene_name column
+  if(!("gene_name" %in% colnames(gtf))){
+    gtf$gene_name <- gtf$gene_id
+  }
 
   # transcriptome features
-  features <- prepareTransInfo(gtf_file = gtf_file)
+  features <- do.call(prepareTransInfo,
+                      modifyList(list(gtf_file = gtf_file),
+                                 prepareTransInfo_params))
 
   # check extend information
   if(extend == TRUE){

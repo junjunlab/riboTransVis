@@ -18,7 +18,8 @@ construct_serp(
   IP_bam_file = NULL,
   IP_sample_name = NULL,
   IP_sample_group = NULL,
-  choose_longest_trans = FALSE
+  choose_longest_trans = FALSE,
+  prepareTransInfo_params = list()
 )
 }
 \arguments{
@@ -57,6 +58,8 @@ Only used when extend = TRUE. Default is 0.}
 for each gene. If TRUE, only the longest transcript (based on CDS and transcript length)
 will be kept for each gene. This is useful to reduce redundancy when multiple transcript
 isoforms exist for a gene. If FALSE (default), all transcripts will be retained.}
+
+\item{prepareTransInfo_params}{A list parameters to prepareTransInfo function.}
 }
 \value{
 An object of class 'serp' containing the processed data.
