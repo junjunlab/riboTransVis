@@ -99,7 +99,7 @@ setMethod("frame_plot",
             # plot
             p <-
               ggplot(pltdf) +
-              geom_col(aes(x = factor(frame),y = counts/10^5,fill = factor(frame)),width = 0.6) +
+              geom_col(aes(x = factor(frame),y = counts/10^6,fill = factor(frame)),width = 0.6) +
               # periodicity.layer +
               label.lyr +
               theme_bw() +
@@ -108,7 +108,7 @@ setMethod("frame_plot",
                     axis.text = element_text(colour = "black")) +
               facet +
               # scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
-              xlab("Read frame") + ylab("Number of reads (10^5)") +
+              xlab("Read frame") + ylab("Number of reads (10^6)") +
               scale_fill_brewer(direction = -1,name = "Frame")
 
             # return
