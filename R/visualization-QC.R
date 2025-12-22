@@ -554,7 +554,7 @@ setMethod("feature_plot",
               theme(panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
-              scale_y_continuous(labels = scales::label_log(base = 2,digits = 1)) +
+              # scale_y_continuous(labels = scales::label_log(base = 2,digits = 1)) +
               xlab("Read features") + ylab("Number of reads (10^6)")
 
             # return
