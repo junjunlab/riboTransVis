@@ -99,7 +99,7 @@ setMethod("frame_plot",
             # plot
             p <-
               ggplot(pltdf) +
-              geom_col(aes(x = factor(frame),y = counts,fill = factor(frame)),width = 0.6) +
+              geom_col(aes(x = factor(frame),y = counts/10^5,fill = factor(frame)),width = 0.6) +
               # periodicity.layer +
               label.lyr +
               theme_bw() +
@@ -107,8 +107,8 @@ setMethod("frame_plot",
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
               facet +
-              scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
-              xlab("Read frame") + ylab("Number of reads") +
+              # scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
+              xlab("Read frame") + ylab("Number of reads (10^5)") +
               scale_fill_brewer(direction = -1,name = "Frame")
 
             # return
@@ -428,7 +428,7 @@ setMethod("length_plot",
                   dplyr::rename(sample = sample_group)
               }
 
-              ptlayer <- geom_col(aes(x = qwidth, y = counts, fill = factor(frame)),
+              ptlayer <- geom_col(aes(x = qwidth, y = counts/10^5, fill = factor(frame)),
                                   width = col_width, position = position_dodge2())
 
               # whether add periodicity info
@@ -463,8 +463,8 @@ setMethod("length_plot",
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
               facet +
-              scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
-              xlab("Read length (nt)") + ylab("Number of reads")
+              # scale_y_continuous(labels = scales::label_log(base = 2,digits = 1)) +
+              xlab("Read length (nt)") + ylab("Number of reads (10^5)")
 
             # return
             if(return_data == FALSE){
@@ -549,13 +549,13 @@ setMethod("feature_plot",
 
             p <-
               ggplot(sry) +
-              geom_col(aes(x = type,y = counts,fill = type),width = 0.6,show.legend = F) +
+              geom_col(aes(x = type,y = counts/10^5,fill = type),width = 0.6,show.legend = F) +
               facet +
               theme(panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
-              scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
-              xlab("Read features") + ylab("Number of reads")
+              scale_y_continuous(labels = scales::label_log(base = 2,digits = 1)) +
+              xlab("Read features") + ylab("Number of reads (10^5)")
 
             # return
             if(return_data == FALSE){
@@ -844,17 +844,17 @@ setMethod("relative_dist_plot",
             # plot
             p <-
               ggplot(pltdf) +
-              geom_col(aes(x = rel, y = counts, fill = factor(frame)),
+              geom_col(aes(x = rel, y = counts/10^5, fill = factor(frame)),
                        width = 0.9, position = position_dodge2()) +
               theme(panel.grid = element_blank(),
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
               # facet_grid(qwidth~sample,scales = "free") +
               facetlayer +
-              scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
+              # scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
               scale_fill_manual(values = c("0" = "#003366", "1" = "#336699", "2" = "#CCCCCC"),
                                 name = "frame") +
-              xlab("Distance to start/stop codon (nt)") + ylab("Number of reads")
+              xlab("Distance to start/stop codon (nt)") + ylab("Number of reads (10^5)")
 
             # return
             if(return_data == FALSE){
@@ -1141,7 +1141,7 @@ setMethod("relative_offset_plot",
             # plot
             p <-
               ggplot(summary.info) +
-              geom_path(aes(x = rel_pos,y = counts)) +
+              geom_path(aes(x = rel_pos,y = counts/10^5)) +
               mx.label +
               geom_vline(xintercept = xpos,lty ="dashed", color = "orange") +
               ggh4x::facet_grid2(qwidth~sample,scales = "free",independent = "y",axes = "y") +
@@ -1151,9 +1151,9 @@ setMethod("relative_offset_plot",
                     axis.ticks.y = axis.ticks.y,
                     strip.text = element_text(colour = "black",size = rel(1),face = "bold")) +
               scale_fill_viridis_c(option = "mako") +
-              scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
+              # scale_y_continuous(labels = scales::label_log(base = 10,digits = 1)) +
               xlab(xlab) +
-              ylab("Reads length (nt)")
+              ylab("Number of reads length (10^5)")
 
 
             # check return type
