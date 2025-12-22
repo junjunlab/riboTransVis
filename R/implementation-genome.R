@@ -216,9 +216,10 @@ getOccupancyGenome <- function(bam_file = NULL,
     tgene <- gene_name
     lo <- lo %>%
       dplyr::mutate(pos = dplyr::case_when(strand == "+" & strand.1 == "+" ~ tx_len - abs(end.1 - start),
-                                           strand == "-" & strand.1 == "+" ~ tx_len - abs(end.1 - (start - qwidth + 1)),
-                                           strand == "-" & strand.1 == "-" ~ tx_len - abs(start - start.1),
-                                           strand == "+" & strand.1 == "-" ~ tx_len - abs(start - (start + qwidth - 1))),
+                                           # strand == "-" & strand.1 == "+" ~ tx_len - abs(end.1 - (start - qwidth + 1)),
+                                           strand == "-" & strand.1 == "-" ~ tx_len - abs(start - start.1)
+                                           # strand == "+" & strand.1 == "-" ~ tx_len - abs(start - (start + qwidth - 1))
+                                           ),
                     rname = paste(transcript_id,gene_name,sep = "|")) %>%
       dplyr::filter(gene_name == tgene)
 
