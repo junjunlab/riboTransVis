@@ -89,7 +89,7 @@ setMethod("frame_plot",
             # add periodicity label
             if(add_periodicity_label == TRUE){
               label.lyr <- geom_label(data = pltdf,
-                                      aes(x = factor(frame),y = 1,label = periodicity),
+                                      aes(x = factor(frame),y = 0,label = periodicity),
                                       vjust = 0,size = text_size)
             }else{
               label.lyr <- NULL
@@ -527,10 +527,32 @@ setMethod("feature_plot",
                    return_data = FALSE){
             # assign features
             sry <- object@summary_info %>%
-              fastplyr::f_filter(mstart != 0 | mstop != 0) %>%
-              dplyr::mutate(type = dplyr::case_when(pos + qwidth/2 < mstart ~ "5'UTR",
-                                                    pos + qwidth/2 >= mstart & pos + qwidth/2 < mstop ~ "CDS",
-                                                    pos + qwidth/2 >= mstop ~ "3'UTR")) %>%
+              fastplyr::f_filter(mstart != 0 | mstop != 0)
+              # dplyr::mutate(type = dplyr::case_when(pos + qwidth/2 < mstart ~ "5'UTR",
+              #                                       pos + qwidth/2 >= mstart & pos + qwidth/2 < mstop ~ "CDS",
+              #                                       pos + qwidth/2 >= mstop ~ "3'UTR")) %>%
+
+            if(object@assignment_mode == "end5"){
+              sry <- sry |>
+                dplyr::mutate(mid = dplyr::case_when(rstrand == "+" & gstrand == "+" ~ pos + qwidth/2,
+                                                     rstrand == "-" & gstrand == "+" ~ pos + qwidth/2,
+                                                     rstrand == "+" & gstrand == "-" ~ pos - qwidth/2,
+                                                     rstrand == "-" & gstrand == "-" ~ pos - qwidth/2
+                                                     ))
+
+            }else{
+              sry <- sry |>
+                dplyr::mutate(mid = dplyr::case_when(rstrand == "+" & gstrand == "+" ~ pos - qwidth/2,
+                                                     rstrand == "-" & gstrand == "+" ~ pos - qwidth/2,
+                                                     rstrand == "+" & gstrand == "-" ~ pos + qwidth/2,
+                                                     rstrand == "-" & gstrand == "-" ~ pos + qwidth/2
+                ))
+            }
+
+            sry <- sry |>
+              dplyr::mutate(type = dplyr::case_when(mid < mstart ~ "5'UTR",
+                                                    mid >= mstart & mid < mstop ~ "CDS",
+                                                    mid >= mstop ~ "3'UTR")) %>%
               fastplyr::f_group_by(sample,sample_group, type) %>%
               fastplyr::f_summarise(counts = sum(count))
 
@@ -555,7 +577,7 @@ setMethod("feature_plot",
                     strip.text = element_text(colour = "black",face = "bold",size = rel(1)),
                     axis.text = element_text(colour = "black")) +
               # scale_y_continuous(labels = scales::label_log(base = 2,digits = 1)) +
-              xlab("Read features") + ylab("Number of reads (10^6)")
+              xlab("Read feature") + ylab("Number of reads (10^6)")
 
             # return
             if(return_data == FALSE){

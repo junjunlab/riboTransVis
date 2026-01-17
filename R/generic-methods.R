@@ -136,7 +136,8 @@ setMethod("generate_summary",
                                                          strand == "+" & strand.1 == "-" ~ tx_len - abs(start - (start + qwidth - 1))
                                                          ),
                                   rname = paste(transcript_id,gene_name,sep = "|")) %>%
-                    fastplyr::f_select(rname,pos,qwidth,count)
+                    dplyr::rename(rstrand = strand, gstrand = strand.1) %>%
+                    fastplyr::f_select(rname,pos,rstrand,gstrand,qwidth,count)
 
                 }else{
                   if(object@assignment_mode == "end3"){
@@ -147,7 +148,9 @@ setMethod("generate_summary",
 
                   tinfo <- tinfo %>%
                     fastplyr::f_group_by(rname,pos,qwidth) %>%
-                    fastplyr::f_summarise(count = dplyr::n())
+                    fastplyr::f_summarise(count = dplyr::n()) %>%
+                    dplyr::rename(rstrand = strand) |>
+                    dplyr::mutate(gstrand = "+",.after = rstrand)
 
                 }
 
